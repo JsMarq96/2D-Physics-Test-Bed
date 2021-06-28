@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.13)
 SET(CMAKE_CXX_COMPILER g++)
 SET(CMAKE_C_COMPILER gcc)
 
+SET(CMAKE_EXE_LINKER_FLAGS "-static -lpthread")
+
 project(GL_GLFW_TEMPLATE)
 
 file(GLOB CPP_SOURCES "src/*.cpp")
@@ -11,8 +13,11 @@ set(includes_dir "includes/")
 
 add_executable(GL_GLFW_TEMPLATE ${CPP_SOURCES} ${C_SOURCES})
 
-find_package(glfw3 3.3 REQUIRED)
-target_link_libraries(GL_GLFW_TEMPLATE glfw)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory("includes/glfw")
+target_link_libraries(GL_GLFW_TEMPLATE "glfw")
 
 set(gl3w_dir "${includes_dir}/GL")
 add_library("gl3w" "${gl3w_dir}/src/gl3w.c")

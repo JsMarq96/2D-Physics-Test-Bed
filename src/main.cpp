@@ -4,27 +4,12 @@
 
 #include "shader.h"
 #include "input_layer.h"
+#include "render_cubes.h"
 
 #define WIN_WIDTH	640
 #define WIN_HEIGHT	480
 #define WIN_NAME	"Test"
 
-const char* vertex_shader = " \
-	#version 330 core \n\
-	layout(location = 0) in vec3 a_pos; \n\
-	void main() { \n\
-		gl_Position = vec4(a_pos, 1.0); \n\
-	\n} \
-";
-
-const char* fragment_shader = " \
-	#version 330 core \n\
-	layout(location = 0) out vec4 FragColor; \n\
-	uniform vec4 u_color; \n\
-	void main() { \n\
-	    FragColor = u_color; \n\
-	\n} \
-";
 
 void temp_error_callback(int error_code, const char* descr) {
 	std::cout << "GLFW Error: " << error_code << " " << descr << std::endl;
@@ -97,40 +82,37 @@ void cursor_enter_callback(GLFWwindow *window, int entered) {
 	input->is_mouse_on_screen = entered;
 }
 
+void get_projection_matrix(sMat44 *result, float vp_width, float vp_height) {
+    result->set_identity();
+
+    float left = (-vp_width) * 0.7f / 2.0f;
+    float right = (vp_width) * 0.7f / 2.0f;
+    float bottom = (-vp_height) * 0.7f / 2.0f;
+    float top = (vp_height) * 0.7f / 2.0f;
+
+    result->mat_values[0][0] = 2.0f / (right - left);
+    result->mat_values[1][1] = 2.0f / (top - bottom);
+    result->mat_values[2][2] = -1.0f;
+    result->mat_values[3][0] = -(right + left) / (right - left);
+    result->mat_values[3][1] = -(top + bottom) / (top - bottom);
+}
+
 void draw_loop(GLFWwindow *window) {
 	glfwMakeContextCurrent(window);
 
-	sShader demo_shader(vertex_shader, fragment_shader);
-	const float triangle_color[4] = {1.0f, 1.0f, 0.0f, 1.0f};
-	const float clip_vertex[] = {
-	   1.0f, 1.0f, 0.0f,
-	   1.0f, -1.0f, 0.0f,
-	   -1.0f, -1.0f, 0.0f,
-	   -1.0f, 1.0f, 0.0f
-	};
+	sMat44 models[6];
+	sVector4 colors[6] = {{}};
 
-	unsigned int indices[] = { 0, 1, 3, 1, 2, 3 };
+	models[0].set_position({50.5, .5, 0.0f});
+	models[0].set_scale({25.05, 25.05, 25.05f});
+	colors[0] = {0.0f, 1.0f, 1.0f, 1.0f};
 
-	// Send teh vertex to the GPU via Vertex Buffer Objects
-	unsigned int vbo, vao, ebo;
-	glGenVertexArrays(1, &vao);
-	glGenBuffers(1, &vbo);
-	glGenBuffers(1, &ebo);
+	models[1].set_position({-15.5, -12.5, 0.0f});
+	models[1].set_scale({8.15, 13.05, 4.05f});
+	colors[1] = {0.0f, 1.0f, .0f, 1.0f};
 
-	glBindVertexArray(vao);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(clip_vertex), clip_vertex, GL_STATIC_DRAW);
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
-	glEnableVertexAttribArray(0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	glBindVertexArray(0);
+	sCubeRenderer renderer;
+	cube_renderer_init(&renderer);
 
 	double prev_frame_time = glfwGetTime();
 	sInputLayer *input_state = get_game_input_instance();
@@ -144,26 +126,23 @@ void draw_loop(GLFWwindow *window) {
 		// Set to OpenGL viewport size anc coordinates
 		glViewport(0,0, width, heigth);
 
+		sMat44 proj_mat;
+
+		get_projection_matrix(&proj_mat, width, heigth);
+
 		// OpenGL stuff
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.5f, 0.0f, 0.5f, 1.0f);
+		glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
 		double curr_frame_time = glfwGetTime();
 		double elapsed_time = curr_frame_time - prev_frame_time;
 
 		// Mouse position control
 		glfwGetCursorPos(window, &temp_mouse_x, &temp_mouse_y);
-		input_state->mouse_speed_x = abs(input_state->mouse_pos_x - temp_mouse_x) * elapsed_time;
-		input_state->mouse_speed_y = abs(input_state->mouse_pos_y - temp_mouse_y) * elapsed_time;
-		input_state->mouse_pos_x = temp_mouse_x;
-		input_state->mouse_pos_y = temp_mouse_y;
 
-		demo_shader.activate();
-		glBindVertexArray(vao);
-		demo_shader.set_uniform_vector("u_color", triangle_color);
+		cube_renderer_render(&renderer, models, colors, 2, &proj_mat);
 
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		//glDrawArrays(GL_TRIANGLES, 0, 3);
+		std::cout << " ======== Frame end ======= " << std::endl;
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
