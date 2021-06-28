@@ -5,6 +5,7 @@
 #include "shader.h"
 #include "input_layer.h"
 #include "render_cubes.h"
+#include "SAT_collision_testing.h"
 
 #define WIN_WIDTH	640
 #define WIN_HEIGHT	480
@@ -85,10 +86,10 @@ void cursor_enter_callback(GLFWwindow *window, int entered) {
 void get_projection_matrix(sMat44 *result, float vp_width, float vp_height) {
     result->set_identity();
 
-    float left = (-vp_width) * 0.7f / 2.0f;
-    float right = (vp_width) * 0.7f / 2.0f;
-    float bottom = (-vp_height) * 0.7f / 2.0f;
-    float top = (vp_height) * 0.7f / 2.0f;
+    float left = (-vp_width) * 0.06f / 2.0f;
+    float right = (vp_width) * 0.06f / 2.0f;
+    float bottom = (-vp_height) * 0.06f / 2.0f;
+    float top = (vp_height) * 0.06f / 2.0f;
 
     result->mat_values[0][0] = 2.0f / (right - left);
     result->mat_values[1][1] = 2.0f / (top - bottom);
@@ -102,13 +103,19 @@ void draw_loop(GLFWwindow *window) {
 
 	sMat44 models[6];
 	sVector4 colors[6] = {{}};
+	sQuaternion4 rotations[6] = {{}};
 
-	models[0].set_position({50.5, .5, 0.0f});
-	models[0].set_scale({25.05, 25.05, 25.05f});
-	colors[0] = {0.0f, 1.0f, 1.0f, 1.0f};
+	rotations[0] = {1.0f, 0.0f, 0.0f, 0.0f};
+	rotations[1] = {1.0f, 0.0f, 0.0f, 0.0f};
 
-	models[1].set_position({-15.5, -12.5, 0.0f});
-	models[1].set_scale({8.15, 13.05, 4.05f});
+	models[0].set_scale({5.05, 5.05, 1.0f});
+	models[1].rotate(&rotations[0]);
+	models[0].set_position({0.5, .5, 0.0f});
+	colors[0] = {1.0f, 1.0f, 1.0f, 1.0f};
+
+	models[1].set_scale({4.15, 1.05, 1.0f});
+	models[1].rotate(&rotations[1]);
+	models[1].set_position({-1.5, -2.5, 0.0f});
 	colors[1] = {0.0f, 1.0f, .0f, 1.0f};
 
 	sCubeRenderer renderer;
@@ -139,6 +146,20 @@ void draw_loop(GLFWwindow *window) {
 
 		// Mouse position control
 		glfwGetCursorPos(window, &temp_mouse_x, &temp_mouse_y);
+
+		// Test collisions
+		for(int i = 0; i < 2; i++) {
+			for(int j = i; j < 2; j++) {
+				if (i == j) {
+					continue;
+				}
+				if (SAT_test_OBB(&models[i], rotations[i], &models[j], rotations[j])) {
+					std::cout << "Collision between " << i << " and " << j << std::endl;
+				} else {
+					std::cout << "No collision between " << i << " and " << j << std::endl;
+				}
+			}
+		}
 
 		cube_renderer_render(&renderer, models, colors, 2, &proj_mat);
 
