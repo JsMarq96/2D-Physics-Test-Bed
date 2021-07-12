@@ -3,12 +3,11 @@ cmake_minimum_required(VERSION 3.13)
 SET(CMAKE_CXX_COMPILER g++)
 SET(CMAKE_C_COMPILER gcc)
 
-SET(CMAKE_EXE_LINKER_FLAGS "-static -lpthread")
 
 project(GL_GLFW_TEMPLATE)
 
-file(GLOB CPP_SOURCES "src/*.cpp")
-file(GLOB C_SOURCES "src/*.c")
+file(GLOB_RECURSE CPP_SOURCES "src/*.cpp")
+file(GLOB_RECURSE C_SOURCES "src/*.c")
 set(includes_dir "includes/")
 
 add_executable(GL_GLFW_TEMPLATE ${CPP_SOURCES} ${C_SOURCES})

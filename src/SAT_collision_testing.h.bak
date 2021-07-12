@@ -1,0 +1,479 @@
+//
+// Created by jsmar on 16/06/2021.
+//
+
+#ifndef QUEST_DEMO_SAT_COLLISION_TESTING_H
+#define QUEST_DEMO_SAT_COLLISION_TESTING_H
+
+#include <float.h>
+
+#include "math.h"
+#include "geometry.h"
+
+#include "collision_types.h"
+
+
+struct sOBB {
+    sVector3 vertices[4];
+    int vertex_count = 4;
+
+    sVector3 normals[4];
+    int normals_count = 4;
+
+    sPlane  face_planes[4];
+    int faces_count = 4;
+
+    void init(const sMat44 *transform,
+              const sQuaternion4 &rotation) {
+        int faces_vertex_index[4][2] = {
+            {3, 1},
+            {3, 2},
+            {2, 0},
+            {1, 0}
+        };
+
+        vertices[0] = sVector3{};
+        vertices[1] = {1.0f, 0.0f, 0.0f};
+        vertices[2] = {0.0f, 1.0f, 0.0f};
+        vertices[3] = {1.0f, 1.0f, 0.0f};
+
+        std::cout << "Position " << std::endl;
+        for(int i = 0; i < 4; i++) {
+            vertices[i] = transform->multiply(vertices[i]);
+            std::cout <<  i << ") " << vertices[i].x << " " << vertices[i].y << " " << vertices[i].z << std::endl;
+        }
+        std::cout << "Normals: ============" << std::endl;
+
+        normals[0] = rotate_vector3(sVector3{1.0f, 0.0f, 0.0f}, rotation);
+        normals[1] = rotate_vector3(sVector3{0.0f, 1.0f, 0.0f}, rotation);
+        normals[2] = rotate_vector3(sVector3{-1.0f, 0.0f, 0.0f}, rotation);
+        normals[3] = rotate_vector3(sVector3{0.0f, -1.0f, 0.0f}, rotation);
+
+       for(int i = 0; i < 4; i++) {
+            std::cout << i << ") " << normals[i].x << " " << normals[i].y << " " << normals[i].z << std::endl;
+        }
+       //std::cout << " Planes origins: ++++++++++++++++" << std::endl;
+        vertex_count = 4;
+        normals_count = 4;
+        faces_count = 4;
+        // Gerate vertex planes
+        for(int i = 0; i < faces_count; i++) {
+            face_planes[i].origin_point = sVector3{
+              (vertices[faces_vertex_index[i][0]].x + vertices[faces_vertex_index[i][1]].x) / 2.0f, 
+              (vertices[faces_vertex_index[i][0]].y + vertices[faces_vertex_index[i][1]].y) / 2.0f, 
+              (vertices[faces_vertex_index[i][0]].z + vertices[faces_vertex_index[i][1]].z) / 2.0f};
+            face_planes[i].normal = normals[i];
+            //std::cout << i << ") " << face_planes[i].origin_point.x << " " << face_planes[i].origin_point.y << " " << face_planes[i].origin_point.z << std::endl;
+        }
+        std::cout << "####################" << std::endl;
+    }
+};
+
+inline void get_OBB_raw_vertex(const sMat44 transform,
+                               sVector3 *result) {
+    result[0] = sVector3{};
+    result[1] = {1.0f, 0.0f, 0.0f};
+    result[2] = {0.0f, 1.0f, 0.0f};
+    result[3] = {1.0f, 1.0f, 0.0f};
+
+    for(int i = 0; i < 8; i++) {
+        result[i] = transform.multiply(result[i]);
+    }
+}
+
+inline bool intersect_vertex_group_on_axis(const sVector3 obb1[4],
+                                           const sVector3 obb2[4],
+                                           const sVector3 axis,
+                                           float          *diff) {
+  float obb1_shape_min = FLT_MAX;
+  float obb1_shape_max = FLT_MIN;
+  float obb2_shape_min = FLT_MAX;
+  float obb2_shape_max = FLT_MIN;
+
+  for(int i = 0; i < 4; i++) {
+    float proj = dot_prod(obb1[i], axis);
+    obb1_shape_max = MAX(proj, obb1_shape_max);
+    obb1_shape_min = MIN(proj, obb1_shape_min);
+  }
+
+  for(int i = 0; i < 4; i++) {
+    float proj = dot_prod(obb2[i], axis);
+    obb2_shape_max = MAX(proj, obb2_shape_max);
+    obb2_shape_min = MIN(proj, obb2_shape_min);
+  }
+
+  float maxest_max = MAX(obb1_shape_max, obb2_shape_max);
+  float minest_min = MIN(obb1_shape_min, obb2_shape_min);
+  std::cout << "MAX 1: " << obb1_shape_max << " MIN 1: " << obb1_shape_min << std::endl;
+  std::cout << "MAX 2: " << obb2_shape_max << " MIN 2: " << obb2_shape_min << std::endl;
+
+  float overlaping_size = maxest_max - minest_min;
+  float proj_sum = (obb1_shape_max - obb1_shape_min) + (obb2_shape_max - obb2_shape_min);
+
+  // Difference between total ovelap of the shapes, and the sum of the individual overlaps
+  *diff = overlaping_size - proj_sum;
+  std::cout << "DIFF: " << *diff << " <===== " << (overlaping_size >= proj_sum) << std::endl;
+  return overlaping_size >= proj_sum;
+}
+
+
+inline bool SAT_OBB_v_OBB(const sMat44 *obb1_transf,
+                          const sQuaternion4 &obb1_quad,
+                          const sMat44 *obb2_transf,
+                          const sQuaternion4 &obb2_quad) {
+  int coll_face_index_a, coll_face_index_b;
+  sOBB obb_a, obb_b;
+
+  std::cout << "Box 1" << std::endl;
+  obb_a.init(obb1_transf, obb1_quad);
+  std::cout << "Box 2" << std::endl;
+  obb_b.init(obb2_transf, obb2_quad);
+
+  float min_diff = FLT_MAX;
+  float diff = FLT_MAX;
+  int col_case = -1;
+
+  // Test all axis, since we need the face too
+  // Test normals of OBB1
+  std::cout << "+Test normals 1" << std::endl;
+  for (int i = 0; i < 2; i++) {
+    if(!intersect_vertex_group_on_axis(obb_a.vertices,
+                                       obb_b.vertices,
+                                       obb_a.normals[i],
+                                       &diff)) {
+      return false;
+    }
+
+    if (min_diff > diff) {
+      min_diff = diff;
+      col_case = i;
+    }
+  }
+
+  std::cout << "+Test normals 2" << std::endl;
+
+  // Test normals of OBB2
+  for (int i = 0; i < 2; i++) {
+    if(!intersect_vertex_group_on_axis(obb_a.vertices,
+                                       obb_b.vertices,
+                                       obb_b.normals[i],
+                                       &diff)) {
+      return false;
+    }
+
+    if (min_diff > diff) {
+      min_diff = diff;
+      col_case = i + 4;
+    }
+  }
+
+  std::cout << "Collision face: " << col_case << std::endl;
+
+  return true;
+}
+
+
+inline bool SAT_OBB_v_OBB1(const sMat44 obb1_transform,
+                          const sQuaternion4 obb1_rotation,
+                          const sMat44 obb2_transform,
+                          const sQuaternion4 obb2_rotation,
+                          sCollisionManifold  *result_manifold) {
+    int OBB_faces_indexing[6][4] = {
+            {0, 1, 2, 3},
+            {6, 7, 3, 1},
+            {2, 3, 7, 5},
+            {5, 4, 7, 6},
+            {4, 6, 0, 1},
+            {5, 4, 2, 0}
+    };
+    sVector3 obb1_vertex[8] = {};
+    sVector3 obb2_vertex[8] = {};
+
+    sVector3 col_normal{};
+
+    get_OBB_raw_vertex(obb1_transform,
+                       &obb1_vertex[0]);
+    get_OBB_raw_vertex(obb2_transform,
+                       &obb2_vertex[0]);
+
+    sVector3 norms_1[] = {
+            rotate_vector3(sVector3{1.0f, 0.0f, 0.0f}, obb1_rotation),
+            rotate_vector3(sVector3{0.0f, 1.0f, 0.0f}, obb1_rotation),
+
+            rotate_vector3(sVector3{-1.0f, 0.0f, 0.0f}, obb1_rotation),
+            rotate_vector3(sVector3{0.0f, -1.0f, 0.0f}, obb1_rotation)
+    };
+
+    sVector3 norms_2[] = {
+            rotate_vector3(sVector3{1.0f, 0.0f, 0.0f}, obb2_rotation),
+            rotate_vector3(sVector3{0.0f, 1.0f, 0.0f}, obb2_rotation),
+
+            rotate_vector3(sVector3{-1.0f, 0.0f, 0.0f}, obb2_rotation),
+            rotate_vector3(sVector3{0.0f, -1.0f, 0.0f}, obb2_rotation)
+    };
+
+    float min_diff = FLT_MAX;
+    float diff = FLT_MAX;
+    int col_case = -1;
+
+    // Test all axis, since we need the face too
+    // Test normals of OBB1
+    for (int i = 0; i < 6; i++) {
+        if(!intersect_vertex_group_on_axis(obb1_vertex,
+                                           obb2_vertex,
+                                           norms_1[i],
+                                           &diff)) {
+            return false;
+        }
+
+        if (min_diff > diff) {
+            col_normal = norms_1[i];
+            min_diff = diff;
+            col_case = i;
+        }
+    }
+
+    // Test normals of OBB2
+    for (int i = 0; i < 6; i++) {
+        if(!intersect_vertex_group_on_axis(obb1_vertex,
+                                           obb2_vertex,
+                                           norms_1[i],
+                                           &diff)) {
+            return false;
+        }
+
+        if (min_diff > diff) {
+            col_normal = norms_1[i];
+            min_diff = diff;
+            col_case = i + 6;
+        }
+    }
+
+    // TODO: test corners
+
+
+    /// http://www.randygaul.net/2013/03/28/custom-physics-engine-part-2-manifold-generation/
+
+    sVector3 reference_face[4] = {};
+    sVector3 indent_face[4] = {};
+
+    int reference_face_index = 0;
+    int indent_face_index = -1;
+
+    // Get the Incident face
+    if (col_case < 6) {
+        // The reference face is on OBB1
+        float min_dot = FLT_MAX;
+        float dot = 0.f;
+
+        for(int i = 0; i < 6; i++) {
+            dot = dot_prod(col_normal, norms_2[i]);
+            if (dot < min_dot) {
+                min_dot = dot;
+                indent_face_index = i;
+            }
+        }
+
+        reference_face_index = col_case;
+
+        reference_face[0] = obb1_vertex[OBB_faces_indexing[reference_face_index][0]];
+        reference_face[1] = obb1_vertex[OBB_faces_indexing[reference_face_index][1]];
+        reference_face[2] = obb1_vertex[OBB_faces_indexing[reference_face_index][2]];
+        reference_face[3] = obb1_vertex[OBB_faces_indexing[reference_face_index][3]];
+
+        indent_face[0] = obb2_vertex[OBB_faces_indexing[indent_face_index][0]];
+        indent_face[1] = obb2_vertex[OBB_faces_indexing[indent_face_index][1]];
+        indent_face[2] = obb2_vertex[OBB_faces_indexing[indent_face_index][2]];
+        indent_face[3] = obb2_vertex[OBB_faces_indexing[indent_face_index][3]];
+
+    } else if (col_case < 12) {
+        // The reference face is on OBB2
+        float min_dot = FLT_MAX;
+        float dot = 0.0f;
+
+        for(int i = 0; i < 6; i++) {
+            dot = dot_prod(col_normal, norms_1[i]);
+            if (dot < min_dot) {
+                min_dot = dot;
+                indent_face_index = i;
+            }
+        }
+
+        reference_face_index = col_case - 6;
+
+        reference_face[0] = obb2_vertex[OBB_faces_indexing[reference_face_index][0]];
+        reference_face[1] = obb2_vertex[OBB_faces_indexing[reference_face_index][1]];
+        reference_face[2] = obb2_vertex[OBB_faces_indexing[reference_face_index][2]];
+        reference_face[3] = obb2_vertex[OBB_faces_indexing[reference_face_index][3]];
+
+        indent_face[0] = obb1_vertex[OBB_faces_indexing[indent_face_index][0]];
+        indent_face[1] = obb1_vertex[OBB_faces_indexing[indent_face_index][1]];
+        indent_face[2] = obb1_vertex[OBB_faces_indexing[indent_face_index][2]];
+        indent_face[3] = obb1_vertex[OBB_faces_indexing[indent_face_index][3]];
+    }
+
+    int index = 0;
+
+    sPlane refence_plane;
+
+    refence_plane.origin_point = sVector3{
+            (reference_face[0].x + reference_face[1].x + reference_face[2].x + reference_face[3].x) / 4.0f,
+            (reference_face[0].y + reference_face[1].y + reference_face[2].y + reference_face[3].y) / 4.0f,
+            (reference_face[0].z + reference_face[1].z + reference_face[2].z + reference_face[3].z) / 4.0f
+    };
+
+    refence_plane.normal = col_normal;
+
+    // Skip clipping for OBBs... Lets see how it goes
+
+    for(int i = 0; i < 4; i++) {
+        float dist = refence_plane.distance(indent_face[i]);
+        if (dist <= 0.0f) {
+            result_manifold->points_depth[index] = dist;
+            result_manifold->contact_points[index++] = indent_face[i];
+        }
+    }
+
+    result_manifold->contact_point_count = index;
+    result_manifold->collision_normal = col_normal;
+
+    return true;
+}
+
+inline int get_support_of_dir(const sVector3  *vertices,
+                       const int        vertices_count,
+                       const sVector3   direction) {
+  int best_proj = -1;
+  float best_depth = -FLT_MAX;
+  for(int i = 0; i < vertices_count; i++) {
+    float depth = dot_prod(vertices[i], direction);
+
+    if (depth >= best_depth) {
+      best_proj = i;
+      best_depth = depth;
+    }
+  }
+
+  return best_proj;
+}
+
+inline float get_max_separation(const sBoxCollider &col1,
+                                const sBoxCollider &col2,
+                                int   *max_face_separation_index) {
+   // The computations are going to be in the local space of the obb2
+
+   int max_separation_index = -1;
+   int max_separacion = -FLT_MAX;
+
+   sMat44 obb2_transform;
+   col2.transform.transpose_to(&obb2_transform);
+  //col2.transform.transpose_to(&obb2_transform);
+
+   obb2_transform.multiply(&col1.transform);
+
+   // NOTE:, maybe there is no need to test for all 8 faces,
+   // since most are parallel
+   // TODO: look this
+   for(int i = 0; i < 8; i++) {
+      sPlane curr_plane = col1.get_plane_of_face(i, true);
+      curr_plane.apply_transform(&obb2_transform);
+      std::cout << "Plane " << i << "  center " << curr_plane.origin_point.x << " " << curr_plane.origin_point.y << " " << curr_plane.origin_point.z << std::endl; 
+      sVector3 support = col2.vertices[get_support_of_dir(col2.vertices, 
+                                            8, 
+                                            curr_plane.normal)];
+std::cout << "Support " << support.x << " " << support.y << " " << support.z << " of norm " << curr_plane.normal.x << " " << curr_plane.normal.y << " " << curr_plane.normal.x << std::endl;
+      float separation = curr_plane.distance(support);
+
+      if (separation > max_separacion) {
+        max_separacion = separation;
+        max_separation_index = i;
+      }
+   }
+
+   *max_face_separation_index = max_separation_index;
+
+   return max_separacion;
+}
+
+
+inline bool SAT_2D_OBB(const sVector3      &obb1_pos,
+                const sVector3      &obb1_size,
+                const sQuaternion4  &obb1_rotation,
+                const sVector3      &obb2_pos,
+                const sVector3      &obb2_size,
+                const sQuaternion4  &obb2_rotation) {
+  sBoxCollider col1, col2;
+
+  col1.modify(obb1_pos, 
+                obb1_size,
+                obb1_rotation);
+
+  col2.modify(obb2_pos, 
+                obb2_size, 
+                obb2_rotation);
+
+  std::cout << obb2_pos.x << " " << obb2_pos.y << std::endl;
+
+  int separation_face_1_2 = -1;
+  float separation_1_2 = get_max_separation(col1, col2, &separation_face_1_2);
+  std::cout << "Test 0: "<< separation_1_2 << " Face: " << separation_face_1_2 << std::endl;
+  if (separation_1_2 > 0.0f) {
+    return false;
+  } 
+
+  int separation_face_2_1 = -1; 
+  float separation_2_1 = get_max_separation(col2, col1, &separation_face_2_1);
+  std::cout << "Test 1: "<< separation_2_1 << " Face: " << separation_face_2_1 << std::endl;
+  if (separation_2_1 > 0.0f) {
+    return false;
+  }
+   
+  return true; 
+}
+
+/*
+
+https://ia801303.us.archive.org/30/items/GDC2013Gregorius/GDC2013-Gregorius.pdf
+https://www.randygaul.net/2013/03/28/custom-physics-engine-part-2-manifold-generation/
+https://gamedevelopment.tutsplus.com/tutorials/understanding-sutherland-hodgman-clipping-for-physics-engines--gamedev-11917
+Numerical boutsness
+
+
+inline float get_axis_overlap(const float size1,
+                              const float size2,
+                              const float min_distance){
+    return (size1 / 2.0f) + (size2 / 2.0f) - ABS(min_distance);
+}
+
+inline bool SAT_AABB_AABB_collision(const sVector3        aabb1_center,
+                                    const sVector3        aabb1_size,
+                                    const sVector3        aabb2_center,
+                                    const sVector3        aabb2_size,
+                                    sCollisionManifold    *result) {
+    if (aabb1_center.x <= (aabb2_center.x + aabb2_size.x) && (aabb1_center.x + aabb1_size.x) >= aabb2_center.x) {
+        return false;
+    }
+    if (aabb1_center.y <= (aabb2_center.y + aabb2_size.y) && (aabb1_center.y + aabb1_size.y) >= aabb2_center.y) {
+        return false;
+    }
+    if (aabb1_center.z <= (aabb2_center.z + aabb2_size.z) && (aabb1_center.z + aabb1_size.z) >= aabb2_center.z) {
+        return false;
+    }
+
+    // Fill collision manifold
+    float overlap_x = get_axis_overlap(aabb1_size.x,
+                                       aabb2_size.x,
+                                       aabb1_center.x - aabb1_center.x);
+
+    float overlap_y = get_axis_overlap(aabb1_size.y,
+                                       aabb2_size.y,
+                                       aabb1_center.y - aabb1_center.y);
+
+    float overlap_z = get_axis_overlap(aabb1_size.z,
+                                       aabb2_size.z,
+                                       aabb1_center.z - aabb1_center.z);
+
+    return true;
+}*/
+
+#endif //QUEST_DEMO_SAT_COLLISION_TESTING_H

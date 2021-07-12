@@ -6,7 +6,7 @@
 
 #include <string.h>
 #include <assert.h>
-#include "math.h"
+#include <cmath>
 
 /**
  * Single header Math library with usefull utilities and structures
@@ -54,6 +54,21 @@ union sVector2 {
 union sVector3 {
     struct { float x = 0.0f; float y = 0.0f; float z = 0.0f; };
     float raw_values[3];
+
+    inline void multiply(const sVector3 &vect) {
+      x *= vect.x;
+      y *= vect.y;
+      z *= vect.z;
+    }
+
+    inline sVector3 invert() const {
+      return sVector3{-x, -y, -z};
+    }; 
+
+    inline sVector3 normalize() const {
+      float magnitude = sqrt((x*x)+ (y*y) + (z*z));
+      return sVector3{x / magnitude, y / magnitude, z / magnitude};
+    }
 };
 
 union sVector4 {
@@ -116,13 +131,13 @@ union sMat44 {
     /// SIMPLE OPERATIONS
     ///
 
-    inline void set_position(const sVector3 vec) {
+    inline void set_position(const sVector3 &vec) {
         px = vec.x;
         py = vec.y;
         pz = vec.z;
     }
 
-    inline void add_position(const sVector3 vec) {
+    inline void add_position(const sVector3 &vec) {
         px += vec.x;
         py += vec.y;
         pz += vec.z;
@@ -191,6 +206,14 @@ union sMat44 {
         float y = sy1 * vect.x + (sy2 * vect.y + (sy3 * vect.z + py));
         float z = sz1 * vect.x + (sz2 * vect.y + (sz3 * vect.z + pz));
         return sVector3{x, y, z};
+    }
+
+    inline void transpose_to(sMat44* result) const {
+       for(int i = 0; i < 4; i++) {
+        for(int j = 0; j < 4; j++) {
+          result->mat_values[i][j] = mat_values[j][i];
+        }
+       }
     }
 
     // Yoinked from a stackoverlof that yoinked from the MESA implmentation
@@ -334,6 +357,8 @@ inline float MIN(float x, float y) { return (x < y) ? x : y; }
 inline int MAX(int x, int y) { return (x >= y) ? x : y; }
 inline int MIN(int x, int y) { return (x < y) ? x : y; }
 
+inline float to_radians(float degree) { return degree * (M_PI / 180.0); }
+
 inline float abs_diff(const float  x,
                       const float  y) {
     return (x > y) ? x - y : y - x;
@@ -345,7 +370,7 @@ inline float dot_prod(const sVector3 v1, const sVector3 v2) {
 
 inline sVector3 cross_prod(const sVector3 v1, const sVector3 v2) {
     return sVector3{v1.y * v2.z - v1.z * v2.y,
-                    v1.z * v2.x - v1.x * v2.y,
+                    v1.z * v2.x - v1.x * v2.z,
                     v1.x * v2.y - v1.y * v2.x};
 }
 
