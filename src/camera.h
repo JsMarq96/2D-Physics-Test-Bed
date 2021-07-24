@@ -4,7 +4,6 @@
 #include <cstring>
 #include <cmath>
 #include "math.h"
-#include "imgui/imgui.h"
 
 /**
  * Camera functions
@@ -77,17 +76,7 @@ struct sCamera {
       result->mat_values[2][2] = -(far + near) / (far - near);
       result->mat_values[2][3] = -1.0f;
       result->mat_values[3][2] = -(2.0f * far * near) / (far - near);
-      result->mat_values[3][3] = 0.0f;
-      ImGui::Text("Aspcet raio %f FOV %f", aspect_ratio, to_radians(FOV));
-
-      for (int i = 0; i < 4; i++) {
-      ImGui::Text("%f %f %f %f", 
-          result->mat_values[i][0], 
-          result->mat_values[i][1], 
-          result->mat_values[i][2], 
-          result->mat_values[i][3]);
-    }
-
+      result->mat_values[3][3] = 0.0f; 
     }
 
     void
@@ -95,14 +84,6 @@ struct sCamera {
       f = sVector3{center.x - position.x, center.y - position.y, center.z - position.z}.normalize();
       s = cross_prod(f, sVector3{0.f, 1.0f, 0.0f}).normalize();
       u = cross_prod(s, f);
-      
-      ImGui::Text("eye %f %f %f", position.x, position.y, position.z);
-      ImGui::Text("center %f %f %f", center.x, center.y, center.z);
-      ImGui::Separator();
-      //ImGui::Text("up %f %f %f", u.x, u.y, u.z);
-      ImGui::Text("f %f %f %f", f.x, f.y, f.z);
-      ImGui::Text("s %f %f %f", s.x, s.y, s.z);
-      ImGui::Text("u %f %f %f", u.x, u.y, u.z);
 
       view_mat.set_identity();
       view_mat.mat_values[0][0] = s.x;
@@ -116,17 +97,7 @@ struct sCamera {
       view_mat.mat_values[2][2] = -f.z;
       view_mat.mat_values[3][0] = -dot_prod(s, position);
       view_mat.mat_values[3][1] = -dot_prod(u, position);
-      view_mat.mat_values[3][2] = dot_prod(f, position);
-  
-      ImGui::Separator();
-      for (int i = 0; i < 4; i++) {
-      ImGui::Text("%f %f %f %f", 
-          view_mat.mat_values[i][0], 
-          view_mat.mat_values[i][1], 
-          view_mat.mat_values[i][2], 
-          view_mat.mat_values[i][3]);
-    }
-
+      view_mat.mat_values[3][2] = dot_prod(f, position); 
     }
 
     void

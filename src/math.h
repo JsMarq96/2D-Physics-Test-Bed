@@ -69,6 +69,14 @@ union sVector3 {
       float magnitude = sqrt((x*x)+ (y*y) + (z*z));
       return sVector3{x / magnitude, y / magnitude, z / magnitude};
     }
+
+    inline float magnitude() const {
+      return sqrt( (x*x) + (y*y) + (z*z) );
+    }
+
+    inline bool is_equal(const sVector3 v) {
+      return v.x == x && v.y == y && v.z == z;
+    }
 };
 
 union sVector4 {
@@ -93,6 +101,14 @@ union sMat33 {
     inline sVector2 multiply(const sVector2   *vect) {
         return sVector2{ (vect->x * sx1) + (vect->y * sy1) + px, (vect->x * sx2) + (vect->y * sy2) + py };
     }
+
+    /*inline sVector3 multiply(const sVector3   vect) const{
+        float x = sx1 * vect.x + (sx2 * vect.y + (sx3 * vect.z + px));
+        float y = sy1 * vect.x + (sy2 * vect.y + (sy3 * vect.z + py));
+        float z = tmp1 * vect.x + (tmp2 * vect.y + (tmp3 * vect.z + pz));
+        return sVector3{x, y, z};
+    }*/
+
 
     inline void set_position(const sVector2    vec) {
         px = vec.x;
@@ -209,11 +225,22 @@ union sMat44 {
     }
 
     inline void transpose_to(sMat44* result) const {
-       for(int i = 0; i < 4; i++) {
-        for(int j = 0; j < 4; j++) {
-          result->mat_values[i][j] = mat_values[j][i];
-        }
-       }
+      result->mat_values[0][0] = mat_values[0][0];
+      result->mat_values[0][1] = mat_values[1][0];
+      result->mat_values[0][2] = mat_values[2][0];
+      result->mat_values[0][3] = mat_values[3][0];
+      result->mat_values[1][0] = mat_values[0][1];
+      result->mat_values[1][1] = mat_values[1][1];
+      result->mat_values[1][2] = mat_values[2][1];
+      result->mat_values[1][3] = mat_values[3][1];
+      result->mat_values[2][0] = mat_values[0][2];
+      result->mat_values[2][1] = mat_values[1][2];
+      result->mat_values[2][2] = mat_values[2][2];
+      result->mat_values[2][3] = mat_values[3][2];
+      result->mat_values[3][0] = mat_values[0][3];
+      result->mat_values[3][1] = mat_values[1][3];
+      result->mat_values[3][2] = mat_values[2][3];
+      result->mat_values[3][3] = mat_values[3][3];
     }
 
     // Yoinked from a stackoverlof that yoinked from the MESA implmentation
@@ -356,6 +383,19 @@ inline float MAX(float x, float y) { return (x >= y) ? x : y; }
 inline float MIN(float x, float y) { return (x < y) ? x : y; }
 inline int MAX(int x, int y) { return (x >= y) ? x : y; }
 inline int MIN(int x, int y) { return (x < y) ? x : y; }
+
+inline float LERP(const float a,
+                  const float b,
+                  const float alpha) {
+  return a + (b - a) * alpha;
+}
+inline sVector3 LERP_3D(const sVector3 &v1, 
+                        const sVector3 &v2, 
+                        const float alpha) {
+  return sVector3{LERP(v1.x, v2.x, alpha),
+                  LERP(v1.y, v2.y, alpha),
+                  LERP(v1.z, v2.z, alpha) }; 
+}
 
 inline float to_radians(float degree) { return degree * (M_PI / 180.0); }
 

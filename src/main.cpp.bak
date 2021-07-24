@@ -6,9 +6,7 @@
 #include "input_layer.h"
 #include "render_cubes.h"
 #include "camera.h"
-#include "collision_testing.h"
-#include "types.h"
-#include "physics.h"
+#include "SAT_collision_testing.h"
 #include "collision_resolution.h"
 
 // Dear IMGUI
@@ -92,6 +90,21 @@ void cursor_enter_callback(GLFWwindow *window, int entered) {
 	input->is_mouse_on_screen = entered;
 }
 
+void get_projection_matrix(sMat44 *result, float vp_width, float vp_height) {
+    result->set_identity();
+
+    float left = (-vp_width) * 0.06f / 2.0f;
+    float right = (vp_width) * 0.06f / 2.0f;
+    float bottom = (-vp_height) * 0.06f / 2.0f;
+    float top = (vp_height) * 0.06f / 2.0f;
+
+    result->mat_values[0][0] = 2.0f / (right - left);
+    result->mat_values[1][1] = 2.0f / (top - bottom);
+    result->mat_values[2][2] = -1.0f;
+    result->mat_values[3][0] = -(right + left) / (right - left);
+    result->mat_values[3][1] = -(top + bottom) / (top - bottom);
+}
+
 sVector3 rotate_arround(const sVector3 pos, 
                         const sVector3 center, 
                         const float angle) {
@@ -106,56 +119,63 @@ sVector3 rotate_arround(const sVector3 pos,
 
 void draw_loop(GLFWwindow *window) {
 	glfwMakeContextCurrent(window);
-  char names[4][5] = {
-    "WHIT",
-    "RED",
-    "GREN",
-    "BLU"
-  };
-  sRawGeometry cubes[4];
-  sTransform   transforms[4];
 
-  cubes[0].init_cuboid({10.0f, 1.0f, 10.0f});
-  transforms[0].position = {-5.0f, 0.0f, -5.0f};
-  transforms[0].scale = {10.0f, 1.0f, 10.0f};
-  //transforms[0].rotation.set_identity();
+	sMat44 models[10];
+	sVector4 colors[10] = {{}};
+	sQuaternion4 rotations[10] = {{}};
 
-  cubes[1].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[1].position = {0.0f, 3.0f, 0.0f};
-  //transforms[1].rotation.set_identity();
+  sMat44 models_col[10];
+	sVector4 colors_col[10] = {{}};
 
-  cubes[2].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[2].position = {0.5f, 4.5f, 0.0f};
-  //transforms[2].rotation.set_identity();
+  sCollisionResolution phys_engine;
 
-  cubes[3].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[3].position = {1.5f, 2.0f, 1.5f};
-  //transforms[3].rotation.set_identity();
+	//rotations[0] = {0.917f, 0.0f, 0.f, -0.383f};
+	rotations[0] = {1.0f, 0.0f, 0.0f, 0.0f};
+  rotations[1] = {1.0f, 0.0f, 0.0f, 0.0f};
 
-  sVector4 colors[4];
-  colors[0] = {1.0f, 1.0f, 1.0f, 1.0f};
-  colors[1] = {1.0f, 0.0f, 0.0f, 1.0f};
-  colors[2] = {0.0f, 1.0f, 0.0f, 1.0f};
-  colors[3] = {0.0f, 0.0f, 1.0f, 1.0f};
+	phys_engine.models[0].set_scale({9.80f, 1.0f, 9.90f});
+	//models[0].rotate(&rotations[0]);
+	phys_engine.models[0].set_position({-4.5f, -2.5f, -4.50f});
+	colors[0] = {1.0f, 1.0f, 1.0f, 1.0f};
 
-  sCubeRenderer renderer;
-  sPhysicsWorld phys_instance;
-  phys_instance.transforms = &transforms[0];
+	//models[1].set_scale({4.15, 1.05, 1.0f});
+  //models[1].set_scale({1.0f, 1.0f, 1.0f});
+	//models[1].rotate(&rotations[1]);
+	phys_engine.models[1].set_position({-2.5, 2.2, 0.0f});
+	colors[1] = {0.0f, 1.0f, .0f, 1.0f};
 
-  phys_instance.mass[0] = 0.0f;
-  phys_instance.mass[1] = 5.0f;
-  phys_instance.mass[2] = 2.0f;
-  phys_instance.mass[3] = 1.0f;
+  phys_engine.models[2].set_position({-2.0, 4.2, 0.0f});
+	colors[2] = {0.0f, 1.0f, 1.0f, 1.0f};
 
-  phys_instance.is_static[0] = true;
+  phys_engine.models[3].set_position({2.5, 1.2, 5.0f});
+	colors[3] = {1.0f, 1.0f, .0f, 1.0f};
 
-  cube_renderer_init(&renderer);
-  float prev_frame_time = glfwGetTime();
+  phys_engine.enabled[0] = true;
+  phys_engine.enabled[1] = true;
+  phys_engine.enabled[2] = true;
+  phys_engine.enabled[3] = true;
+
+  phys_engine.attribs[0] = IS_STATIC;
+
+  phys_engine.mass[0] = 5.0f;
+  phys_engine.mass[1] = 10.0f;
+  phys_engine.mass[2] = 15.0f;
+  phys_engine.mass[3] = 6.0f;
+
+	sCubeRenderer renderer;
+	cube_renderer_init(&renderer);
+
+	double prev_frame_time = glfwGetTime();
+	sInputLayer *input_state = get_game_input_instance();
+
   sCamera camera;
+
+  //camera.right = sVector3{0.0f, 0.0f, 3.0f};
+  //camera.up = sVector3{0.0f, 0.f, 0.f};
+  //camera.forward = sVector3{0.0f, 1.0f, 0.f};
+  camera.position = sVector3{5.0f, 1.0f, 5.0f}; 
+
   float camera_rot = 0.0f;
-
-  camera.position = {5.0f, 3.5f, 5.0f};
-
 	while(!glfwWindowShouldClose(window)) {
 		// Draw loop
 		int width, heigth;
@@ -179,7 +199,6 @@ void draw_loop(GLFWwindow *window) {
 
 		double curr_frame_time = glfwGetTime();
 		double elapsed_time = curr_frame_time - prev_frame_time;
-    prev_frame_time = curr_frame_time;
 
     camera_rot = 1.10f; 
     camera.position = rotate_arround(camera.position, 
@@ -193,44 +212,68 @@ void draw_loop(GLFWwindow *window) {
                                                 (float)width / (float)heigth,
                                                 &proj_mat);
 
-    phys_instance.calculate_gravity();
-    phys_instance.update(elapsed_time);
+    //camera.look_at(positions[1]);
+		// Mouse position control
+		glfwGetCursorPos(window, &temp_mouse_x, &temp_mouse_y);
 
-    ImGui::Begin("Collisions");
-    for(int i = 0; i < 4; i++) {
-      for(int j = i+1; j < 4; j++) {
-        ImGui::Text("Obj %d %d", i, j);
-        if (SAT_test(cubes[i], 
-                     transforms[i], 
-                     cubes[j], 
-                     transforms[j])) {
-          // Collision!
-          ImGui::Text("Collision between %s and %s", names[i], names[j]);
+    /*ImGui::Begin("Position data");
+    ImGui::Text("Camera pos %f %f %f angle: %f", camera.position.x, camera.position.y, camera.position.z, camera_rot);
+    for (int i = 0; i < 2; i++) {
+      ImGui::Text("Obj: %i", i);
+      ImGui::Text("Pos: x: %f y: %f z: %f", models[i].px, models[i].py, models[i].pz);
+      ImGui::Text("Rot: %f %f %f %f", rotations[i].x, rotations[i].y, rotations[i].z, rotations[i].w);
+      ImGui::Separator();
+    }
+    ImGui::End();*/
+
+    phys_engine.update_positions(elapsed_time);
+
+		// Test collisions
+    ImGui::Begin("Collision data");
+
+    int to_render_index = 0;
+    sCollisionManifold manifold;
+		for(int i = 0; i < 3; i++) {
+			for(int j = i; j < 3; j++) {
+				if (i == j) {
+					continue;
+				}
+        sBoxCollider col1, col2;
+        col1.modify(phys_engine.models[i], 
+                    rotations[i]);
+
+        col2.modify(phys_engine.models[j], 
+                    rotations[j]);
+
+        manifold.obj1_index = i;
+        manifold.obj2_index = j;
+
+        if (SAT_test_OBB_v_OBB(col1, col2, &manifold)) {
+          std::cout << "Collision detected" << std::endl;
+          //ImGui::Text("Collision between %i and %i", i, j); 
+          for(int i = 0; i < manifold.contact_point_count; i++) {
+            models_col[i].set_scale({0.1f, 0.1f, 0.1f});
+            models_col[i].set_position(manifold.contact_points[i]);
+            colors_col[i] = {1.0f, 0.0f, 0.0f};
+          }
+
+          cube_renderer_render(&renderer, models_col, colors_col, manifold.contact_point_count, &proj_mat);
+          phys_engine.resolve_collision(manifold);
         } else {
-          // no collision
-        }
-        ImGui::Separator();
-      }
+          std::cout << "No collision detected" << std::endl;
+        }        
+		  }
     }
     ImGui::End();
 
-    sMat44 models[4]; 
-
-    ImGui::Begin("Objects");
-    for(int i = 0; i < 4; i++) {
-      models[i].set_identity();
-      models[i].set_scale(transforms[i].scale);
-      // Rotation
-      models[i].set_position(transforms[i].position);
-      ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
-    }
-    ImGui::End();
-    cube_renderer_render(&renderer, models, colors, 4, &proj_mat);
+    int min_shapes = 0; 
+		cube_renderer_render(&renderer, phys_engine.models, colors, 3, &proj_mat);
+    //cube_renderer_render(&renderer, models, colors, 2, &proj_mat);
+    cube_renderer_render(&renderer, models_col, colors_col, manifold.contact_point_count, &proj_mat);
+		std::cout << " ======== Frame end ======= " << std::endl; 
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    std::cout << "==== End Frame ====" << std::endl;
 
 		glfwSwapBuffers(window);
 	}
