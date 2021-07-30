@@ -50,14 +50,16 @@ struct sPlane {
     }
 
   inline void clip_segment(sVector3 *p1, 
-                           sVector3 *p2) const {
+                           sVector3 *p2,
+                           bool     *is_outside) const {
       float dist_p1 = distance(*p1);
       float dist_p2 = distance(*p2); 
-
+      
       // Fast exit, there is no internsection
       if (dist_p1 > 0.0f && dist_p2 > 0.0f) {
+        *is_outside = true;
         return;
-      } else if (dist_p1 < 0.0f && dist_p2 < 0.0f) {
+      } else if (dist_p1 < 0.0f && dist_p2 < 0.0f) { 
         return;
       }
 
@@ -66,17 +68,12 @@ struct sPlane {
       if (dist_p1 > 0.0f) {
         // The first point is outside, an the other is outside,
         // so we clip it 
-        *p1 = LERP_3D(*p1, *p2, 1.0f - (dist_p1 / p1_p2_dist));
-        //ImGui::Text("P1 %f %f %f dist %f  %f", p1.x, p1.y, p1.z, dist_p1, dist_p1 / p1_p2_dist);
-        //ImGui::Text("P2 %f %f %f dist %f", p2.x, p2.y, p2.z, dist_p2);
+        *p1 = LERP_3D(*p1, *p2, (dist_p1 / p1_p2_dist)); 
       } else if (dist_p2 > 0.0f) {
         // The second point is outside, an the other is outside,
         // so we clip it 
-        *p2 = LERP_3D(*p2, *p1, 1.0f - (dist_p2 / p1_p2_dist));
+        *p2 = LERP_3D(*p2, *p1, (dist_p2 / p1_p2_dist));
       } 
-      //ImGui::Text("P1 %f %f %f dist %f", clipped_p1->x, clipped_p1->y, clipped_p1->z, dist_p1);
-      //ImGui::Text("P2 %f %f %f dist %f", clipped_p2->x, clipped_p2->y, clipped_p2->z, dist_p2);
-      //ImGui::Separator();
   }
 
 };

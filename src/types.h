@@ -31,12 +31,10 @@ struct sTransform {
     position = tmp.multiply(position);
   }
 
-  inline sVector3 apply(const sVector3 vect) {
+  inline sVector3 apply(const sVector3 vect) const {
     sMat44 mat;
     mat.set_position(position);
-    return mat.multiply(vect);
-    //return result;
-    //return rotation.multiply(result);
+    return rotation_mat.multiply(mat.multiply(vect));
   }
 };
 
@@ -47,25 +45,34 @@ struct sRawGeometry {
   sVector3  *raw_points;
   sPlane    *planes;
 
-  int **face_indexes;
+  int *face_indexes;
+
+  bool is_cube = false;
 
   unsigned int raw_point_size = 0;
   unsigned int planes_size = 0;
   unsigned int points_per_plane = 0;
 
+  void get_face_vertices(const int       face_id, 
+                               sVector3  *vertices) const {
+    for(int i = 0; i < points_per_plane; i++) {
+      //vertices[i] = raw_points[face_indexes[face_id][i]]; 
+    }
+  }
+
   void init_cuboid(const sVector3 &c_scale) {
-    // Indexes
-    int box_LUT_vertices[6][4] = {
-      {0, 1, 3, 2},
-      {6, 7, 3, 2},
-      {0, 2, 6, 4},
-      {4, 5, 7, 6},
-      {0, 1, 5, 4},
-      {1, 3, 7, 5}
+    // Indexes of each face
+    int box_LUT_vertices[6 * 4] = {
+      4, 5, 7, 6,
+      6, 7, 3, 2,
+      0, 2, 6, 4,
+      0, 1, 3, 2,
+      0, 1, 5, 4,
+      1, 3, 7, 5
     };
 
     scale = c_scale;
-    face_indexes = (int**) malloc(sizeof(int) * 6 *4);
+    face_indexes = (int*) malloc(sizeof(int) * 6 * 4);
     memcpy(face_indexes, box_LUT_vertices, sizeof(box_LUT_vertices));
 
     // Raw pointers
@@ -85,7 +92,7 @@ struct sRawGeometry {
       sVector3 center = {};
 
       for(int j = 0; j < 4; j++) {
-        sVector3 tmp = raw_points[ box_LUT_vertices[i][j] ];
+        sVector3 tmp = raw_points[ box_LUT_vertices[(i * 4) + j] ];
         center.x += tmp.x;
         center.y += tmp.y;
         center.z += tmp.z;
@@ -98,16 +105,18 @@ struct sRawGeometry {
       planes[i].origin_point = center;
     }
     // Plane orientations
-    planes[0].normal = sVector3{0.0f, -1.0f, 0.0f};
+    planes[0].normal = sVector3{0.0f, 1.0f, 0.0f};
     planes[1].normal = sVector3{0.0f, 0.0f, 1.0f};
     planes[2].normal = sVector3{1.0f, 0.0f, 0.0f};
-    planes[3].normal = sVector3{0.0f, 1.0f, 0.0f};
+    planes[3].normal = sVector3{0.0f, -1.0f, 0.0f};
     planes[4].normal = sVector3{0.0f, 0.0f, -1.0f};
     planes[5].normal = sVector3{-1.0f, 0.0f, 0.0f};
 
     raw_point_size = 8;
     planes_size = 6;
-    points_per_plane = 4; 
+    points_per_plane = 4;
+    is_cube = true; // This signalizes to only test 3 axis, instead of all the surface
+                    // normals
   };
 
   void init_plane();

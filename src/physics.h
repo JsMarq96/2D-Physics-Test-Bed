@@ -43,7 +43,7 @@ struct sPhysicsWorld {
         continue;
       }
 
-      add_impulse(i, {0.0f, -0.009f, 0.0f});
+      add_impulse(i, {0.0f, -0.0009f, 0.0f});
     }
   }
 };

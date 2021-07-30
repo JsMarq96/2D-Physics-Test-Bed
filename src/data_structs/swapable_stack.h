@@ -17,27 +17,25 @@
  * By Juan S. Marquerie
  * */
 
-struct sSwapableStack {
-  char  *stack1 = NULL;
-  char  *stack2 = NULL;
 
-  char *stacks_list[STACKS_NUM] = { NULL };
+struct sSwapableVector3Stacks {
+  sVector3  *stack1 = NULL;
+  sVector3   *stack2 = NULL;
+
+  sVector3 *stacks_list[STACKS_NUM] = { NULL };
 
   size_t stacks_sizes[STACKS_NUM] = { 0 };
 
   int swap_index = 0;
-  size_t element_size = 0;
   size_t stack_max_size = 0;
 
   // =================
   // LIFECYCLE FUNCTIONS
   // ================
-  void init(const size_t  ielement_size, 
-            const size_t  istack_size) {
-    stack1 = (char*) malloc(ielement_size * istack_size);
-    stack2 = (char*) malloc(ielement_size * istack_size);
+  void init(const size_t  istack_size) {
+    stack1 = (sVector3*) malloc(sizeof(sVector3) * istack_size);
+    stack2 = (sVector3*) malloc(sizeof(sVector3) * istack_size);
 
-    element_size = ielement_size;
     stack_max_size = istack_size;
 
     stacks_list[0] = stack1;
@@ -60,20 +58,26 @@ struct sSwapableStack {
     return stacks_sizes[swap_index] == stack_max_size;
   }
 
-  inline void* get_element_from_current_stack(const int index) const {
-    return (void*) &stacks_list[swap_index][index * element_size];
+  inline sVector3 get_element_from_current_stack(const int index) const {
+    return stacks_list[swap_index][index];
   }
 
-  inline void add_element_to_current_stack(const void *value) {
-    memcpy(&stacks_list[swap_index][ stacks_sizes[swap_index] * element_size ], value, element_size);
+  inline void add_element_to_current_stack(const sVector3 &value) {
+    stacks_list[swap_index][ stacks_sizes[swap_index] ] =  value;
+    stacks_sizes[swap_index]++;
   }
 
   void clean_current_stack() {
-    memset(stacks_list[swap_index], 0, stack_max_size * element_size);
+    stacks_sizes[swap_index] = 0;
+    memset(stacks_list[swap_index], 0, stack_max_size * sizeof(sVector3));
   }
 
-  void *get_current_stack() {
-    return (void*) stacks_list[swap_index];
+  sVector3* get_current_stack() {
+    return  stacks_list[swap_index];
+  }
+
+  inline int get_current_stacks_size() const {
+    return stacks_sizes[swap_index];
   }
 
 };

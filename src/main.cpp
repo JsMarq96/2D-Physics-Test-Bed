@@ -108,7 +108,7 @@ void draw_loop(GLFWwindow *window) {
 	glfwMakeContextCurrent(window);
   char names[4][5] = {
     "WHIT",
-    "RED",
+    "BLAK",
     "GREN",
     "BLU"
   };
@@ -134,7 +134,7 @@ void draw_loop(GLFWwindow *window) {
 
   sVector4 colors[4];
   colors[0] = {1.0f, 1.0f, 1.0f, 1.0f};
-  colors[1] = {1.0f, 0.0f, 0.0f, 1.0f};
+  colors[1] = {0.0f, 0.0f, 0.0f, 1.0f};
   colors[2] = {0.0f, 1.0f, 0.0f, 1.0f};
   colors[3] = {0.0f, 0.0f, 1.0f, 1.0f};
 
@@ -199,13 +199,25 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Begin("Collisions");
     for(int i = 0; i < 4; i++) {
       for(int j = i+1; j < 4; j++) {
-        ImGui::Text("Obj %d %d", i, j);
+        //ImGui::Text("Obj %d %d", i, j);
+        sCollisionManifold manifold;
         if (SAT_test(cubes[i], 
                      transforms[i], 
                      cubes[j], 
-                     transforms[j])) {
+                     transforms[j],
+                     &manifold)) {
           // Collision!
-          ImGui::Text("Collision between %s and %s", names[i], names[j]);
+          ImGui::Text("Collision between Obj1 %s and obj2 %s", names[i], names[j]);
+          sMat44 points_models[6];
+          sVector4 point_colors[6];
+          for(int x = 0; x < manifold.contact_point_count; x++) {
+            points_models[x].set_identity();
+            points_models[x].set_scale({0.09, 0.05,0.09});
+            points_models[x].set_position(manifold.contact_points[x].sum({-0.05f, 0.f, -0.05f}));
+            point_colors[x] = {1.0f, 0.0f, 0.0f, 1.0f};
+          }
+
+          cube_renderer_render(&renderer, points_models, point_colors, manifold.contact_point_count, &proj_mat);
         } else {
           // no collision
         }
