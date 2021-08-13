@@ -67,6 +67,12 @@ struct sSwapableVector3Stacks {
     stacks_sizes[swap_index]++;
   }
 
+  inline void add_element_to_secundary_stack(const sVector3 &value) {
+    int index = (swap_index == 1) ? 0 : 1;
+    stacks_list[index][ stacks_sizes[index] ] = value;
+    stacks_sizes[index]++;
+  }
+
   void clean_current_stack() {
     stacks_sizes[swap_index] = 0;
     memset(stacks_list[swap_index], 0, stack_max_size * sizeof(sVector3));
@@ -78,6 +84,11 @@ struct sSwapableVector3Stacks {
 
   inline int get_current_stacks_size() const {
     return stacks_sizes[swap_index];
+  }
+
+  inline int get_secondary_stack_size() {
+    int index = (swap_index == 1) ? 0 : 1;
+    return stacks_sizes[index];
   }
 
 };

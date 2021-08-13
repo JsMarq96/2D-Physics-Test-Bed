@@ -121,11 +121,11 @@ void draw_loop(GLFWwindow *window) {
   //transforms[0].rotation.set_identity();
 
   cubes[1].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[1].position = {0.0f, 3.0f, 0.0f};
+  transforms[1].position = {0.0f, 2.15f, 0.0f};
   //transforms[1].rotation.set_identity();
 
   cubes[2].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[2].position = {0.5f, 4.5f, 0.0f};
+  transforms[2].position = {0.5f, 2.5f, 0.0f};
   //transforms[2].rotation.set_identity();
 
   cubes[3].init_cuboid({1.0f, 1.0f, 1.0f});
@@ -193,8 +193,8 @@ void draw_loop(GLFWwindow *window) {
                                                 (float)width / (float)heigth,
                                                 &proj_mat);
 
-    phys_instance.calculate_gravity();
-    phys_instance.update(elapsed_time);
+    //phys_instance.calculate_gravity();
+    //phys_instance.update(elapsed_time);
 
     ImGui::Begin("Collisions");
     for(int i = 0; i < 4; i++) {

@@ -107,7 +107,7 @@ inline bool SAT_test(const sRawGeometry &obj1,
       separating_axis2_index = i;
       axis2_diff = test_diff;
 
-      if(!is_obj1_first) {
+      if(is_obj1_first) {
         separating_axis2_index += 3;
       }
 
@@ -133,12 +133,7 @@ inline bool SAT_test(const sRawGeometry &obj1,
   sPlane incident_face = obj2.planes[incident_index];
 
   sVector3 *incident_vertices = (sVector3*) malloc(sizeof(sVector3) * obj2.points_per_plane);
-
-  // Retrieve thje incident faces's points 
-  for(int i = 0; i < obj2.points_per_plane; i++) {
-    incident_vertices[i] = obj2_vertices[obj2.face_indexes[incident_index * obj2.points_per_plane + i]]; 
-  }
-
+ 
   // Sutherland-Hgdman clipping ====
   /*
    * Use the Swapable stacks for iterating the vertices and one for
@@ -147,50 +142,61 @@ inline bool SAT_test(const sRawGeometry &obj1,
    * */
   int incident_vertex_count = obj2.points_per_plane;
 
-  sVector3 *vertices_to_read = (sVector3*) malloc(sizeof(sVector3) * 6);
-  sVector3 *store_vertices = (sVector3*) malloc(sizeof(sVector3) * 6);
+  sSwapableVector3Stacks swaps;
 
-  memcpy(vertices_to_read, incident_vertices, sizeof(sVector3) * obj2.points_per_plane);
+  swaps.init(obj2.points_per_plane); 
 
-  int size_vertices_to_read = obj2.points_per_plane;
-  int size_stored_vertices = 0;
+  // Retrieve thje incident faces's points 
+  for(int i = 0; i < obj2.points_per_plane; i++) {
+    //manifold->add_collision_point(obj1_transform.apply(obj1_vertices[obj1.face_indexes[separating_axis1_index * obj1.points_per_plane + i]]), 0.0f);
+    //manifold->add_collision_point(obj1_transform.apply(obj2_vertices[obj2.face_indexes[incident_index * obj2.points_per_plane + i]]), 0.0f);
 
-  for(int i = 0; i < obj1.planes_size; i++) {
+    swaps.add_element_to_current_stack(obj2_vertices[obj2.face_indexes[incident_index * obj2.points_per_plane + i]]);
+  }
 
-    for(int j = 0; j < size_vertices_to_read; j++) {
-      sVector3 segment_begin = vertices_to_read[j];
-      sVector3 segment_end = vertices_to_read[(j + 1) % size_vertices_to_read];
 
-      bool is_outside;
-      obj1.planes[i].clip_segment(&segment_begin, &segment_end, &is_outside);
+  for(int i = 0; i < obj1.planes_size; i++) { 
+    sPlane *curr_plane = &obj1.planes[i];
+   
+    int element_count = swaps.get_current_stacks_size(); 
+    for(int j = 0; j < element_count; j++) {
+      sVector3 begin = swaps.get_element_from_current_stack(j);
+      sVector3 end = swaps.get_element_from_current_stack((j+1) % element_count);
 
-      if (is_outside) {
-        continue;
-      } 
-      store_vertices[size_stored_vertices++] = segment_end;
+      float begin_dist = curr_plane->distance(begin);
+      float end_dist = curr_plane->distance(end);
+
+      if (begin_dist * end_dist > 1e-6f) {
+        // If both have the same sign, and the begin distance is negative,
+        // both are inside, if not, both are inside
+        if (begin_dist < 1e-6f) {
+          // Add the end point
+          swaps.add_element_to_secundary_stack(end);
+        }
+      } else {
+        // If the sing is negative, then the points are in different sides of
+        // the plane
+        
+        // Add the intersection point
+        swaps.add_element_to_secundary_stack(curr_plane->get_intersection_point(begin, end));
+        if (begin_dist > 1e-6f) {
+          // Add the end point
+          swaps.add_element_to_secundary_stack(end);
+        }
+      }
     }
 
-    // Swap buffers
-    {
-      ImGui::Text("Stored %d", size_stored_vertices);
-      memset(vertices_to_read, 0, sizeof(sVector3) * size_vertices_to_read);
-      sVector3 *tmp = vertices_to_read;
-      vertices_to_read = store_vertices;
-      store_vertices = tmp;
+    swaps.clean_current_stack(); 
+    swaps.swap(); 
+    ImGui::Text("Col point size %d", swaps.get_current_stacks_size());
+  }
+  ImGui::Text("pCol point size %d", swaps.get_current_stacks_size());
 
-      size_vertices_to_read = size_stored_vertices;
-      size_stored_vertices = 0;
-    } 
-    ImGui::Separator();
-    //manifold->add_collision_point(obj1_transform.apply(obj1.planes[i].origin_point), 0.0f); 
-  } 
-
-  for(int i = 0; i < size_vertices_to_read; i++) {
-    manifold->add_collision_point(obj1_transform.apply(vertices_to_read[i]), 0.0f);
-  } 
-  
-  //manifold->add_collision_point(obj1_transform.apply(obj1.planes[1].origin_point), -1.0f);
-  //manifold->add_collision_point(obj1_transform.apply(obj1.planes[4].origin_point), -1.0f);
+  for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
+    sVector3 tmp = swaps.get_element_from_current_stack(j);
+    ImGui::Text(" col point %f %f %f", tmp.x, tmp.y, tmp.z);
+    manifold->add_collision_point(obj1_transform.apply(tmp), 0.0f);
+  }
 
   ImGui::Text("Obj 1 axis: %d diff %f refernce index: %d", separating_axis1_index, axis1_diff, separating_axis1_index);
   ImGui::Text("Obj 2 axis: %d diff %f incident index %d", separating_axis2_index, axis2_diff, incident_index);
@@ -198,10 +204,12 @@ inline bool SAT_test(const sRawGeometry &obj1,
   for(int i = 0; i < manifold->contact_point_count; i++) {
     ImGui::Text("  %f %f %f", manifold->contact_points[i].x, manifold->contact_points[i].y, manifold->contact_points[i].z);
   }
+
+  swaps.clean();
   free(obj2_vertices);
   free(incident_vertices);
-  free(store_vertices);
-  free(vertices_to_read);
+  //free(store_vertices);
+  //free(vertices_to_read);
   return true;
 }
 

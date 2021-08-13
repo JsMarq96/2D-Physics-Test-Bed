@@ -53,13 +53,6 @@ struct sRawGeometry {
   unsigned int planes_size = 0;
   unsigned int points_per_plane = 0;
 
-  void get_face_vertices(const int       face_id, 
-                               sVector3  *vertices) const {
-    for(int i = 0; i < points_per_plane; i++) {
-      //vertices[i] = raw_points[face_indexes[face_id][i]]; 
-    }
-  }
-
   void init_cuboid(const sVector3 &c_scale) {
     // Indexes of each face
     int box_LUT_vertices[6 * 4] = {
@@ -105,12 +98,12 @@ struct sRawGeometry {
       planes[i].origin_point = center;
     }
     // Plane orientations
-    planes[0].normal = sVector3{0.0f, 1.0f, 0.0f};
-    planes[1].normal = sVector3{0.0f, 0.0f, 1.0f};
-    planes[2].normal = sVector3{1.0f, 0.0f, 0.0f};
-    planes[3].normal = sVector3{0.0f, -1.0f, 0.0f};
-    planes[4].normal = sVector3{0.0f, 0.0f, -1.0f};
-    planes[5].normal = sVector3{-1.0f, 0.0f, 0.0f};
+    planes[0].normal = sVector3{0.0f, 0.0f, 1.0f};
+    planes[1].normal = sVector3{0.0f, 1.0f, 0.0f};
+    planes[2].normal = sVector3{-1.0f, 0.0f, 0.0f};
+    planes[3].normal = sVector3{0.0f, 0.0f, -1.0f};
+    planes[4].normal = sVector3{0.0f, -1.0f, 0.0f};
+    planes[5].normal = sVector3{1.0f, 0.0f, 0.0f};
 
     raw_point_size = 8;
     planes_size = 6;
