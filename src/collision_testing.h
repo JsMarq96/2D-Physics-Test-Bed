@@ -237,13 +237,15 @@ inline bool SAT_test(const sRawGeometry &obj1,
     swaps.swap(); 
     //ImGui::Text("Col point size %d", swaps.get_current_stacks_size());
   }
-  ImGui::Text("pCol point size %d", swaps.get_current_stacks_size());
+  ImGui::Text("Col point num %d", swaps.get_current_stacks_size());
 
+  sPlane reference_plane = reference_obj->planes[reference_index];
   for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
     sVector3 tmp = swaps.get_element_from_current_stack(j);
-    ImGui::Text(" col point %f %f %f", tmp.x, tmp.y, tmp.z);
+    float distance = reference_plane.distance(tmp);
+    ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, distance);
     obj1_transform.apply(&tmp);
-    //manifold->add_collision_point(tmp, 0.0f);
+    manifold->add_collision_point(tmp, distance);
   }
 
   ImGui::Text("Collision points:");
