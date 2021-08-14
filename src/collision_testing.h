@@ -14,9 +14,7 @@ inline bool test_overlap_on_axis(const sVector3  *shape1_vertices,
                                  const int       shape1_size,
                                  const sVector3  *shape2_vertices,
                                  const int       shape2_size,
-                                 const sVector3  &axis,
-                                       float     *diff,
-                                       bool      *is_obj1_first) {
+                                 const sVector3  &axis) {
   float min_shape1 = FLT_MAX;
   float max_shape1 = -FLT_MAX;
   float min_shape2 = FLT_MAX;
@@ -38,13 +36,50 @@ inline bool test_overlap_on_axis(const sVector3  *shape1_vertices,
 
   float shape1_len = max_shape1 - min_shape1;
   float shape2_len = max_shape2 - min_shape2;
-  float total_shapes_len = MAX(max_shape1, max_shape2) - MIN(min_shape1, min_shape2);
-
-  *diff = (shape1_len + shape2_len) - total_shapes_len;
-
-  *is_obj1_first =  min_shape1 > min_shape2;
+  float total_shapes_len = MAX(max_shape1, max_shape2) - MIN(min_shape1, min_shape2); 
 
   return (shape1_len + shape2_len) > total_shapes_len;
+}
+
+inline sVector3 get_support_point_on_dir(const sVector3  &direction,
+                                         const sVector3  *vertices,
+                                         const int        vertices_count) {
+  sVector3 support;
+  float support_proj = -FLT_MAX;
+  for(int i = 0; i < vertices_count; i++) {
+    float proj = dot_prod(vertices[i], direction);
+
+    if (proj > support_proj) {
+      support = vertices[i];
+      support_proj = proj;
+    }
+  }
+
+  return support;
+}
+
+inline float get_max_distance_in_planes_axis(const sPlane    *obj1_planes,
+                                             const int        obj1_planes_size,
+                                             const sVector3  *obj2_vertices,
+                                             const int        obj2_vertices_size,
+                                                   int        *obj1_most_reparation_plane) {
+  int most_separation_plane = -1;
+  float most_separation = -FLT_MAX;
+  for(int i = 0; i < obj1_planes_size; i++) {
+    sVector3 obj2_support = get_support_point_on_dir(obj1_planes[i].normal.invert(), 
+                                                     obj2_vertices,
+                                                     obj2_vertices_size);
+
+    float plane_support_distance = obj1_planes[i].distance(obj2_support);
+
+    if (plane_support_distance > most_separation) {
+      most_separation_plane = i;
+      most_separation = plane_support_distance;
+    }
+  }
+
+  *obj1_most_reparation_plane = most_separation_plane;
+  return most_separation;
 }
 
 
@@ -57,82 +92,91 @@ inline bool SAT_test(const sRawGeometry &obj1,
   sTransform new_transf = obj2_transform;
   new_transf.change_basis(obj1_transform);
 
-  sVector3 *obj1_vertices = obj1.raw_points;
-  sVector3 *obj2_vertices = (sVector3*) malloc(obj2.raw_point_size * sizeof(sVector3));
+  sRawGeometry obj2_in_obj1_space;
+  obj2.duplicate(&obj2_in_obj1_space);
+  obj2_in_obj1_space.apply_transform(new_transf);
 
-  for(int i = 0; i < obj2.raw_point_size; i++) {
-    obj2_vertices[i] = new_transf.apply(obj2.raw_points[i]);
-  }
-
-  float test_diff = 0.0f;
-  bool is_obj1_first = false;
+  // ========= SAT =================
   
-  int separating_axis1_index = -1;
-  float axis1_diff = -FLT_MAX;
-  int obj1_axis_count = (obj1.is_cube) ? 3 : obj1.planes_size;
-  for(int i = 0; i < obj1_axis_count; i++) {
-    if (!test_overlap_on_axis(obj1_vertices, obj1.raw_point_size, 
-                              obj2_vertices, obj2.raw_point_size,
-                              obj1.planes[i].normal,
-                              &test_diff,
-                              &is_obj1_first)) {
-      free(obj2_vertices);
-      return false;
-    }
+  // First, we evaluate the planes and directions of obj1 vs the points of obj2
+  int obj1_face_of_most_separation = -1;
+  float obj1_nearest_distance = get_max_distance_in_planes_axis(obj1.planes, 
+                                                                obj1.planes_size,
+                                                                obj2_in_obj1_space.raw_points,
+                                                                obj2_in_obj1_space.vertices_size,
+                                                                &obj1_face_of_most_separation);
 
-    if (test_diff > axis1_diff) {
-      separating_axis1_index = i;
-      axis1_diff = test_diff;
+  // The nearest point is outside of the figure, so no collisions
+  if (obj1_nearest_distance > 0.0f) {
+    return false;
+  }
 
-      if (is_obj1_first) {
-        separating_axis1_index += 3;
+  // Now, evaluate the points of obj1 vs the planes and direction of obj2
+  int obj2_face_of_most_separation = -1;
+  float obj2_nearest_distance = get_max_distance_in_planes_axis(obj2_in_obj1_space.planes, 
+                                                                obj2_in_obj1_space.planes_size,
+                                                                obj1.raw_points,
+                                                                obj1.vertices_size,
+                                                                &obj2_face_of_most_separation);
+  
+  if (obj2_nearest_distance > 0.0f) {
+    return false;
+  }
+
+  // For last, we test the overlap on the edge's axis
+  int obj1_num_of_axis = (obj1.is_cube) ? 3 : obj1.planes_size;
+  int obj2_num_of_axis = (obj2.is_cube) ? 3 : obj2.planes_size;
+  for(int i = 0; i < obj1_num_of_axis; i++) {
+    for(int j = 0; j < obj2_num_of_axis; j++) {
+      sVector3 axis = cross_prod(obj1.planes[i].normal, 
+                                 obj2_in_obj1_space.planes[j].normal);
+
+      if (axis.x == 0 && axis.y == 0 && axis.z == 0) {
+        continue;
+      }
+
+      if (!test_overlap_on_axis(obj1.raw_points,
+                                obj1.vertices_size,
+                                obj2_in_obj1_space.raw_points,
+                                obj2_in_obj1_space.vertices_size,
+                                axis)) {
+        return false;
       }
     }
   }
 
-  int separating_axis2_index = -1;
-  float axis2_diff = -FLT_MAX;
-  int obj2_axis_count = (obj2.is_cube) ? 3 : obj2.planes_size;
-  for(int i = 0; i < obj2_axis_count; i++) {
-    if (!test_overlap_on_axis(obj1_vertices, obj1.raw_point_size, 
-                              obj2_vertices, obj2.raw_point_size,
-                              obj2.planes[i].normal,
-                              &test_diff,
-                              &is_obj1_first)) {
-      free(obj2_vertices);
-      return false;
-    }
+  // ======= Manifold generation =================
 
-    if (test_diff > axis2_diff) {
-      separating_axis2_index = i;
-      axis2_diff = test_diff;
+  // First we select the incident and the reference faces
+  // the refrence face is the one whose normal has the axiss of
+  // more penetrarion, and the incident is the most facing
+  // face of the other body
+  int incident_index, reference_index;
+  const sRawGeometry *incident_obj, *reference_obj;
 
-      if(is_obj1_first) {
-        separating_axis2_index += 3;
-      }
+  if (obj1_nearest_distance + 1e-6f < obj2_nearest_distance) {
+    reference_obj = &obj1;
+    reference_index = obj1_face_of_most_separation;
 
-    }
+    incident_obj = &obj2_in_obj1_space;
+  } else {
+    reference_obj = &obj2_in_obj1_space;
+    reference_index = obj2_face_of_most_separation;
+
+    incident_obj = &obj1;
   }
 
-  // Generate manifold
-  // The reference face is aways on the object 1
-  // Is this stable...?
-  // TODO: rotate the planes
-
-  sPlane reference_plane  = obj1.planes[separating_axis1_index];
-  int incident_index = -1;
-  float most_facing = FLT_MAX;
-  for(int i = 0; i < obj2.planes_size; i++) {
-    float dot = dot_prod(reference_plane.normal, obj2.planes[i].normal);
-
-    if (most_facing > dot) {
-      most_facing = dot;
+  // Calculate the incident face
+  sVector3 reference_normal = reference_obj->planes[reference_index].normal.invert();
+  incident_index = -1;
+  float incident_facing = -FLT_MAX;
+  for(int i = 0; i < incident_obj->planes_size; i++) {
+    float facing = dot_prod(reference_normal, incident_obj->planes[i].normal);
+    if (facing > incident_facing) {
       incident_index = i;
+      incident_facing = facing;
     }
   }
-  sPlane incident_face = obj2.planes[incident_index];
-
-  sVector3 *incident_vertices = (sVector3*) malloc(sizeof(sVector3) * obj2.points_per_plane);
  
   // Sutherland-Hgdman clipping ====
   /*
@@ -144,19 +188,22 @@ inline bool SAT_test(const sRawGeometry &obj1,
 
   sSwapableVector3Stacks swaps;
 
-  swaps.init(obj2.points_per_plane); 
+  swaps.init(incident_obj->points_per_plane * 3); 
 
-  // Retrieve thje incident faces's points 
-  for(int i = 0; i < obj2.points_per_plane; i++) {
+  // Add to the stack the points 
+  for(int i = 0; i < incident_obj->points_per_plane; i++) {
     //manifold->add_collision_point(obj1_transform.apply(obj1_vertices[obj1.face_indexes[separating_axis1_index * obj1.points_per_plane + i]]), 0.0f);
     //manifold->add_collision_point(obj1_transform.apply(obj2_vertices[obj2.face_indexes[incident_index * obj2.points_per_plane + i]]), 0.0f);
-
-    swaps.add_element_to_current_stack(obj2_vertices[obj2.face_indexes[incident_index * obj2.points_per_plane + i]]);
+    sVector3 tmp = incident_obj->get_point_of_face(incident_index, i); 
+    obj1_transform.apply(&tmp);
+    manifold->add_collision_point(tmp, 0.0f);
+    swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
+    //swaps.add_element_to_current_stack(obj2_vertices[obj2.face_indexes[incident_index * obj2.points_per_plane + i]]);
   }
 
 
-  for(int i = 0; i < obj1.planes_size; i++) { 
-    sPlane *curr_plane = &obj1.planes[i];
+  for(int i = 0; i < reference_obj->planes_size; i++) { 
+    sPlane *curr_plane = &reference_obj->planes[i];
    
     int element_count = swaps.get_current_stacks_size(); 
     for(int j = 0; j < element_count; j++) {
@@ -188,28 +235,24 @@ inline bool SAT_test(const sRawGeometry &obj1,
 
     swaps.clean_current_stack(); 
     swaps.swap(); 
-    ImGui::Text("Col point size %d", swaps.get_current_stacks_size());
+    //ImGui::Text("Col point size %d", swaps.get_current_stacks_size());
   }
   ImGui::Text("pCol point size %d", swaps.get_current_stacks_size());
 
   for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
     sVector3 tmp = swaps.get_element_from_current_stack(j);
     ImGui::Text(" col point %f %f %f", tmp.x, tmp.y, tmp.z);
-    manifold->add_collision_point(obj1_transform.apply(tmp), 0.0f);
+    obj1_transform.apply(&tmp);
+    //manifold->add_collision_point(tmp, 0.0f);
   }
 
-  ImGui::Text("Obj 1 axis: %d diff %f refernce index: %d", separating_axis1_index, axis1_diff, separating_axis1_index);
-  ImGui::Text("Obj 2 axis: %d diff %f incident index %d", separating_axis2_index, axis2_diff, incident_index);
   ImGui::Text("Collision points:");
   for(int i = 0; i < manifold->contact_point_count; i++) {
     ImGui::Text("  %f %f %f", manifold->contact_points[i].x, manifold->contact_points[i].y, manifold->contact_points[i].z);
   }
 
-  swaps.clean();
-  free(obj2_vertices);
-  free(incident_vertices);
-  //free(store_vertices);
-  //free(vertices_to_read);
+  swaps.clean(); 
+  obj2_in_obj1_space.clean();
   return true;
 }
 

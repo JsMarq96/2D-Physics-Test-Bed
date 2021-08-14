@@ -125,7 +125,7 @@ void draw_loop(GLFWwindow *window) {
   //transforms[1].rotation.set_identity();
 
   cubes[2].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[2].position = {0.5f, 2.5f, 0.0f};
+  transforms[2].position = {0.5f, 3.3f, 0.0f};
   //transforms[2].rotation.set_identity();
 
   cubes[3].init_cuboid({1.0f, 1.0f, 1.0f});
@@ -193,8 +193,8 @@ void draw_loop(GLFWwindow *window) {
                                                 (float)width / (float)heigth,
                                                 &proj_mat);
 
-    //phys_instance.calculate_gravity();
-    //phys_instance.update(elapsed_time);
+    phys_instance.calculate_gravity();
+    phys_instance.update(elapsed_time);
 
     ImGui::Begin("Collisions");
     for(int i = 0; i < 4; i++) {
@@ -212,7 +212,7 @@ void draw_loop(GLFWwindow *window) {
           sVector4 point_colors[6];
           for(int x = 0; x < manifold.contact_point_count; x++) {
             points_models[x].set_identity();
-            points_models[x].set_scale({0.09, 0.05,0.09});
+            points_models[x].set_scale({0.39, 0.05,0.39});
             points_models[x].set_position(manifold.contact_points[x].sum({-0.05f, 0.f, -0.05f}));
             point_colors[x] = {1.0f, 0.0f, 0.0f, 1.0f};
           }
@@ -242,7 +242,7 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    std::cout << "==== End Frame ====" << std::endl;
+    //std::cout << "==== End Frame ====" << std::endl;
 
 		glfwSwapBuffers(window);
 	}

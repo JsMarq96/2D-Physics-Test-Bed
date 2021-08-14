@@ -18,16 +18,6 @@ struct sPlane {
         return dot_prod(normal, sVector3{  p.x - origin_point.x,  p.y - origin_point.y, p.z - origin_point.z });
     }
 
-    inline void apply_transform(const sMat44 *transf) {
-      /*sMat44 rot_mat;
-      memcpy(&rot_mat, transf, sizeof(sMat44));
-      rot_mat.set_position(sVector3{0.0f, 0.0f, 0.0f});
-*/
-      origin_point = transf->multiply(origin_point);
-      // normal = rotate_vector3;
-      //TODO: rotate normal
-    }
-
     inline bool intersect(const sVector3  &p1, 
                           const sVector3  &p2,
                                 bool      *is_inside,

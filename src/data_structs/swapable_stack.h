@@ -40,6 +40,9 @@ struct sSwapableVector3Stacks {
 
     stacks_list[0] = stack1;
     stacks_list[1] = stack2;
+
+    stacks_sizes[0] = {0};
+    stacks_sizes[1] = {0};
   }
 
   void clean() {

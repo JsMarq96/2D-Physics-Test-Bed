@@ -31,10 +31,15 @@ struct sTransform {
     position = tmp.multiply(position);
   }
 
-  inline sVector3 apply(const sVector3 vect) const {
+  inline void apply(sVector3 *vect) const {
     sMat44 mat;
     mat.set_position(position);
-    return rotation_mat.multiply(mat.multiply(vect));
+    *vect = rotation_mat.multiply(mat.multiply(*vect));
+  }
+
+  inline void apply(sPlane *plane) const {
+    apply(&(plane->origin_point));
+    plane->normal = rotation_mat.multiply(plane->normal);
   }
 };
 
@@ -46,22 +51,23 @@ struct sRawGeometry {
   sPlane    *planes;
 
   int *face_indexes;
+  // TODO: generalize the face indexes and add w,h if needed
 
   bool is_cube = false;
 
-  unsigned int raw_point_size = 0;
+  unsigned int vertices_size = 0;
   unsigned int planes_size = 0;
   unsigned int points_per_plane = 0;
 
   void init_cuboid(const sVector3 &c_scale) {
     // Indexes of each face
     int box_LUT_vertices[6 * 4] = {
-      4, 5, 7, 6,
-      6, 7, 3, 2,
-      0, 2, 6, 4,
-      0, 1, 3, 2,
-      0, 1, 5, 4,
-      1, 3, 7, 5
+      4, 5, 7, 6, // 0
+      6, 7, 3, 2, // 1
+      1, 3, 7, 5, // 5
+      0, 1, 3, 2, // 3
+      0, 1, 5, 4, // 4 
+      0, 2, 6, 4 // 2
     };
 
     scale = c_scale;
@@ -100,22 +106,76 @@ struct sRawGeometry {
     // Plane orientations
     planes[0].normal = sVector3{0.0f, 0.0f, 1.0f};
     planes[1].normal = sVector3{0.0f, 1.0f, 0.0f};
-    planes[2].normal = sVector3{-1.0f, 0.0f, 0.0f};
+    planes[2].normal = sVector3{1.0f, 0.0f, 0.0f};
     planes[3].normal = sVector3{0.0f, 0.0f, -1.0f};
     planes[4].normal = sVector3{0.0f, -1.0f, 0.0f};
-    planes[5].normal = sVector3{1.0f, 0.0f, 0.0f};
+    planes[5].normal = sVector3{-1.0f, 0.0f, 0.0f};
 
-    raw_point_size = 8;
+    vertices_size = 8;
     planes_size = 6;
     points_per_plane = 4;
     is_cube = true; // This signalizes to only test 3 axis, instead of all the surface
                     // normals
   };
 
-  void init_plane();
+  void duplicate(sRawGeometry *copy_to) const {
+    copy_to->scale = scale;
+    copy_to->is_cube = is_cube;
+    copy_to->vertices_size = vertices_size;
+    copy_to->planes_size = planes_size;
+    copy_to->points_per_plane = points_per_plane; 
+
+    copy_to->face_indexes = (int*) malloc(sizeof(int) * planes_size * points_per_plane);
+    copy_to->raw_points = (sVector3*) malloc(sizeof(sVector3) * vertices_size);
+    copy_to->planes = (sPlane*) malloc(sizeof(sPlane) * planes_size);
+
+    memcpy(copy_to->face_indexes, face_indexes, sizeof(int) * planes_size * points_per_plane);
+    memcpy(copy_to->raw_points, raw_points, sizeof(sVector3) * vertices_size);
+    memcpy(copy_to->planes, raw_points, sizeof(sPlane) * planes_size);
+  }
+
+  /*
+   * Calculates a support point in a given direction
+   * A support point is the furcest point in that direction
+   * */
+  inline sVector3 get_support_point(const sVector3 &direction) const {
+    sVector3 support;
+    float support_proj = -FLT_MAX;
+
+    for(int i = 0; i < vertices_size; i++) {
+      float proj = dot_prod(raw_points[i], direction);
+
+      if (proj > support_proj) { 
+        support = raw_points[i];
+        support_proj = proj;
+      }
+    }
+
+    return support;
+  }
+
+  inline sVector3 get_point_of_face(const int face,
+                                    const int point) const {
+    int index = face_indexes[face * points_per_plane + point];
+    return raw_points[index];
+  }
+
+  inline void apply_transform(const sTransform &transf) {
+    for(int i = 0; i < vertices_size; i++) {
+      transf.apply(&raw_points[i]);
+    }
+
+    for(int i = 0; i< planes_size; i++) {
+      transf.apply(&planes[i]);
+    }
+  }
 
   void clean() {
-    // TODO 
+    free(face_indexes);
+    free(raw_points);
+    free(planes);
+
+    // TODO: finish, but laterrr
   };
 };
 

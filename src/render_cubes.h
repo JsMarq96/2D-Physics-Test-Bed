@@ -106,7 +106,7 @@ inline void cube_renderer_render(sCubeRenderer *renderer, sMat44 *models, sVecto
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        std::cout << "Draw cube with color R:" << colors[i].x << " G:" << colors[i].y << " B:" << colors[i].z << std::endl;
+        //std::cout << "Draw cube with color R:" << colors[i].x << " G:" << colors[i].y << " B:" << colors[i].z << std::endl;
     }
     renderer->shader.deactivate();
 
