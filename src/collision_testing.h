@@ -122,7 +122,7 @@ inline bool SAT_test(const sRawGeometry &obj1,
   if (obj2_nearest_distance > 0.0f) {
     return false;
   }
-
+ 
   // For last, we test the overlap on the edge's axis
   int obj1_num_of_axis = (obj1.is_cube) ? 3 : obj1.planes_size;
   int obj2_num_of_axis = (obj2.is_cube) ? 3 : obj2.planes_size;
@@ -167,12 +167,12 @@ inline bool SAT_test(const sRawGeometry &obj1,
   }
 
   // Calculate the incident face
-  sVector3 reference_normal = reference_obj->planes[reference_index].normal.invert();
+  sVector3 reference_normal = reference_obj->planes[reference_index].normal;
   incident_index = -1;
-  float incident_facing = -FLT_MAX;
+  float incident_facing = FLT_MAX;
   for(int i = 0; i < incident_obj->planes_size; i++) {
     float facing = dot_prod(reference_normal, incident_obj->planes[i].normal);
-    if (facing > incident_facing) {
+    if (facing < incident_facing) {
       incident_index = i;
       incident_facing = facing;
     }
@@ -192,13 +192,9 @@ inline bool SAT_test(const sRawGeometry &obj1,
 
   // Add to the stack the points 
   for(int i = 0; i < incident_obj->points_per_plane; i++) {
-    //manifold->add_collision_point(obj1_transform.apply(obj1_vertices[obj1.face_indexes[separating_axis1_index * obj1.points_per_plane + i]]), 0.0f);
-    //manifold->add_collision_point(obj1_transform.apply(obj2_vertices[obj2.face_indexes[incident_index * obj2.points_per_plane + i]]), 0.0f);
     sVector3 tmp = incident_obj->get_point_of_face(incident_index, i); 
-    obj1_transform.apply(&tmp);
-    manifold->add_collision_point(tmp, 0.0f);
+    obj1_transform.apply(&tmp);    
     swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
-    //swaps.add_element_to_current_stack(obj2_vertices[obj2.face_indexes[incident_index * obj2.points_per_plane + i]]);
   }
 
 
@@ -235,23 +231,18 @@ inline bool SAT_test(const sRawGeometry &obj1,
 
     swaps.clean_current_stack(); 
     swaps.swap(); 
-    //ImGui::Text("Col point size %d", swaps.get_current_stacks_size());
   }
-  ImGui::Text("Col point num %d", swaps.get_current_stacks_size());
+  ImGui::Text("Colision points count:  %d", swaps.get_current_stacks_size());
 
+  // Add the collision points to the manifold
   sPlane reference_plane = reference_obj->planes[reference_index];
   for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
     sVector3 tmp = swaps.get_element_from_current_stack(j);
-    float distance = reference_plane.distance(tmp);
-    ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, distance);
+    float distance = reference_plane.distance(tmp); 
     obj1_transform.apply(&tmp);
     manifold->add_collision_point(tmp, distance);
-  }
-
-  ImGui::Text("Collision points:");
-  for(int i = 0; i < manifold->contact_point_count; i++) {
-    ImGui::Text("  %f %f %f", manifold->contact_points[i].x, manifold->contact_points[i].y, manifold->contact_points[i].z);
-  }
+    ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, distance);
+  } 
 
   swaps.clean(); 
   obj2_in_obj1_space.clean();

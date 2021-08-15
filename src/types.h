@@ -39,7 +39,7 @@ struct sTransform {
 
   inline void apply(sPlane *plane) const {
     apply(&(plane->origin_point));
-    plane->normal = rotation_mat.multiply(plane->normal);
+    //plane->normal = rotation_mat.multiply(plane->normal);
   }
 };
 
@@ -131,7 +131,7 @@ struct sRawGeometry {
 
     memcpy(copy_to->face_indexes, face_indexes, sizeof(int) * planes_size * points_per_plane);
     memcpy(copy_to->raw_points, raw_points, sizeof(sVector3) * vertices_size);
-    memcpy(copy_to->planes, raw_points, sizeof(sPlane) * planes_size);
+    memcpy(copy_to->planes, planes, sizeof(sPlane) * planes_size);
   }
 
   /*
