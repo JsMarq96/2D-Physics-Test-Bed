@@ -242,7 +242,9 @@ inline bool SAT_test(const sRawGeometry &obj1,
     obj1_transform.apply(&tmp);
     manifold->add_collision_point(tmp, distance);
     ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, distance);
-  } 
+  }
+
+  manifold->collision_normal = reference_plane.normal;
 
   swaps.clean(); 
   obj2_in_obj1_space.clean();

@@ -147,6 +147,11 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.mass[2] = 2.0f;
   phys_instance.mass[3] = 1.0f;
 
+  phys_instance.restitution[0] = 0.5f;
+  phys_instance.restitution[1] = 0.8f;
+  phys_instance.restitution[2] = 0.5f;
+  phys_instance.restitution[3] = 0.2f;
+
   phys_instance.is_static[0] = true;
 
   cube_renderer_init(&renderer);
@@ -201,6 +206,7 @@ void draw_loop(GLFWwindow *window) {
       for(int j = i+1; j < 4; j++) {
         //ImGui::Text("Obj %d %d", i, j);
         sCollisionManifold manifold;
+
         if (SAT_test(cubes[i], 
                      transforms[i], 
                      cubes[j], 
@@ -212,12 +218,18 @@ void draw_loop(GLFWwindow *window) {
           sVector4 point_colors[6];
           for(int x = 0; x < manifold.contact_point_count; x++) {
             points_models[x].set_identity();
-            points_models[x].set_scale({0.39, 0.05,0.39});
+            points_models[x].set_scale({0.09, 0.05,0.09});
             points_models[x].set_position(manifold.contact_points[x].sum({-0.05f, 0.f, -0.05f}));
             point_colors[x] = {1.0f, 0.0f, 0.0f, 1.0f};
           }
 
           cube_renderer_render(&renderer, points_models, point_colors, manifold.contact_point_count, &proj_mat);
+          
+          // Fill the manifold with the index data
+          manifold.obj1_index = i;
+          manifold.obj2_index = j;
+
+          phys_instance.resolve_collision(manifold);
         } else {
           // no collision
         }
