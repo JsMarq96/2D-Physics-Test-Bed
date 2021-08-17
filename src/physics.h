@@ -45,7 +45,7 @@ struct sPhysicsWorld {
         continue;
       }
 
-      add_impulse(i, {0.0f, -0.009f, 0.0f});
+      add_impulse(i, {0.0f, -0.09f, 0.0f});
     }
   }
 
@@ -72,6 +72,21 @@ struct sPhysicsWorld {
     
     add_impulse(obj1, impulse);
     add_impulse(obj2, impulse.invert());
+
+    // Penetration correction
+    // TODO: Work a bit better the solution, without moving the objects http://allenchou.net/2013/12/game-physics-constraints-sequential-impulse/
+
+    float penetration = 0.0f;
+    for(int i = 0; i < manifold.contact_point_count; i++) {
+      penetration = MIN(manifold.points_depth[i], penetration);
+    }
+
+    penetration *= 0.2f / (inv_mass1 + inv_mass2);
+
+    sVector3 correction = {penetration * manifold.collision_normal.x, penetration * manifold.collision_normal.y, penetration * manifold.collision_normal.z};
+
+    transforms[obj1].position = transforms[obj1].position.sum(sVector3{-inv_mass1 * correction.x, -inv_mass1 * correction.y, -inv_mass1 * correction.z});
+    transforms[obj2].position = transforms[obj2].position.sum(sVector3{inv_mass2 * correction.x, inv_mass2 * correction.y, inv_mass2 * correction.z});
   }
 };
 

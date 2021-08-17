@@ -125,11 +125,11 @@ void draw_loop(GLFWwindow *window) {
   //transforms[1].rotation.set_identity();
 
   cubes[2].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[2].position = {0.5f, 3.3f, 0.0f};
+  transforms[2].position = {0.5f, 3.7f, 0.0f};
   //transforms[2].rotation.set_identity();
 
   cubes[3].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[3].position = {1.5f, 2.0f, 1.5f};
+  transforms[3].position = {1.5f, 3.0f, 1.5f};
   //transforms[3].rotation.set_identity();
 
   sVector4 colors[4];
