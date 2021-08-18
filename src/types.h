@@ -10,7 +10,23 @@ struct sTransform {
   sMat44 rotation_mat;
   sVector3 position = sVector3{};
  
-  sVector3 scale = sVector3{1.0f, 1.0f, 1.0f};
+  sVector3 scale = sVector3{1.0f, 1.0f, 1.0f}; 
+
+  void add_angular_speed(const sVector3 &angular_speed,
+                         const double    delta_time) {
+    sQuaternion4 base = {1.0f, 0.0f, 0.0f, 0.0f};
+    sQuaternion4 quat = { 0.0f, 
+                          angular_speed.x * delta_time,
+                          angular_speed.y * delta_time,
+                          angular_speed.z * delta_time };
+    quat = quat.multiply(base);
+
+    base = base.sum(quat.multiply(0.5f));
+
+    base = base.normalize();
+
+    rotation_mat.rotate(&base);
+  }
 
   void set_rotation(const sQuaternion4 quat) {
    convert_quaternion_to_matrix(&quat, &rotation_mat);
@@ -35,6 +51,12 @@ struct sTransform {
     sMat44 mat;
     mat.set_position(position);
     *vect = rotation_mat.multiply(mat.multiply(*vect));
+  }
+
+  inline sVector3 apply(const sVector3 &vect) const {
+    sMat44 mat;
+    mat.set_position(position);
+    return rotation_mat.multiply(mat.multiply(vect));
   }
 
   inline void apply(sPlane *plane) const {
