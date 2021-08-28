@@ -1,7 +1,11 @@
-# OpenGL GLFW Template
-An empty project template for an OpengGL-GLFW project, with a basic Shader struct, and mouse & keyboard interaction.<br/>
-I will keep updating this repo in order to keep adding all the boilerplate code and/or functionalities.<br/>
+# To Be Named Physics Engine
+An basic physics engine based on impulse solving and SAT collision detection.<br/>
 ## To do
-- Add text rendering. (Just bitmap fonts, for debugging purposes).
-- Draw simple primitives.
-- (Maybe) some basic performance monitoring tools.
+- Physics solver.
+- Stable rotatioing constraint.
+- Define basic constraints
+## Done
+- SAT collision detection
+- Basic transform strucutre
+- OBB colliders
+- Stable position impulse solving
