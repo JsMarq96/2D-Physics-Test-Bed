@@ -112,27 +112,32 @@ void draw_loop(GLFWwindow *window) {
     "GREN",
     "BLU"
   };
-  sRawGeometry cubes[4];
-  sTransform   transforms[4];
+  sRawGeometry cubes[4] = {};
+  sTransform   transforms[4] = {};
 
   cubes[0].init_cuboid({10.0f, 1.0f, 10.0f});
   transforms[0].position = {-5.0f, 0.0f, -5.0f};
   transforms[0].scale = {10.0f, 1.0f, 10.0f};
-  //transforms[0].rotation.set_identity();
+  transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
   cubes[1].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[1].position = {0.0f, 2.15f, 0.0f};
+  transforms[1].position = {0.0f, 2.00f, 0.0f};
+  transforms[1].scale = {1.0f, 1.0f, 1.0f};
+  transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[1].rotation.set_identity();
 
   cubes[2].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[2].position = {0.5f, 3.7f, 0.0f};
+  transforms[2].position = {0.7f, 4.0f, 0.0f};
+  transforms[2].scale = {1.0f, 1.0f, 1.0f};
+  transforms[2].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[2].rotation.set_identity();
 
   cubes[3].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[3].position = {1.5f, 3.0f, 1.5f};
+  transforms[3].position = {1.5f, 3.0f, 3.5f};
+  transforms[3].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[3].rotation.set_identity();
 
-  sVector4 colors[4];
+  sVector4 colors[4] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 1.0f};
   colors[1] = {0.0f, 0.0f, 0.0f, 1.0f};
   colors[2] = {0.0f, 1.0f, 0.0f, 1.0f};
@@ -143,7 +148,7 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.transforms = &transforms[0];
 
   phys_instance.mass[0] = 0.0f;
-  phys_instance.mass[1] = 5.0f;
+  phys_instance.mass[1] = 9.0f;
   phys_instance.mass[2] = 2.0f;
   phys_instance.mass[3] = 1.0f;
 
@@ -154,9 +159,17 @@ void draw_loop(GLFWwindow *window) {
 
   phys_instance.is_static[0] = true;
 
+  for(int i = 0; i < 4; i++) {
+    sVector3 curr_scale = transforms[i].scale;
+
+    phys_instance.mass_center[i] = {curr_scale.x / 2.0f, curr_scale.y / 2.0f, curr_scale.z / 2.0f};
+  }
+
+  phys_instance.generate_inertia_tensors();
+
   cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
-  sCamera camera;
+  sCamera camera = {};
   float camera_rot = 0.0f;
 
   camera.position = {5.0f, 3.5f, 5.0f};
@@ -171,7 +184,7 @@ void draw_loop(GLFWwindow *window) {
 		// Set to OpenGL viewport size anc coordinates
 		glViewport(0,0, width, heigth);
 
-		sMat44 proj_mat;	
+		sMat44 proj_mat = {};
 
 		// OpenGL stuff
     glEnable(GL_DEPTH_TEST);  
@@ -198,7 +211,6 @@ void draw_loop(GLFWwindow *window) {
                                                 (float)width / (float)heigth,
                                                 &proj_mat);
 
-    phys_instance.calculate_gravity();
     phys_instance.update(elapsed_time);
 
     ImGui::Begin("Collisions");
@@ -214,8 +226,8 @@ void draw_loop(GLFWwindow *window) {
                      &manifold)) {
           // Collision!
           ImGui::Text("Collision between Obj1 %s and obj2 %s", names[i], names[j]);
-          sMat44 points_models[6];
-          sVector4 point_colors[6];
+          sMat44 points_models[6] = {};
+          sVector4 point_colors[6] = {};
           for(int x = 0; x < manifold.contact_point_count; x++) {
             points_models[x].set_identity();
             points_models[x].set_scale({0.09, 0.05,0.09});
@@ -238,7 +250,14 @@ void draw_loop(GLFWwindow *window) {
     }
     ImGui::End();
 
-    sMat44 models[4]; 
+    sMat44 models[4] = {};
+
+    ImGui::Begin("Rotations");
+    for(int i = 0; i < 4; i++) {
+      sQuaternion4 quat = transforms[i].rotation_quat;
+      ImGui::Text("Obj %s: %f %f %f %f", names[i], quat.w, quat.x, quat.y, quat.z);
+    }
+    ImGui::End();
 
     ImGui::Begin("Objects");
     for(int i = 0; i < 4; i++) {
@@ -246,6 +265,7 @@ void draw_loop(GLFWwindow *window) {
       models[i].set_scale(transforms[i].scale);
       // Rotation
       models[i].set_position(transforms[i].position);
+      models[i].rotate(&transforms[i].rotation_quat);
       ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
     }
     ImGui::End();

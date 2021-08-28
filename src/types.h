@@ -7,34 +7,35 @@
 #include "geometry.h"
 
 struct sTransform {
+  sQuaternion4 rotation_quat = {1.0f, 0.0f, 0.0f, 0.0f};
   sMat44 rotation_mat;
   sVector3 position = sVector3{};
  
-  sVector3 scale = sVector3{1.0f, 1.0f, 1.0f}; 
+  sVector3 scale = sVector3{1.0f, 1.0f, 1.0f};
 
-  void add_angular_speed(const sVector3 &angular_speed,
-                         const double    delta_time) {
-    sQuaternion4 base = {1.0f, 0.0f, 0.0f, 0.0f};
-    sQuaternion4 quat = { 0.0f, 
-                          angular_speed.x * delta_time,
-                          angular_speed.y * delta_time,
-                          angular_speed.z * delta_time };
-    quat = quat.multiply(base);
 
-    base = base.sum(quat.multiply(0.5f));
+  //https://math.stackexchange.com/questions/1693067/differences-between-quaternion-integration-methods 
+  void integrate_angular_speed(const sVector3 angular_speed, 
+                               const float    delta_time) {
+    sQuaternion4 qr = {0.0f, angular_speed.x, angular_speed.y, angular_speed.z};
 
-    base = base.normalize();
+    qr = qr.multiply(delta_time);
 
-    rotation_mat.rotate(&base);
+    rotation_quat = rotation_quat.sum(rotation_quat.multiply(qr).multiply(0.5f));
+    rotation_quat.normalize();
+    convert_quaternion_to_matrix(&rotation_quat, &rotation_mat);
+    //std::cout << rotation_quat.w << " " << rotation_quat.x << " " << rotation_quat.y << " " << rotation_quat.z << std::endl;;
+    //rotation_mat.print();
   }
 
   void set_rotation(const sQuaternion4 quat) {
-   convert_quaternion_to_matrix(&quat, &rotation_mat);
+    rotation_quat = quat;
+    convert_quaternion_to_matrix(&quat, &rotation_mat);
   }
 
   // Set the transform in the new_ref's space
   void change_basis(const sTransform &new_ref) {
-    sMat44 tmp;
+    sMat44 tmp = {};
     
     // Invert the rottaion matrix via a transpose
     new_ref.rotation_mat.transpose_to(&tmp);
@@ -50,18 +51,20 @@ struct sTransform {
   inline void apply(sVector3 *vect) const {
     sMat44 mat;
     mat.set_position(position);
+    mat.set_scale(scale);
     *vect = rotation_mat.multiply(mat.multiply(*vect));
   }
 
   inline sVector3 apply(const sVector3 &vect) const {
     sMat44 mat;
     mat.set_position(position);
+    mat.set_scale(scale);
     return rotation_mat.multiply(mat.multiply(vect));
   }
 
   inline void apply(sPlane *plane) const {
     apply(&(plane->origin_point));
-    //plane->normal = rotation_mat.multiply(plane->normal);
+    plane->normal = rotation_mat.multiply(plane->normal);
   }
 };
 

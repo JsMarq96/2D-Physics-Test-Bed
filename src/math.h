@@ -75,6 +75,7 @@ union sVector4 {
 
 
 union sQuaternion4 {
+    float raw_values[4];
     struct {
         float q0 = 1.0f;
         float q1 = 0.0f;
@@ -86,10 +87,6 @@ union sQuaternion4 {
         float x;
         float y;
         float z;
-    };
-    struct {
-      float w0;
-      sVector3 vect;
     };
 
     sQuaternion4 inverse();
@@ -242,11 +239,15 @@ union sMat44 {
     inline void
     scale(const sVector3 vect);
 
+    inline sQuaternion4 multiply(const sQuaternion4 &quat) const;
+
     inline sVector4 multiply(const sVector4   vect) const;
 
     inline sVector3 multiply(const sVector3   vect) const;
 
     inline void transpose_to(sMat44* result) const;
+
+    inline void transpose();
 
     // Yoinked from a stackoverlof that yoinked from the MESA implmentation
     // of GLU
@@ -254,6 +255,8 @@ union sMat44 {
     // It uses Sarrus' rule
     // TODO: SIMD...?
     void invert(sMat44 *result) const;
+
+    inline void print() const;
 };
 
 
