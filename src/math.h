@@ -109,7 +109,7 @@ union sMat33 {
         float px = 0.0f; float py = 0.0f; float tmp3 = 1.0;
     };
 
-    sMat33() {
+    void set_identity() {
         sx1 = 1.0f;  sy1 = 0.0f;  px = 0.0f;
         sx2 = 0.0f;  sy2 = 1.0f;  py = 0.0f;
         tmp1 = 0.0f; tmp2 = 0.0f; tmp3 = 1.0;
@@ -133,7 +133,7 @@ union sMat33 {
 
     inline void
     multiply(const sMat33   *B) {
-        sMat33 result;
+        sMat33 result = {};
         for (int x = 0; x < 3; x++) {
             for (int y = 0; y < 3; y++) {
                 float tmp = 0.0f;

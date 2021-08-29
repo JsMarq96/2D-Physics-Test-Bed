@@ -24,8 +24,6 @@ struct sTransform {
     rotation_quat = rotation_quat.sum(rotation_quat.multiply(qr).multiply(0.5f));
     rotation_quat.normalize();
     convert_quaternion_to_matrix(&rotation_quat, &rotation_mat);
-    //std::cout << rotation_quat.w << " " << rotation_quat.x << " " << rotation_quat.y << " " << rotation_quat.z << std::endl;;
-    //rotation_mat.print();
   }
 
   void set_rotation(const sQuaternion4 quat) {

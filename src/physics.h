@@ -30,12 +30,13 @@ struct sPhysicsWorld {
        }
         sVector3 scale = transforms[i].scale;
 
-        sMat33 tmp;
+        sMat33 tmp = {};
 
         tmp.sx1 = mass[i] * (scale.y * scale.y + scale.z * scale.z) / 12.0f;
         tmp.sy2 = mass[i] * (scale.x * scale.x + scale.z * scale.z) / 12.0f;
         tmp.tmp3 = mass[i] * (scale.x * scale.x + scale.y * scale.y) / 12.0f;
         tmp.invert(&inv_inertia_tensors[i]);
+        std::cout << inv_inertia_tensors[i].sx1 << " " <<  inv_inertia_tensors[i].sy2 << std::endl;
      }
   }
 
@@ -98,8 +99,8 @@ struct sPhysicsWorld {
     // me = invM1 + invM2 + dot( r1 x n, invI1 * (r1 x n) ) + dot( r2 x n, invI2 * (r2 x n) )
     float max_depth = FLT_MAX;
     for(int i = 0; i < manifold.contact_point_count; i++) {
-      sVector3 point_center_1 = mass_center_obj1.subs(manifold.contact_points[i]);
-      sVector3 point_center_2 = mass_center_obj2.subs(manifold.contact_points[i]);
+      sVector3 point_center_1 = manifold.contact_points[i].subs(mass_center_obj1);
+      sVector3 point_center_2 = manifold.contact_points[i].subs(mass_center_obj2);
       
       sVector3 contact_speed_1 = cross_prod(angular_speed[obj1], point_center_1).sum(speed[obj1]);
       sVector3 contact_speed_2 = cross_prod(angular_speed[obj2], point_center_2).subs(speed[obj2]);
@@ -113,21 +114,24 @@ struct sPhysicsWorld {
       sVector3 point_normal_cross2 = cross_prod(point_center_2, manifold.collision_normal);
       
       // The impulse force is the relative speed divided by the sum of the inverse masses
-      float impulse_force_common = -(1.0f + col_restitution) * relative_speed_among_normal;
+      float impulse_force_common = -relative_speed_among_normal;//-(1.0f + col_restitution) * relative_speed_among_normal;
       float to_divide = inv_mass1 + inv_mass2;
       
       to_divide += dot_prod( point_normal_cross1, inv_inertia_tensors[obj1].multiply(point_normal_cross1) );
       to_divide += dot_prod( point_normal_cross2, inv_inertia_tensors[obj2].multiply(point_normal_cross2) ); 
 
-      float impulse_force_complete = MAX(0.0f, impulse_force_common / to_divide);
+      float impulse_force_complete = impulse_force_common / to_divide;
 
-      sVector3 impulse = manifold.collision_normal.mult(impulse_force_complete);
+      sVector3 impulse = manifold.collision_normal.mult(impulse_force_complete / manifold.contact_point_count);
 
       add_impulse(obj1, impulse);
       add_impulse(obj2, impulse.invert());
 
-      angular_speed[obj1] = angular_speed[obj1].subs(inv_inertia_tensors[obj1].multiply(cross_prod(point_center_1, impulse)));
-      angular_speed[obj2] = angular_speed[obj2].sum(inv_inertia_tensors[obj2].multiply(cross_prod(point_center_2, impulse)));
+      //std::cout << inv_inertia_tensors[obj1].sx1 << std::endl;
+      sVector3 t = cross_prod(point_center_1, impulse);
+      std::cout << impulse.x << " " << impulse.y << " " << impulse.z << std::endl;
+      //angular_speed[obj1] = angular_speed[obj1].sum(inv_inertia_tensors[obj1].multiply(cross_prod(point_center_1, impulse)));
+      //angular_speed[obj2] = angular_speed[obj2].subs(inv_inertia_tensors[obj2].multiply(cross_prod(point_center_2, impulse)));
 
       max_depth = MIN(manifold.points_depth[i], max_depth);
     }
@@ -138,7 +142,7 @@ struct sPhysicsWorld {
     float penetration_allowance = 0.001f;
     float penetration = MIN(max_depth + penetration_allowance, 0.0f) / (inv_mass1 + inv_mass2);
     //std::cout << manifold.points_depth[i] << " " << penetration << std::endl;
-    penetration *= 1.1f;
+    penetration *= 0.25f * manifold.contact_point_count;
     sVector3 correction = {penetration * manifold.collision_normal.x, penetration * manifold.collision_normal.y, penetration * manifold.collision_normal.z};
 
     transforms[obj1].position = transforms[obj1].position.sum(sVector3{-inv_mass1 * correction.x, -inv_mass1 * correction.y, -inv_mass1 * correction.z});

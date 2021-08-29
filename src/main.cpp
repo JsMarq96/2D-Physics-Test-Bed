@@ -255,7 +255,11 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Begin("Rotations");
     for(int i = 0; i < 4; i++) {
       sQuaternion4 quat = transforms[i].rotation_quat;
-      ImGui::Text("Obj %s: %f %f %f %f", names[i], quat.w, quat.x, quat.y, quat.z);
+      sVector3 ang_speed = phys_instance.angular_speed[i];
+      ImGui::Text("%s", names[i]);
+      ImGui::Text("Rot: %f %f %f %f", quat.w, quat.x, quat.y, quat.z);
+      ImGui::Text("Ang speed: %f %f %f",  ang_speed.x, ang_speed.y, ang_speed.z);
+      ImGui::Separator();
     }
     ImGui::End();
 
