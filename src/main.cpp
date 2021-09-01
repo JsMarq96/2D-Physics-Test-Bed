@@ -163,6 +163,7 @@ void draw_loop(GLFWwindow *window) {
     sVector3 curr_scale = transforms[i].scale;
 
     phys_instance.mass_center[i] = {curr_scale.x / 2.0f, curr_scale.y / 2.0f, curr_scale.z / 2.0f};
+    std::cout << curr_scale.x / 2.0f << " " << curr_scale.x << std::endl;
   }
 
   phys_instance.generate_inertia_tensors();
@@ -195,9 +196,6 @@ void draw_loop(GLFWwindow *window) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-		double curr_frame_time = glfwGetTime();
-		double elapsed_time = curr_frame_time - prev_frame_time;
-    prev_frame_time = curr_frame_time;
 
     camera_rot = 1.10f; 
     camera.position = rotate_arround(camera.position, 
@@ -211,9 +209,14 @@ void draw_loop(GLFWwindow *window) {
                                                 (float)width / (float)heigth,
                                                 &proj_mat);
 
-    phys_instance.update(elapsed_time);
+    double curr_frame_time = glfwGetTime();
+		double elapsed_time = curr_frame_time - prev_frame_time;
+    prev_frame_time = curr_frame_time;
+
+    phys_instance.apply_gravity(elapsed_time);
 
     ImGui::Begin("Collisions");
+    for (int iter = 0; iter < 5; iter++) {
     for(int i = 0; i < 4; i++) {
       for(int j = i+1; j < 4; j++) {
         //ImGui::Text("Obj %d %d", i, j);
@@ -248,7 +251,11 @@ void draw_loop(GLFWwindow *window) {
         ImGui::Separator();
       }
     }
+    }
     ImGui::End();
+
+    phys_instance.update(elapsed_time);
+
 
     sMat44 models[4] = {};
 

@@ -1,3 +1,4 @@
+#include "math.h"
 #include <iostream>
 //// FUNCTIONS
 inline float ABS(float x) { return (x < 0.0f) ? x * -1.0f : x; }
@@ -26,6 +27,11 @@ inline float abs_diff(const float  x,
     return (x > y) ? x - y : y - x;
 }
 
+inline float dot_prod(const sQuaternion4& quat1,
+                      const sQuaternion4& quat2) {
+  return quat1.w * quat2.w + quat1.x * quat2.x + quat1.y * quat2.y + quat1.z * quat2.z;
+}
+
 inline float dot_prod(const sVector3 &v1, const sVector3 &v2) {
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
@@ -37,7 +43,7 @@ inline sVector3 cross_prod(const sVector3 &v1, const sVector3 &v2) {
 }
 
 inline sVector3 rotate_vector3(const sVector3 v, const sQuaternion4 quat) {
-    sMat44 rot;
+  sMat44 rot = {};
     convert_quaternion_to_matrix(&quat, &rot);
     sVector4 v2 {v.x, v.y, v.z, 1.0f};
 
@@ -66,29 +72,39 @@ inline void
 convert_quaternion_to_matrix(const sQuaternion4 *quat, sMat44 *mat) {
     mat->set_identity();
     mat->mat_values[0][0] = 1.0f - (2.0f * (quat->y * quat->y + quat->z * quat->z));
-    mat->mat_values[1][0] = 2.0f * (quat->x * quat->y + quat->z * quat->w);
-    mat->mat_values[2][0] = 2.0f * (quat->x * quat->z - quat->y * quat->w);
+    mat->mat_values[0][1] = 2.0f * (quat->x * quat->y + quat->z * quat->w);
+    mat->mat_values[0][2] = 2.0f * (quat->x * quat->z - quat->y * quat->w);
 
-    mat->mat_values[0][1] = 2.0f * (quat->x * quat->y - quat->z * quat->w);
-    mat->mat_values[1][1] = 1.0f - (2.0f * (quat->x * quat->x - quat->z * quat->z));
-    mat->mat_values[2][1] = 2.0f * (quat->y * quat->z + quat->x * quat->w);
+    mat->mat_values[1][0] = 2.0f * (quat->x * quat->y - quat->z * quat->w);
+    mat->mat_values[1][1] = 1.0f - (2.0f * (quat->x * quat->x + quat->z * quat->z));
+    mat->mat_values[1][2] = 2.0f * (quat->y * quat->z + quat->x * quat->w);
 
-    mat->mat_values[0][2] = 2.0f * (quat->x * quat->z + quat->y * quat->w);
-    mat->mat_values[1][2] = 2.0f * (quat->y * quat->z - quat->x * quat->w);
+    mat->mat_values[2][0] = 2.0f * (quat->x * quat->z + quat->y * quat->w);
+    mat->mat_values[2][1] = 2.0f * (quat->y * quat->z - quat->x * quat->w);
     mat->mat_values[2][2] = 1.0f - (2.0f * (quat->x * quat->x + quat->y * quat->y));
     mat->mat_values[3][3] = 1.0f;
-    mat->transpose();
 }
+
+// VECTOR3 ===============================
+
+  inline sQuaternion4 sVector3::get_pure_quaternion() const {
+        return sQuaternion4{0.0f, x, y, z};
+    }
+
 
 // QUATERNION =============================
 
-    inline sQuaternion4 sQuaternion4::inverse() {
-        float norm = w*w + x*x + y*y + z*z;
+inline sQuaternion4 sQuaternion4::conjugate() const {
+  return sQuaternion4{w, -x, -y, -z};
+}
+
+    inline sQuaternion4 sQuaternion4::inverse() const {
+        float norm = sqrt(w*w + x*x + y*y + z*z);
         return sQuaternion4{w / norm, -x / norm, -y / norm, -z / norm};
     }
 
-    inline sQuaternion4 sQuaternion4::normalize() {
-        float norm = w*w + x*x + y*y + z*z;
+    inline sQuaternion4 sQuaternion4::normalize() const {
+        float norm = sqrt(w*w + x*x + y*y + z*z);
         return sQuaternion4{w / norm, x / norm, y / norm, z / norm};
     }
 

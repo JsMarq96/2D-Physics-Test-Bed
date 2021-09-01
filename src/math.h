@@ -63,9 +63,11 @@ union sVector3 {
       return sqrt( (x*x) + (y*y) + (z*z) );
     }
 
-    inline bool is_equal(const sVector3 v) {
+    inline bool is_equal(const sVector3 v) const {
       return v.x == x && v.y == y && v.z == z;
     }
+
+    inline sQuaternion4 get_pure_quaternion() const;
 };
 
 union sVector4 {
@@ -89,15 +91,21 @@ union sQuaternion4 {
         float z;
     };
 
-    sQuaternion4 inverse();
+    sQuaternion4 inverse() const;
 
-    sQuaternion4 normalize();
+    sQuaternion4 normalize() const;
+
+    inline sQuaternion4 conjugate() const;
 
     sQuaternion4 multiply(const sQuaternion4 &quat) const;
 
     sQuaternion4 multiply(const float num) const; 
 
     sQuaternion4 sum(const sQuaternion4 &quat) const;
+
+    sVector3 get_vector() const {
+        return sVector3{x, y, z};
+    }
 };
 
 union sMat33 {
@@ -181,23 +189,25 @@ union sMat33 {
         sy2 = vec.y;
     }
 
-    inline void invert(sMat33 *result) const {
-      // Using sarrus rule
-      float determinant = 1.0f / (
-				+ mat_values[0][0] * (mat_values[1][1] * mat_values[2][2] - mat_values[2][1] * mat_values[1][2])
-				- mat_values[1][0] * (mat_values[0][1] * mat_values[2][2] - mat_values[2][1] * mat_values[0][2])
-				+ mat_values[2][0] * (mat_values[0][1] * mat_values[1][2] - mat_values[1][1] * mat_values[0][2])); 
+    inline void invert(sMat33 *inverse) const {
+        // Using sarrus rule
+        float determinant = (mat_values[0][0] * (mat_values[1][1] * mat_values[2][2] - mat_values[2][1] * mat_values[1][2])
+                            - mat_values[1][0] * (mat_values[0][1] * mat_values[2][2] - mat_values[2][1] * mat_values[0][2])
+                            + mat_values[2][0] * (mat_values[0][1] * mat_values[1][2] - mat_values[1][1] * mat_values[0][2]));
+        assert(determinant != 0 && "Determinant cannto be 0 on inv_matrix 3");
 
-      result->mat_values[0][0] = + (mat_values[1][1] * mat_values[2][2] - mat_values[2][1] * mat_values[1][2]) * determinant;
-			result->mat_values[1][0] = - (mat_values[1][0] * mat_values[2][2] - mat_values[2][0] * mat_values[1][2]) * determinant;
-			result->mat_values[2][0] = + (mat_values[1][0] * mat_values[2][1] - mat_values[2][0] * mat_values[1][1]) * determinant;
-			result->mat_values[0][1] = - (mat_values[0][1] * mat_values[2][2] - mat_values[2][1] * mat_values[0][2]) * determinant;
-			result->mat_values[1][1] = + (mat_values[0][0] * mat_values[2][2] - mat_values[2][0] * mat_values[0][2]) * determinant;
-			result->mat_values[2][1] = - (mat_values[0][0] * mat_values[2][1] - mat_values[2][0] * mat_values[0][1]) * determinant;
-			result->mat_values[0][2] = + (mat_values[0][1] * mat_values[1][2] - mat_values[1][1] * mat_values[0][2]) * determinant;
-			result->mat_values[1][2] = - (mat_values[0][0] * mat_values[1][2] - mat_values[1][0] * mat_values[0][2]) * determinant;
-			result->mat_values[2][2] = + (mat_values[0][0] * mat_values[1][1] - mat_values[1][0] * mat_values[0][1]) * determinant; 
-    }
+        determinant = 1.0f / determinant;
+
+        inverse->mat_values[0][0] = + (mat_values[1][1] * mat_values[2][2] - mat_values[2][1] * mat_values[1][2]) * determinant;
+        inverse->mat_values[1][0] = - (mat_values[1][0] * mat_values[2][2] - mat_values[2][0] * mat_values[1][2]) * determinant;
+        inverse->mat_values[2][0] = + (mat_values[1][0] * mat_values[2][1] - mat_values[2][0] * mat_values[1][1]) * determinant;
+        inverse->mat_values[0][1] = - (mat_values[0][1] * mat_values[2][2] - mat_values[2][1] * mat_values[0][2]) * determinant;
+        inverse->mat_values[1][1] = + (mat_values[0][0] * mat_values[2][2] - mat_values[2][0] * mat_values[0][2]) * determinant;
+        inverse->mat_values[2][1] = - (mat_values[0][0] * mat_values[2][1] - mat_values[2][0] * mat_values[0][1]) * determinant;
+        inverse->mat_values[0][2] = + (mat_values[0][1] * mat_values[1][2] - mat_values[1][1] * mat_values[0][2]) * determinant;
+        inverse->mat_values[1][2] = - (mat_values[0][0] * mat_values[1][2] - mat_values[1][0] * mat_values[0][2]) * determinant;
+        inverse->mat_values[2][2] = + (mat_values[0][0] * mat_values[1][1] - mat_values[1][0] * mat_values[0][1]) * determinant;
+      }
 
 };
 
