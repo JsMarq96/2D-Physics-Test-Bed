@@ -122,12 +122,17 @@ void test_draw_loop(GLFWwindow *window) {
 
   transf[0].position = {1.2f, 0.0f, 0.0f};
   transf[0].scale = {1.0f, 0.5f, 1.0f};
-  transf[0].rotation = {1.0f, 0.f, 0.0f, 0.0f};
+  transf[0].rotation = sQuaternion4{1.0f, 0.f, 0.0f, 0.0f};
 
   transf[1].position = {-1.2f, 0.0f, 0.0f};
   transf[1].scale = {1.0f, 0.5f, 1.0f};
   transf[1].rotation = sQuaternion4{1.0f, 2.0f,0.0f, 0.0f}.normalize();
 
+  //transf[0].rotation = transf[0].rotation.multiply(sQuaternion4{1.0f, 2.0f,0.0f, 0.0f}.normalize().inverse());
+
+  //transf[0].change_basis(transf[1]);
+
+  transf[0] = transf[1].inverse().multiply(transf[0]);
 
   sVector4 colors[2] = {{1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}};
 

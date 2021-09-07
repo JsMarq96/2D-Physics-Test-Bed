@@ -50,6 +50,10 @@ union sVector3 {
       return {x * num, y * num, z * num};
     }
 
+    inline sVector3 mult(const sVector3 &vect) const {
+        return {x * vect.x, y * vect.y, z * vect.z};
+    }
+
     inline sVector3 invert() const {
       return sVector3{-x, -y, -z};
     }; 

@@ -28,23 +28,18 @@ struct sTransform {
     rotation = rotation.normalize();
   }
 
+  sTransform inverse() const {
+    return sTransform{ rotation.inverse(), position.mult(-1.0f), sVector3{1.0f / scale.x, 1.0f / scale.y, 1.0f / scale.z}};
+  }
 
-  // Set the transform in the new_ref's space
-  void change_basis(const sTransform &new_ref) {
-    sMat44 tmp = {};
-    
-    // Invert the rottaion matrix via a transpose
-    /*new_ref.rotation_mat.transpose_to(&tmp);
-    tmp.multiply(&rotation_mat);
-    memcpy(&rotation_mat, &tmp, sizeof(sMat44));*/
+  sTransform multiply(const sTransform &b) const {
+    sTransform res = {};
 
-    // Rotate the quaternion along new basis
-    rotation = new_ref.rotation.multiply(rotation);
+    res.rotation = rotation.multiply(b.rotation);
+    res.position = position.sum(b.position);
+    res.scale = scale.mult(b.scale);
 
-    // Invert the position
-    tmp.set_identity();
-    tmp.set_position(new_ref.position.invert());
-    position = tmp.multiply(position);
+    return res;
   }
 
   inline void apply(sVector3 *vect) const {
