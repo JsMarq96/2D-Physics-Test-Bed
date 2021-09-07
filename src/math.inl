@@ -68,21 +68,48 @@ inline sVector3 rotate_vector3(const sVector3 v, const sQuaternion4 quat) {
     return result;*/
 }
 // https://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/index.htm
+/*inline void
+convert_quaternion_to_matrix(const sQuaternion4 *quat, sMat44 *mat) {
+  mat->set_identity();
+    mat->mat_values[0][0] = 2.0f * (quat->q0 * quat->q0 + quat->q1 * quat->q1) - 1.0f;
+    mat->mat_values[1][0] = 2.0f * (quat->q1 * quat->q1 + quat->q0 * quat->q3);
+    mat->mat_values[2][0] = 2.0f * (quat->q1 * quat->q3 - quat->q0 * quat->q2);
+
+    mat->mat_values[0][1] = 2.0f * (quat->q1 * quat->q2 - quat->q0 * quat->q3);
+    mat->mat_values[1][1] = 2.0f * (quat->q0 * quat->q0 + quat->q2 * quat->q2) - 1.0f;
+    mat->mat_values[2][1] = 2.0f * (quat->q2 * quat->q3 + quat->q0 * quat->q1);
+
+    mat->mat_values[0][2] = 2.0f * (quat->q1 * quat->q3 + quat->q0 * quat->q2);
+    mat->mat_values[1][2] = 2.0f * (quat->q2 * quat->q3 - quat->q0 * quat->q1);
+    mat->mat_values[2][2] = 2.0f * (quat->q0 * quat->q0 + quat->q3 * quat->q3) - 1.0f;
+    mat->mat_values[3][3] = 1.0f;
+    mat->transpose();
+}*/
 inline void
 convert_quaternion_to_matrix(const sQuaternion4 *quat, sMat44 *mat) {
-    mat->set_identity();
-    mat->mat_values[0][0] = 1.0f - (2.0f * (quat->y * quat->y + quat->z * quat->z));
-    mat->mat_values[0][1] = 2.0f * (quat->x * quat->y + quat->z * quat->w);
-    mat->mat_values[0][2] = 2.0f * (quat->x * quat->z - quat->y * quat->w);
+  float qxx = quat->x * quat->x;
+  float qyy = quat->y * quat->y;
+  float qzz = quat->z * quat->z;
+  float qxz = quat->w * quat->z;
+  float qxy = quat->x * quat->y;
+  float qyz = quat->y * quat->z;
+  float qwy = quat->w * quat->y;
+  float qwx = quat->w * quat->x;
+  float qwz = quat->w * quat->z;
 
-    mat->mat_values[1][0] = 2.0f * (quat->x * quat->y - quat->z * quat->w);
-    mat->mat_values[1][1] = 1.0f - (2.0f * (quat->x * quat->x + quat->z * quat->z));
-    mat->mat_values[1][2] = 2.0f * (quat->y * quat->z + quat->x * quat->w);
+  mat->set_identity();
+  mat->mat_values[0][0] = 1.0f - (2.0f * (qyy + qzz));
+  mat->mat_values[0][1] = 2.0f * (qxy + qwz);
+  mat->mat_values[0][2] = 2.0f * (qxz - qwy);
 
-    mat->mat_values[2][0] = 2.0f * (quat->x * quat->z + quat->y * quat->w);
-    mat->mat_values[2][1] = 2.0f * (quat->y * quat->z - quat->x * quat->w);
-    mat->mat_values[2][2] = 1.0f - (2.0f * (quat->x * quat->x + quat->y * quat->y));
-    mat->mat_values[3][3] = 1.0f;
+  mat->mat_values[1][0] = 2.0f * (qxy - qwz);
+  mat->mat_values[1][1] = 1.0f - (2.0f * (qxx + qzz));
+  mat->mat_values[1][2] = 2.0f * (qyz + qwx);
+
+  mat->mat_values[2][0] = 2.0f * (qxy + qwy);
+  mat->mat_values[2][1] = 2.0f * (qyz - qwx);
+  mat->mat_values[2][2] = 1.0f - (2.0f * (qxx + qyy));
+  //mat->transpose();
 }
 
 // VECTOR3 ===============================
@@ -109,10 +136,10 @@ inline sQuaternion4 sQuaternion4::conjugate() const {
     }
 
     inline sQuaternion4 sQuaternion4::multiply(const sQuaternion4 &q) const {
-      return {(w * q.x) + (x * q.w) + (y * q.z) - (z * q.y),
-              (w * q.y) + (y * q.w) + (z * q.x) - (x * q.z),
-              (w * q.z) + (z * q.w) + (x * q.y) - (y * q.x),
-              (w * q.w) - (x * q.x) - (y * q.y) - (z * q.z)
+      return {(w * q.w) - (x * q.x) - (y * q.y) - (z * q.z),
+              (w * q.x) + (x * q.w) - (y * q.z) + (z * q.y),
+              (w * q.y) + (x * q.z) + (y * q.w) - (z * q.x),
+              (w * q.z) - (x * q.y) + (y * q.x) + (z * q.w)
               };
     };
 
@@ -165,12 +192,12 @@ inline sQuaternion4 sQuaternion4::conjugate() const {
     // TODO: Optimize via SIMD
     inline void
     sMat44::multiply(const sMat44   *B) {
-        sMat44 result;
+      sMat44 result = {};
         for (int x = 0; x < 4; x++) {
             for (int y = 0; y < 4; y++) {
                 float tmp = 0.0f;
                 for (int i = 0; i < 4; i++) {
-                    tmp += mat_values[x][i] * B->mat_values[i][y];
+                    tmp += mat_values[i][y] * B->mat_values[x][i];
                 }
 
                 result.mat_values[x][y] = tmp;
@@ -182,7 +209,7 @@ inline sQuaternion4 sQuaternion4::conjugate() const {
 
     inline void
     sMat44::rotate(const sQuaternion4 *quat) {
-        sMat44 tmp_mat, tmp_mat2;
+      sMat44 tmp_mat = {}, tmp_mat2 = {};
         convert_quaternion_to_matrix(quat, &tmp_mat);
         tmp_mat.invert(&tmp_mat2);
         multiply(&tmp_mat2);
@@ -190,7 +217,7 @@ inline sQuaternion4 sQuaternion4::conjugate() const {
 
     inline void
     sMat44::scale(const sVector3 vect) {
-        sMat44 tmp_mat, tmp_mat2;
+      sMat44 tmp_mat = {}, tmp_mat2 = {};
         tmp_mat.set_scale(vect);
         tmp_mat.invert(&tmp_mat2);
         multiply(&tmp_mat2);
@@ -248,7 +275,7 @@ inline sQuaternion4 sQuaternion4::conjugate() const {
     }
 
   inline void sMat44::transpose() {
-      sMat44 tmp;
+    sMat44 tmp = {};
       tmp.mat_values[0][0] = mat_values[0][0];
       tmp.mat_values[0][1] = mat_values[1][0];
       tmp.mat_values[0][2] = mat_values[2][0];

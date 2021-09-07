@@ -106,13 +106,13 @@ struct sCamera {
                                           const float near,
                                           const float aspect_ratio,
                                           sMat44  *result) const {
-      sMat44 tmp;
+      sMat44 tmp = {};
       memcpy(&tmp, &view_mat, sizeof(sMat44));
       get_perspective_projection_matrix(FOV, far, near, aspect_ratio, result);
 
-      tmp.multiply(result);
+      result->multiply(&tmp);
 
-      memcpy(result, &tmp, sizeof(sMat44));
+      //memcpy(result, &tmp, sizeof(sMat44));
     }
 
     void

@@ -44,7 +44,7 @@ inline bool test_overlap_on_axis(const sVector3  *shape1_vertices,
 inline sVector3 get_support_point_on_dir(const sVector3  &direction,
                                          const sVector3  *vertices,
                                          const int        vertices_count) {
-  sVector3 support;
+  sVector3 support = {};
   float support_proj = -FLT_MAX;
   for(int i = 0; i < vertices_count; i++) {
     float proj = dot_prod(vertices[i], direction);
@@ -92,7 +92,12 @@ inline bool SAT_test(const sRawGeometry &obj1,
   sTransform new_transf = obj2_transform;
   new_transf.change_basis(obj1_transform);
 
-  sRawGeometry obj2_in_obj1_space;
+  // Test
+  sVector3 tmp = {0.0f, 0.0f, 0.0f};
+  tmp = obj2_transform.apply(tmp);
+  ImGui::Text("TEST obj2: %f %f %f", tmp.x, tmp.y, tmp.z);
+
+  sRawGeometry obj2_in_obj1_space = {};
   obj2.duplicate(&obj2_in_obj1_space);
   obj2_in_obj1_space.apply_transform(new_transf);
 

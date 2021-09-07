@@ -39,7 +39,7 @@ struct sTransform {
     memcpy(&rotation_mat, &tmp, sizeof(sMat44));*/
 
     // Rotate the quaternion along new basis
-    rotation = new_ref.rotation.inverse().multiply(rotation);
+    rotation = new_ref.rotation.multiply(rotation);
 
     // Invert the position
     tmp.set_identity();
@@ -64,9 +64,12 @@ struct sTransform {
     mat.set_position(position);
     mat.set_scale(scale);
     sQuaternion4 q_vect = mat.multiply(vect).get_pure_quaternion();
+    ImGui::Text("q vect %f %f %f %f", q_vect.w, q_vect.x, q_vect.y, q_vect.z);
+    //return mat.multiply(vect);
 
     // Using a' = Q * a * Q^-1
-    return rotation.multiply(q_vect.multiply(rotation.conjugate())).get_vector();
+    return rotation.multiply(q_vect).multiply(rotation.inverse()).get_vector();
+    //return rotation.multiply( q_vect.multiply( rotation.conjugate() ) ).get_vector();
   }
 
   inline void apply(sPlane *plane) const {
@@ -74,6 +77,26 @@ struct sTransform {
     //plane->normal = rotation_mat.multiply(plane->normal);
     sQuaternion4 normal_quat = plane->normal.get_pure_quaternion();
     plane->normal = rotation.multiply(normal_quat.multiply(rotation.conjugate())).get_vector();
+  }
+
+  inline void get_model(sMat44 *mat) const {
+    //convert_quaternion_to_matrix(&rotation, mat);
+    //return;
+    sMat44 scale_mat = {}, rot_mat = {};
+
+    mat->set_identity();
+    mat->set_position(position);
+
+    scale_mat.set_identity();
+    scale_mat.set_scale(scale);
+
+    convert_quaternion_to_matrix(&rotation, &rot_mat);
+
+    rot_mat.multiply(&scale_mat);
+
+    mat->multiply(&rot_mat);
+
+    //mat->multiply(&scale_mat);
   }
 };
 

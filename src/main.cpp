@@ -104,6 +104,102 @@ sVector3 rotate_arround(const sVector3 pos,
   return sVector3{nx + center.x, pos.y, nz + center.z};
 }
 
+void test_draw_loop(GLFWwindow *window) {
+  glfwMakeContextCurrent(window);
+
+  // Generate geometry data
+
+  sCubeRenderer renderer = {};
+
+  cube_renderer_init(&renderer);
+
+  sCamera camera = {};
+  camera.position = {2.0f, 0.2f, 2.0f};
+
+  double prev_frame_time = glfwGetTime();
+
+  sTransform transf[2] = {{}};
+
+  transf[0].position = {1.2f, 0.0f, 0.0f};
+  transf[0].scale = {1.0f, 0.5f, 1.0f};
+  transf[0].rotation = {1.0f, 0.f, 0.0f, 0.0f};
+
+  transf[1].position = {-1.2f, 0.0f, 0.0f};
+  transf[1].scale = {1.0f, 0.5f, 1.0f};
+  transf[1].rotation = sQuaternion4{1.0f, 2.0f,0.0f, 0.0f}.normalize();
+
+
+  sVector4 colors[2] = {{1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}};
+
+  while(!glfwWindowShouldClose(window)) {
+   // Draw loop
+    int width, heigth;
+    double temp_mouse_x, temp_mouse_y;
+
+    glfwPollEvents();
+    glfwGetFramebufferSize(window, &width, &heigth);
+    // Set to OpenGL viewport size anc coordinates
+    glViewport(0,0, width, heigth);
+
+    sMat44 proj_mat = {};
+
+    // OpenGL stuff
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+
+    float camera_rot = 1.10f;
+    camera.position = rotate_arround(camera.position,
+                                     sVector3{0.0f, 0.0f, 0.0f},
+                                     to_radians(camera_rot));
+
+    camera.look_at(sVector3{0.0f, 0.0f, 0.0f});
+    camera.get_perspective_viewprojection_matrix(90.0f,
+                                                100.0f,
+                                                0.1f,
+                                                (float)width / (float)heigth,
+                                                &proj_mat);
+
+    double curr_frame_time = glfwGetTime();
+    double elapsed_time = curr_frame_time - prev_frame_time;
+    prev_frame_time = curr_frame_time;
+
+    sMat44 model[2] = {};
+
+    transf[0].get_model(&model[0]);
+    transf[1].get_model(&model[1]);
+
+    ImGui::Begin("Rot");
+    for(int i = 0; i < 2; i++) {
+      sQuaternion4 q = transf[i].rotation;
+      ImGui::Text("%f %f %f %f", q.w, q.x, q.y, q.z);
+      //ImGui::Separator();
+      ImGui::Text("Model mat:");
+      for(int j = 0; j < 4; j++) {
+        ImGui::Text("%f %f %f %f", model[i].mat_values[j][0], model[i].mat_values[j][1], model[i].mat_values[j][2], model[i].mat_values[j][3]);
+      }
+      ImGui::Separator();
+    }
+
+    ImGui::End();
+
+    cube_renderer_render(&renderer,
+                         model,
+                         colors,
+                         2,
+                         &proj_mat);
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    glfwSwapBuffers(window);
+  }
+}
+
 void draw_loop(GLFWwindow *window) {
 	glfwMakeContextCurrent(window);
   char names[4][5] = {
@@ -213,7 +309,7 @@ void draw_loop(GLFWwindow *window) {
 		double elapsed_time = curr_frame_time - prev_frame_time;
     prev_frame_time = curr_frame_time;
 
-    phys_instance.apply_gravity(elapsed_time);
+    //phys_instance.apply_gravity(elapsed_time);
 
     ImGui::Begin("Collisions");
     for (int iter = 0; iter < 5; iter++) {
@@ -254,14 +350,14 @@ void draw_loop(GLFWwindow *window) {
     }
     ImGui::End();
 
-    phys_instance.update(elapsed_time);
+    //phys_instance.update(elapsed_time);
 
 
     sMat44 models[4] = {};
 
     ImGui::Begin("Rotations");
     for(int i = 0; i < 4; i++) {
-      sQuaternion4 quat = transforms[i].rotation_quat;
+      sQuaternion4 quat = transforms[i].rotation;
       sVector3 ang_speed = phys_instance.angular_speed[i];
       ImGui::Text("%s", names[i]);
       ImGui::Text("Rot: %f %f %f %f", quat.w, quat.x, quat.y, quat.z);
@@ -276,7 +372,7 @@ void draw_loop(GLFWwindow *window) {
       models[i].set_scale(transforms[i].scale);
       // Rotation
       models[i].set_position(transforms[i].position);
-      models[i].rotate(&transforms[i].rotation_quat);
+      models[i].rotate(&transforms[i].rotation);
       ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
     }
     ImGui::End();
@@ -312,7 +408,6 @@ int main() {
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 
-	std::cout << "test" << std::endl;
 	if (!window) {
 		std::cout << "Error, could not create window" << std::endl; 
 	} else {
@@ -324,7 +419,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-			draw_loop(window);
+      //draw_loop(window);
+      test_draw_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

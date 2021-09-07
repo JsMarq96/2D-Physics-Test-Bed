@@ -72,11 +72,11 @@ struct sPhysicsWorld {
       sQuaternion4 tmp_quat = {0.0f, angular_speed[i].x, angular_speed[i].y, angular_speed[i].z};
       tmp_quat = tmp_quat.multiply(0.5f).multiply(elapsed_time);
 
-      sQuaternion4 rot_quat = transforms[i].rotation_quat;
+      sQuaternion4 rot_quat = transforms[i].rotation;
       rot_quat = rot_quat.sum(tmp_quat.multiply(rot_quat));
       rot_quat = rot_quat.normalize();
 
-      transforms[i].set_rotation(rot_quat);
+      //transforms[i].set_rotation(rot_quat);
     }
   }
 
@@ -88,7 +88,8 @@ struct sPhysicsWorld {
     tmp.y += inv_mass * impulse.y;
     tmp.z += inv_mass * impulse.z;
 
-    speed[index] = tmp;
+    //TODO: Dont forget, disabled for debugging
+    //speed[index] = tmp;
   }
 
   void resolve_collision(const sCollisionManifold &manifold) {
