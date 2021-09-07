@@ -83,22 +83,17 @@ inline float get_max_distance_in_planes_axis(const sPlane    *obj1_planes,
 }
 
 
-inline bool SAT_test(const sRawGeometry &obj1, 
-                     const sTransform   &obj1_transform,
-                     const sRawGeometry &obj2,
+inline bool SAT_test(const sTransform   &obj1_transform,
                      const sTransform   &obj2_transform,
                            sCollisionManifold    *manifold) {
   // We evaluate the collisions in obj1's local space
-  sTransform new_transf = obj2_transform;
-  new_transf.change_basis(obj1_transform);
+  sTransform new_transf = obj1_transform.inverse().multiply(obj2_transform);
 
-  // Test
-  sVector3 tmp = {0.0f, 0.0f, 0.0f};
-  tmp = obj2_transform.apply(tmp);
-  ImGui::Text("TEST obj2: %f %f %f", tmp.x, tmp.y, tmp.z);
+  sRawGeometry obj1 = {};
+  obj1.init_cuboid();
 
   sRawGeometry obj2_in_obj1_space = {};
-  obj2.duplicate(&obj2_in_obj1_space);
+  obj2_in_obj1_space.init_cuboid();
   obj2_in_obj1_space.apply_transform(new_transf);
 
   // ========= SAT =================
@@ -128,27 +123,6 @@ inline bool SAT_test(const sRawGeometry &obj1,
     return false;
   }
  
-  // For last, we test the overlap on the edge's axis
-  int obj1_num_of_axis = (obj1.is_cube) ? 3 : obj1.planes_size;
-  int obj2_num_of_axis = (obj2.is_cube) ? 3 : obj2.planes_size;
-  for(int i = 0; i < obj1_num_of_axis; i++) {
-    for(int j = 0; j < obj2_num_of_axis; j++) {
-      sVector3 axis = cross_prod(obj1.planes[i].normal, 
-                                 obj2_in_obj1_space.planes[j].normal);
-
-      if (axis.x == 0 && axis.y == 0 && axis.z == 0) {
-        continue;
-      }
-
-      if (!test_overlap_on_axis(obj1.raw_points,
-                                obj1.vertices_size,
-                                obj2_in_obj1_space.raw_points,
-                                obj2_in_obj1_space.vertices_size,
-                                axis)) {
-        return false;
-      }
-    }
-  }
 
   // ======= Manifold generation =================
 
@@ -164,11 +138,13 @@ inline bool SAT_test(const sRawGeometry &obj1,
     reference_index = obj1_face_of_most_separation;
 
     incident_obj = &obj2_in_obj1_space;
+    ImGui::Text("Incident 2");
   } else {
     reference_obj = &obj2_in_obj1_space;
     reference_index = obj2_face_of_most_separation;
 
     incident_obj = &obj1;
+    ImGui::Text("Incident 1");
   }
 
   // Calculate the incident face
@@ -189,7 +165,7 @@ inline bool SAT_test(const sRawGeometry &obj1,
    * storing the modified ones, and then swp then back, for iterating the
    * previusly modified vertices, and storing on the (cleaned) old iterating buffer
    * */
-  int incident_vertex_count = obj2.points_per_plane;
+  int incident_vertex_count = obj1.points_per_plane;
 
   sSwapableVector3Stacks swaps;
 
@@ -197,11 +173,16 @@ inline bool SAT_test(const sRawGeometry &obj1,
 
   // Add to the stack the points 
   for(int i = 0; i < incident_obj->points_per_plane; i++) {
-    sVector3 tmp = incident_obj->get_point_of_face(incident_index, i); 
-    obj1_transform.apply(&tmp);    
+    sVector3 tmp = incident_obj->get_point_of_face(incident_index, i);
+    //ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, 0.0f);
     swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
   }
 
+  for(int i = 0; i < reference_obj->points_per_plane; i++) {
+    sVector3 tmp = reference_obj->get_point_of_face(incident_index, i);
+    ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, 0.0f);
+    //swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
+  }
 
   for(int i = 0; i < reference_obj->planes_size; i++) { 
     sPlane *curr_plane = &reference_obj->planes[i];
@@ -243,10 +224,9 @@ inline bool SAT_test(const sRawGeometry &obj1,
   sPlane reference_plane = reference_obj->planes[reference_index];
   for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
     sVector3 tmp = swaps.get_element_from_current_stack(j);
-    float distance = reference_plane.distance(tmp); 
-    obj1_transform.apply(&tmp);
+    float distance = reference_plane.distance(tmp);
+    tmp = obj1_transform.apply(tmp);
     manifold->add_collision_point(tmp, distance);
-    ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, distance);
   }
 
   manifold->collision_normal = reference_plane.normal;

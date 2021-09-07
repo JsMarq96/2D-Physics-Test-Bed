@@ -41,7 +41,6 @@ struct sPhysicsWorld {
         tmp.sy2 = mass[i] * (half_x * half_x + half_z * half_z) / 12.0f;
         tmp.tmp3 = mass[i] * (half_x * half_x + half_y * half_y) / 12.0f;
         tmp.invert(&inv_inertia_tensors[i]);
-        std::cout << inv_inertia_tensors[i].sx1 << " " <<  inv_inertia_tensors[i].sy2 << std::endl;
      }
   }
 
@@ -53,7 +52,7 @@ struct sPhysicsWorld {
 
       // Integrate gravity
       // TODO: Gravity constatn cleanup
-      speed[i].y += -0.98f * elapsed_time;
+      speed[i].y += -0.098f * elapsed_time;
     }
 
   }
@@ -76,7 +75,7 @@ struct sPhysicsWorld {
       rot_quat = rot_quat.sum(tmp_quat.multiply(rot_quat));
       rot_quat = rot_quat.normalize();
 
-      //transforms[i].set_rotation(rot_quat);
+      transforms[i].set_rotation(rot_quat);
     }
   }
 
@@ -88,8 +87,7 @@ struct sPhysicsWorld {
     tmp.y += inv_mass * impulse.y;
     tmp.z += inv_mass * impulse.z;
 
-    //TODO: Dont forget, disabled for debugging
-    //speed[index] = tmp;
+    speed[index] = tmp;
   }
 
   void resolve_collision(const sCollisionManifold &manifold) {
@@ -128,9 +126,6 @@ struct sPhysicsWorld {
                                                     contact_speed_1.z - contact_speed_2.z}); 
 
 
-      if (relative_speed_among_normal > 0.0f) {
-        continue;
-      }
 
       sVector3 point_normal_cross1 = cross_prod(point_center_1, manifold.collision_normal);
       sVector3 point_normal_cross2 = cross_prod(point_center_2, manifold.collision_normal);
@@ -138,9 +133,6 @@ struct sPhysicsWorld {
       // The impulse force is the relative speed divided by the sum of the inverse masses
       float impulse_force_common = -relative_speed_among_normal;//-(1.0f + col_restitution) * relative_speed_among_normal;
       float to_divide = inv_mass1 + inv_mass2;
-      
-      //to_divide += dot_prod( point_center_1, inv_inertia_tensors[obj1].multiply(point_normal_cross1) );
-      //to_divide += dot_prod( point_center_2, inv_inertia_tensors[obj2].multiply(point_normal_cross2) );
 
       sVector3 t1 = cross_prod(inv_inertia_tensors[obj1].multiply(point_normal_cross1), point_center_1);
       sVector3 t2 = cross_prod(inv_inertia_tensors[obj2].multiply(point_normal_cross2), point_center_2);
@@ -154,9 +146,6 @@ struct sPhysicsWorld {
       add_impulse(obj1, impulse);
       add_impulse(obj2, impulse.invert());
 
-      //std::cout << inv_inertia_tensors[obj1].sx1 << std::endl;
-      //sVector3 t = cross_prod(point_center_1, impulse);
-      // std::cout << impulse.x << " " << impulse.y << " " << impulse.z << std::endl;
       angular_speed[obj1] = angular_speed[obj1].sum(inv_inertia_tensors[obj1].multiply(cross_prod(point_center_1, impulse)));
       angular_speed[obj2] = angular_speed[obj2].sum(inv_inertia_tensors[obj2].multiply(cross_prod(point_center_2, impulse.invert())));
 
@@ -165,7 +154,7 @@ struct sPhysicsWorld {
 
     // Penetration correction
     // TODO: Work a bit better the solution, without moving the objects http://allenchou.net/2013/12/game-physics-constraints-sequential-impulse/
-    float penetration_allowance = 0.0001f;
+    float penetration_allowance = 0.001f;
       float penetration = MAX(-max_depth - penetration_allowance, 0.0f) / (inv_mass1 + inv_mass2);
       //std::cout << manifold.points_depth[i] << " " << penetration << std::endl;
       penetration *= 0.3f * manifold.contact_point_count;

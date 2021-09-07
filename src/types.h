@@ -17,13 +17,9 @@ struct sTransform {
 
   void set_rotation(const sQuaternion4 quat) {
     rotation = quat;
-    //convert_quaternion_to_matrix(&quat, &rotation_mat);
   }
 
   void rotate(const sQuaternion4 quat) {
-    //sQuaternion4 quat_conj = quat.conjugate();
-    //rotation_quat = quat.multiply(rotation_quat.multiply(quat_conj));
-    //rotation_quat = rotation_quat.normalize();
     rotation = quat.multiply(rotation);
     rotation = rotation.normalize();
   }
@@ -42,43 +38,25 @@ struct sTransform {
     return res;
   }
 
-  inline void apply(sVector3 *vect) const {
-    sMat44 mat = {};
-    mat.set_position(position);
-    mat.set_scale(scale);
-
-    sQuaternion4 q_vect = vect->get_pure_quaternion();
-    // Using a' = Q * a * Q^-1
-    *vect = rotation.multiply(q_vect.multiply(rotation.conjugate())).get_vector();
-
-    //*vect = rotation_mat.multiply(mat.multiply(*vect));
-  }
-
   inline sVector3 apply(const sVector3 &vect) const {
-    sMat44 mat = {};
-    mat.set_position(position);
-    mat.set_scale(scale);
-    sQuaternion4 q_vect = mat.multiply(vect).get_pure_quaternion();
-    ImGui::Text("q vect %f %f %f %f", q_vect.w, q_vect.x, q_vect.y, q_vect.z);
-    //return mat.multiply(vect);
+    sVector3 scalled = vect.mult(scale);
+    sQuaternion4 q_vect = scalled.get_pure_quaternion();
 
     // Using a' = Q * a * Q^-1
-    return rotation.multiply(q_vect).multiply(rotation.inverse()).get_vector();
-    //return rotation.multiply( q_vect.multiply( rotation.conjugate() ) ).get_vector();
+    return rotation.inverse().multiply(q_vect).multiply(rotation).get_vector().sum(position);
   }
 
   inline void apply(sPlane *plane) const {
-    apply(&(plane->origin_point));
-    //plane->normal = rotation_mat.multiply(plane->normal);
+    plane->origin_point = apply((plane->origin_point));
     sQuaternion4 normal_quat = plane->normal.get_pure_quaternion();
-    plane->normal = rotation.multiply(normal_quat.multiply(rotation.conjugate())).get_vector();
+    plane->normal = rotation.inverse().multiply(normal_quat).multiply(rotation).get_vector().normalize();
   }
 
+  // Generate model matrix
   inline void get_model(sMat44 *mat) const {
-    //convert_quaternion_to_matrix(&rotation, mat);
-    //return;
     sMat44 scale_mat = {}, rot_mat = {};
 
+    // Order of transforms: Position <- Rotation <- Scale
     mat->set_identity();
     mat->set_position(position);
 
@@ -90,15 +68,11 @@ struct sTransform {
     rot_mat.multiply(&scale_mat);
 
     mat->multiply(&rot_mat);
-
-    //mat->multiply(&scale_mat);
   }
 };
 
 
 struct sRawGeometry {
-  sVector3  scale; 
-
   sVector3  *raw_points;
   sPlane    *planes;
 
@@ -111,7 +85,7 @@ struct sRawGeometry {
   unsigned int planes_size = 0;
   unsigned int points_per_plane = 0;
 
-  void init_cuboid(const sVector3 &c_scale) {
+  void init_cuboid() {
     // Indexes of each face
     int box_LUT_vertices[6 * 4] = {
       4, 5, 7, 6, // 0
@@ -122,20 +96,19 @@ struct sRawGeometry {
       0, 2, 6, 4 // 2
     };
 
-    scale = c_scale;
     face_indexes = (int*) malloc(sizeof(int) * 6 * 4);
     memcpy(face_indexes, box_LUT_vertices, sizeof(box_LUT_vertices));
 
     // Raw pointers
     raw_points = (sVector3*) malloc(sizeof(sVector3) * 8);
     raw_points[0] = sVector3{0.0f, 0.0f, 0.0f};
-    raw_points[1] = sVector3{scale.x, 0.0f, 0.0f};
-    raw_points[2] = sVector3{0.0f, scale.y, 0.0f};
-    raw_points[3] = sVector3{scale.x, scale.y, 0.0f};
-    raw_points[4] = sVector3{0.0f, 0.0f, scale.z};
-    raw_points[5] = sVector3{scale.x, 0.0f, scale.z};
-    raw_points[6] = sVector3{0.0f, scale.y, scale.z};
-    raw_points[7] = sVector3{scale.x, scale.y, scale.z};
+    raw_points[1] = sVector3{1.0f, 0.0f, 0.0f};
+    raw_points[2] = sVector3{0.0f, 1.0f, 0.0f};
+    raw_points[3] = sVector3{1.0f, 1.0f, 0.0f};
+    raw_points[4] = sVector3{0.0f, 0.0f, 1.0f};
+    raw_points[5] = sVector3{1.0f, 0.0f, 1.0f};
+    raw_points[6] = sVector3{0.0f, 1.0f, 1.0f};
+    raw_points[7] = sVector3{1.0f, 1.0f, 1.0f};
 
     // Generate planes
     planes = (sPlane*) malloc(sizeof(sPlane) * 6);
@@ -171,7 +144,6 @@ struct sRawGeometry {
   };
 
   void duplicate(sRawGeometry *copy_to) const {
-    copy_to->scale = scale;
     copy_to->is_cube = is_cube;
     copy_to->vertices_size = vertices_size;
     copy_to->planes_size = planes_size;
@@ -191,7 +163,7 @@ struct sRawGeometry {
    * A support point is the furcest point in that direction
    * */
   inline sVector3 get_support_point(const sVector3 &direction) const {
-    sVector3 support;
+    sVector3 support = {};
     float support_proj = -FLT_MAX;
 
     for(int i = 0; i < vertices_size; i++) {
@@ -214,7 +186,7 @@ struct sRawGeometry {
 
   inline void apply_transform(const sTransform &transf) {
     for(int i = 0; i < vertices_size; i++) {
-      transf.apply(&raw_points[i]);
+      raw_points[i] = transf.apply(raw_points[i]);
     }
 
     for(int i = 0; i< planes_size; i++) {

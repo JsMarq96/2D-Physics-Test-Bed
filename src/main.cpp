@@ -128,13 +128,11 @@ void test_draw_loop(GLFWwindow *window) {
   transf[1].scale = {1.0f, 0.5f, 1.0f};
   transf[1].rotation = sQuaternion4{1.0f, 2.0f,0.0f, 0.0f}.normalize();
 
-  //transf[0].rotation = transf[0].rotation.multiply(sQuaternion4{1.0f, 2.0f,0.0f, 0.0f}.normalize().inverse());
+  transf[0] = transf[1].multiply( transf[1].inverse().multiply(transf[0]));
 
-  //transf[0].change_basis(transf[1]);
-
-  transf[0] = transf[1].inverse().multiply(transf[0]);
-
-  sVector4 colors[2] = {{1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}};
+  sVector4 colors[3] = {{1.0f, 0.0f, 0.0f, 1.0f},
+                        {0.0f, 1.0f, 0.0f, 1.0f},
+                        {0.0f, 0.0f, 1.0f, 1.0f}};
 
   while(!glfwWindowShouldClose(window)) {
    // Draw loop
@@ -174,7 +172,7 @@ void test_draw_loop(GLFWwindow *window) {
     double elapsed_time = curr_frame_time - prev_frame_time;
     prev_frame_time = curr_frame_time;
 
-    sMat44 model[2] = {};
+    sMat44 model[3] = {};
 
     transf[0].get_model(&model[0]);
     transf[1].get_model(&model[1]);
@@ -190,13 +188,19 @@ void test_draw_loop(GLFWwindow *window) {
       }
       ImGui::Separator();
     }
+    sVector3 t = transf[0].apply({1.0f, 0.0f, 1.0f});
 
+    model[2].set_identity();
+    model[2].set_position(t);
+    model[2].set_scale({0.05f, 0.05f, 0.05f});
+
+    ImGui::Text("-> %f %f %f", t.x, t.y, t.z);
     ImGui::End();
 
     cube_renderer_render(&renderer,
                          model,
                          colors,
-                         2,
+                         3,
                          &proj_mat);
 
     ImGui::Render();
@@ -216,24 +220,20 @@ void draw_loop(GLFWwindow *window) {
   sRawGeometry cubes[4] = {};
   sTransform   transforms[4] = {};
 
-  cubes[0].init_cuboid({10.0f, 1.0f, 10.0f});
   transforms[0].position = {-5.0f, 0.0f, -5.0f};
   transforms[0].scale = {10.0f, 1.0f, 10.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
-  cubes[1].init_cuboid({1.0f, 1.0f, 1.0f});
   transforms[1].position = {0.0f, 2.00f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
   transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[1].rotation.set_identity();
 
-  cubes[2].init_cuboid({1.0f, 1.0f, 1.0f});
-  transforms[2].position = {0.7f, 4.0f, 0.0f};
+  transforms[2].position = {0.7f, 3.0f, 0.0f};
   transforms[2].scale = {1.0f, 1.0f, 1.0f};
-  transforms[2].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  transforms[2].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
   //transforms[2].rotation.set_identity();
 
-  cubes[3].init_cuboid({1.0f, 1.0f, 1.0f});
   transforms[3].position = {1.5f, 3.0f, 3.5f};
   transforms[3].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[3].rotation.set_identity();
@@ -264,7 +264,9 @@ void draw_loop(GLFWwindow *window) {
     sVector3 curr_scale = transforms[i].scale;
 
     phys_instance.mass_center[i] = {curr_scale.x / 2.0f, curr_scale.y / 2.0f, curr_scale.z / 2.0f};
-    std::cout << curr_scale.x / 2.0f << " " << curr_scale.x << std::endl;
+
+    cubes[i].init_cuboid();
+    cubes[i].apply_transform(transforms[i]);
   }
 
   phys_instance.generate_inertia_tensors();
@@ -314,18 +316,16 @@ void draw_loop(GLFWwindow *window) {
 		double elapsed_time = curr_frame_time - prev_frame_time;
     prev_frame_time = curr_frame_time;
 
-    //phys_instance.apply_gravity(elapsed_time);
+    phys_instance.apply_gravity(elapsed_time);
 
     ImGui::Begin("Collisions");
-    for (int iter = 0; iter < 5; iter++) {
+    for (int iter = 0; iter < 1; iter++) {
     for(int i = 0; i < 4; i++) {
       for(int j = i+1; j < 4; j++) {
         //ImGui::Text("Obj %d %d", i, j);
         sCollisionManifold manifold;
 
-        if (SAT_test(cubes[i], 
-                     transforms[i], 
-                     cubes[j], 
+        if (SAT_test(transforms[i],
                      transforms[j],
                      &manifold)) {
           // Collision!
@@ -334,9 +334,9 @@ void draw_loop(GLFWwindow *window) {
           sVector4 point_colors[6] = {};
           for(int x = 0; x < manifold.contact_point_count; x++) {
             points_models[x].set_identity();
-            points_models[x].set_scale({0.09, 0.05,0.09});
-            points_models[x].set_position(manifold.contact_points[x].sum({-0.05f, 0.f, -0.05f}));
-            point_colors[x] = {1.0f, 0.0f, 0.0f, 1.0f};
+            points_models[x].set_scale({0.5, 0.05,0.5});
+            points_models[x].set_position(manifold.contact_points[x]);
+            point_colors[x] = colors[j];//{1.0f, 0.0f, 0.0f, 1.0f};
           }
 
           cube_renderer_render(&renderer, points_models, point_colors, manifold.contact_point_count, &proj_mat);
@@ -355,12 +355,18 @@ void draw_loop(GLFWwindow *window) {
     }
     ImGui::End();
 
-    //phys_instance.update(elapsed_time);
+    phys_instance.update(elapsed_time);
 
 
     sMat44 models[4] = {};
 
-    ImGui::Begin("Rotations");
+    for(int i = 0; i < 4; i++) {
+      transforms[i].get_model(&models[i]);
+      //ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
+    }
+
+
+    /*ImGui::Begin("Rotations");
     for(int i = 0; i < 4; i++) {
       sQuaternion4 quat = transforms[i].rotation;
       sVector3 ang_speed = phys_instance.angular_speed[i];
@@ -380,7 +386,7 @@ void draw_loop(GLFWwindow *window) {
       models[i].rotate(&transforms[i].rotation);
       ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
     }
-    ImGui::End();
+    ImGui::End();*/
     cube_renderer_render(&renderer, models, colors, 4, &proj_mat);
 
     ImGui::Render();
@@ -424,8 +430,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_draw_loop(window);
+      draw_loop(window);
+      //test_draw_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
