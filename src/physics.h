@@ -10,13 +10,23 @@
 struct sPhysicsWorld {
   sTransform  *transforms;
 
-  float     mass              [INSTANCE_SIZE] = {0.0f};
-  float     restitution       [INSTANCE_SIZE] = {0.0f};
-  bool      is_static         [INSTANCE_SIZE] = {false};
-  sVector3  mass_center       [INSTANCE_SIZE] = {{0.0f}};
-  sVector3  speed             [INSTANCE_SIZE] = {{}};
-  sVector3  angular_speed  [INSTANCE_SIZE] = {{}};
+  float     mass                  [INSTANCE_SIZE] = {0.0f};
+  float     restitution           [INSTANCE_SIZE] = {0.0f};
+  bool      is_static             [INSTANCE_SIZE] = {false};
+  sVector3  mass_center           [INSTANCE_SIZE] = {{0.0f}};
+  sVector3  speed                 [INSTANCE_SIZE] = {{}};
+  sVector3  angular_speed         [INSTANCE_SIZE] = {{}};
   sMat33    inv_inertia_tensors   [INSTANCE_SIZE] = {};
+  bool      is_awake              [INSTANCE_SIZE] = { false };
+
+
+  void config_simulation() {
+    generate_inertia_tensors();
+
+    for(int i = 0; i < INSTANCE_SIZE; i++) {
+      is_awake[i] = true;
+    }
+  }
 
   // Based on https://en.wikipedia.org/wiki/List_of_moments_of_inertia 
   void generate_inertia_tensors() {
@@ -46,7 +56,7 @@ struct sPhysicsWorld {
 
   void apply_gravity(const double elapsed_time) {
     for(int i = 0; i < INSTANCE_SIZE; i++) {
-      if (is_static[i]) {
+      if (is_static[i] || !is_awake[i]) {
         continue;
       }
 
@@ -59,9 +69,16 @@ struct sPhysicsWorld {
 
   void update(const double elapsed_time) {
     for(int i = 0; i < INSTANCE_SIZE; i++) {
-      if (is_static[i]) {
+      if (is_static[i] || !is_awake[i]) {
         continue;
       }
+
+      // Put to sleep if the speed is near to 0
+      if (speed[i].magnitude() <= 0.005f) {
+      //  is_awake[i] = false;
+     //   continue;
+      }
+
       // Integrate speed
       transforms[i].position.x += speed[i].x * elapsed_time;
       transforms[i].position.y += speed[i].y * elapsed_time;
@@ -88,9 +105,12 @@ struct sPhysicsWorld {
     tmp.z += inv_mass * impulse.z;
 
     speed[index] = tmp;
+
+    is_awake[index] = true;
   }
 
-  void resolve_collision(const sCollisionManifold &manifold) {
+  void resolve_collision(const sCollisionManifold &manifold,
+                         const double             elapsed_time) {
     // Impulse resolution ===
     int obj1 = manifold.obj1_index, obj2 = manifold. obj2_index; 
 
@@ -113,6 +133,7 @@ struct sPhysicsWorld {
     // using the formula https://www.euclideanspace.com/physics/dynamics/collision/index.htm 
     // me = invM1 + invM2 + dot( r1 x n, invI1 * (r1 x n) ) + dot( r2 x n, invI2 * (r2 x n) )
     float max_depth = FLT_MAX;
+    for(int p = 0; p < 3; p++) {
     for(int i = 0; i < manifold.contact_point_count; i++) {
       sVector3 point_center_1 = manifold.contact_points[i].subs(mass_center_obj1);
       sVector3 point_center_2 = manifold.contact_points[i].subs(mass_center_obj2);
@@ -131,14 +152,15 @@ struct sPhysicsWorld {
       sVector3 point_normal_cross2 = cross_prod(point_center_2, manifold.collision_normal);
       
       // The impulse force is the relative speed divided by the sum of the inverse masses
-      float impulse_force_common = -relative_speed_among_normal;//-(1.0f + col_restitution) * relative_speed_among_normal;
+      std::cout << -manifold.points_depth[i] << std::endl;
+      float impulse_force_common = -(1.0f + col_restitution) * relative_speed_among_normal;//+ (0.3f/elapsed_time  * MAX(-manifold.points_depth[i] - 0.02f, 0.0f));
       float to_divide = inv_mass1 + inv_mass2;
 
       sVector3 t1 = cross_prod(inv_inertia_tensors[obj1].multiply(point_normal_cross1), point_center_1);
       sVector3 t2 = cross_prod(inv_inertia_tensors[obj2].multiply(point_normal_cross2), point_center_2);
       to_divide += dot_prod(t1.sum(t2), manifold.collision_normal);
 
-      float impulse_force_complete = impulse_force_common / to_divide;
+      float impulse_force_complete = MAX((impulse_force_common) / to_divide, 0.0f);// + (-manifold.points_depth[i] * 0.7f);
       //impulse_force_common /= manifold.contact_point_count;
 
       sVector3 impulse = manifold.collision_normal.mult(impulse_force_complete);
@@ -149,20 +171,25 @@ struct sPhysicsWorld {
       angular_speed[obj1] = angular_speed[obj1].sum(inv_inertia_tensors[obj1].multiply(cross_prod(point_center_1, impulse)));
       angular_speed[obj2] = angular_speed[obj2].sum(inv_inertia_tensors[obj2].multiply(cross_prod(point_center_2, impulse.invert())));
 
-      max_depth = MIN(manifold.points_depth[i], max_depth);
+      float penetration = 0.2 * MAX(-manifold.points_depth[i] - 0.001f, 0.0f) / (inv_mass1 + inv_mass2);
+      sVector3 correction = manifold.collision_normal.mult(penetration);
+
+      transforms[obj1].position = transforms[obj1].position.sum(correction.mult(inv_mass1));
+      transforms[obj2].position = transforms[obj2].position.subs(correction.mult(inv_mass2));
     }
 
-    // Penetration correction
+    /*/// Penetration correction
     // TODO: Work a bit better the solution, without moving the objects http://allenchou.net/2013/12/game-physics-constraints-sequential-impulse/
     float penetration_allowance = 0.001f;
-      float penetration = MAX(-max_depth - penetration_allowance, 0.0f) / (inv_mass1 + inv_mass2);
-      //std::cout << manifold.points_depth[i] << " " << penetration << std::endl;
-      penetration *= 0.3f * manifold.contact_point_count;
-      sVector3 correction = {penetration * manifold.collision_normal.x, penetration * manifold.collision_normal.y, penetration * manifold.collision_normal.z};
+    float penetration = MAX(-max_depth - penetration_allowance, 0.0f) / (inv_mass1 + inv_mass2);
+    //std::cout << manifold.points_depth[i] << " " << penetration << std::endl;
+    penetration *= 0.3f * manifold.contact_point_count;
+    sVector3 correction = {penetration * manifold.collision_normal.x, penetration * manifold.collision_normal.y, penetration * manifold.collision_normal.z};
 
-      transforms[obj1].position = transforms[obj1].position.sum(sVector3{inv_mass1 * correction.x, inv_mass1 * correction.y, inv_mass1 * correction.z});
-      transforms[obj2].position = transforms[obj2].position.sum(sVector3{-inv_mass2 * correction.x, -inv_mass2 * correction.y, -inv_mass2 * correction.z});
-
+    transforms[obj1].position = transforms[obj1].position.sum(sVector3{inv_mass1 * correction.x, inv_mass1 * correction.y, inv_mass1 * correction.z});
+    transforms[obj2].position = transforms[obj2].position.sum(sVector3{-inv_mass2 * correction.x, -inv_mass2 * correction.y, -inv_mass2 * correction.z});
+    */
+    }
   }
 };
 

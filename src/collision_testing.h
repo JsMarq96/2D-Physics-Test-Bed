@@ -192,11 +192,6 @@ inline bool SAT_test(const sTransform   &obj1_transform,
     swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
   }
 
-  for(int i = 0; i < reference_obj->points_per_plane; i++) {
-    sVector3 tmp = reference_obj->get_point_of_face(incident_index, i);
-    //ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, 0.0f);
-    //swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
-  }
 
   for(int i = 0; i < reference_obj->planes_size; i++) { 
     sPlane *curr_plane = &reference_obj->planes[i];
@@ -221,7 +216,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
         // the plane
         
         // Add the intersection point
-        swaps.add_element_to_secundary_stack(curr_plane->get_intersection_point(begin, end));
+        swaps.add_element_to_secundary_stack(curr_plane->get_intersection_point(end, begin));
         if (begin_dist > 1e-6f) {
           // Add the end point
           swaps.add_element_to_secundary_stack(end);
@@ -238,11 +233,18 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   sPlane reference_plane = reference_obj->planes[reference_index];
   for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
     sVector3 tmp = swaps.get_element_from_current_stack(j);
+
+    ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
+
     float distance = reference_plane.distance(tmp);
     tmp = obj1_transform.apply_without_scale(tmp);
+    ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
+
     manifold->add_collision_point(tmp, distance);
+    ImGui::Separator();
   }
 
+  ImGui::Text("ENDOL ====");
   manifold->collision_normal = reference_plane.normal;
 
   swaps.clean(); 

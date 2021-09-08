@@ -28,12 +28,6 @@ struct sCollisionManifold {
         return;
       }
 
-      for(int i = 0; i < contact_point_count; i++) {
-        if (contact_points[i].is_equal(point)) {
-          return;
-        }
-      }
-
       contact_points[contact_point_count] = point;
       points_depth[contact_point_count++] = depth;
     }

@@ -120,12 +120,12 @@ void test_draw_loop(GLFWwindow *window) {
 
   sTransform transf[2] = {{}};
 
-  transf[0].position = {1.2f, 0.0f, 0.0f};
-  transf[0].scale = {1.0f, 0.5f, 1.0f};
+  transf[0].position = {0.3f, 0.0f, -0.3f};
+  transf[0].scale = {1.0f, 0.5f, 2.0f};
   transf[0].rotation = sQuaternion4{1.0f, 0.f, 0.0f, 0.0f};
 
-  transf[1].position = {-1.2f, 0.0f, 0.0f};
-  transf[1].scale = {1.0f, 0.5f, 1.0f};
+  transf[1].position = {0.0f, 0.0f, 0.0f};
+  transf[1].scale = {10.0f, 0.5f, 1.0f};
   transf[1].rotation = sQuaternion4{1.0f, 2.0f,0.0f, 0.0f}.normalize();
 
   transf[0] = transf[1].multiply( transf[1].inverse().multiply(transf[0]));
@@ -180,27 +180,36 @@ void test_draw_loop(GLFWwindow *window) {
     ImGui::Begin("Rot");
     for(int i = 0; i < 2; i++) {
       sQuaternion4 q = transf[i].rotation;
-      ImGui::Text("%f %f %f %f", q.w, q.x, q.y, q.z);
-      //ImGui::Separator();
-      ImGui::Text("Model mat:");
-      for(int j = 0; j < 4; j++) {
-        ImGui::Text("%f %f %f %f", model[i].mat_values[j][0], model[i].mat_values[j][1], model[i].mat_values[j][2], model[i].mat_values[j][3]);
-      }
-      ImGui::Separator();
     }
     sVector3 t = transf[0].apply({1.0f, 0.0f, 1.0f});
+
+    sCollisionManifold manifold = {};
+
+    if (SAT_test(transf[0], transf[1], &manifold)) {
+      ImGui::Text("Collision");
+      sMat44 col_points[6] = {};
+      sVector4 col_color[6] = {};
+
+      for(int i = 0; i < manifold.contact_point_count; i++) {
+        col_points[i].set_identity();
+        col_points[i].set_scale({0.25, 1.05, 0.25});
+        col_points[i].set_position(manifold.contact_points[i]);
+        col_color[i] = {0.0f, 0.0f, 1.0f, 1.0f};
+      }
+
+      cube_renderer_render(&renderer, col_points, col_color, manifold.contact_point_count, &proj_mat);
+    }
 
     model[2].set_identity();
     model[2].set_position(t);
     model[2].set_scale({0.05f, 0.05f, 0.05f});
 
-    ImGui::Text("-> %f %f %f", t.x, t.y, t.z);
     ImGui::End();
 
     cube_renderer_render(&renderer,
                          model,
                          colors,
-                         3,
+                         2,
                          &proj_mat);
 
     ImGui::Render();
@@ -269,7 +278,8 @@ void draw_loop(GLFWwindow *window) {
     //cubes[i].apply_transform(transforms[i]);
   }
 
-  phys_instance.generate_inertia_tensors();
+  //phys_instance.generate_inertia_tensors();
+  phys_instance.config_simulation();
 
   cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
@@ -318,7 +328,7 @@ void draw_loop(GLFWwindow *window) {
 
     phys_instance.apply_gravity(elapsed_time);
 
-    //ImGui::Begin("Collisions");
+    ImGui::Begin("Collisions");
     for (int iter = 0; iter < 1; iter++) {
     for(int i = 0; i < 4; i++) {
       for(int j = i+1; j < 4; j++) {
@@ -329,23 +339,23 @@ void draw_loop(GLFWwindow *window) {
                      transforms[j],
                      &manifold)) {
           // Collision!
-          //ImGui::Text("Collision between Obj1 %s and obj2 %s", names[i], names[j]);
+          ImGui::Text("Collision between Obj1 %s and obj2 %s", names[i], names[j]);
           sMat44 points_models[6] = {};
           sVector4 point_colors[6] = {};
-          for(int x = 20; x < manifold.contact_point_count; x++) {
+          for(int x = 0; x < manifold.contact_point_count; x++) {
             points_models[x].set_identity();
-            points_models[x].set_scale({0.5, 0.05,0.5});
+            points_models[x].set_scale({0.5, 0.05, 0.5});
             points_models[x].set_position(manifold.contact_points[x]);
             point_colors[x] = colors[j];//{1.0f, 0.0f, 0.0f, 1.0f};
           }
 
-          cube_renderer_render(&renderer, points_models, point_colors, manifold.contact_point_count, &proj_mat);
+          //cube_renderer_render(&renderer, points_models, point_colors, manifold.contact_point_count, &proj_mat);
           
           // Fill the manifold with the index data
           manifold.obj1_index = i;
           manifold.obj2_index = j;
 
-          phys_instance.resolve_collision(manifold);
+          phys_instance.resolve_collision(manifold, elapsed_time);
         } else {
           // no collision
         }
@@ -353,7 +363,7 @@ void draw_loop(GLFWwindow *window) {
       }
     }
     }
-    //ImGui::End();
+    ImGui::End();
 
     phys_instance.update(elapsed_time);
 
