@@ -16,8 +16,8 @@
 #include "imgui/imgui_impl_opengl3.h"
 #include "imgui/imgui_impl_glfw.h"
 
-#define WIN_WIDTH	640
-#define WIN_HEIGHT	480
+#define WIN_WIDTH	740
+#define WIN_HEIGHT	680
 #define WIN_NAME	"Test"
 
 
@@ -224,17 +224,17 @@ void draw_loop(GLFWwindow *window) {
   transforms[0].scale = {10.0f, 1.0f, 10.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
-  transforms[1].position = {0.0f, 2.00f, 0.0f};
+  transforms[1].position = {0.0f, 4.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
   transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[1].rotation.set_identity();
 
-  transforms[2].position = {0.7f, 3.0f, 0.0f};
+  transforms[2].position = {0.7f, 5.5f, 0.0f};
   transforms[2].scale = {1.0f, 1.0f, 1.0f};
   transforms[2].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
   //transforms[2].rotation.set_identity();
 
-  transforms[3].position = {1.5f, 3.0f, 3.5f};
+  transforms[3].position = {1.5f, 4.0f, 3.5f};
   transforms[3].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[3].rotation.set_identity();
 
@@ -318,7 +318,7 @@ void draw_loop(GLFWwindow *window) {
 
     phys_instance.apply_gravity(elapsed_time);
 
-    ImGui::Begin("Collisions");
+    //ImGui::Begin("Collisions");
     for (int iter = 0; iter < 1; iter++) {
     for(int i = 0; i < 4; i++) {
       for(int j = i+1; j < 4; j++) {
@@ -329,10 +329,10 @@ void draw_loop(GLFWwindow *window) {
                      transforms[j],
                      &manifold)) {
           // Collision!
-          ImGui::Text("Collision between Obj1 %s and obj2 %s", names[i], names[j]);
+          //ImGui::Text("Collision between Obj1 %s and obj2 %s", names[i], names[j]);
           sMat44 points_models[6] = {};
           sVector4 point_colors[6] = {};
-          for(int x = 0; x < manifold.contact_point_count; x++) {
+          for(int x = 20; x < manifold.contact_point_count; x++) {
             points_models[x].set_identity();
             points_models[x].set_scale({0.5, 0.05,0.5});
             points_models[x].set_position(manifold.contact_points[x]);
@@ -349,11 +349,11 @@ void draw_loop(GLFWwindow *window) {
         } else {
           // no collision
         }
-        ImGui::Separator();
+        //ImGui::Separator();
       }
     }
     }
-    ImGui::End();
+    //ImGui::End();
 
     phys_instance.update(elapsed_time);
 

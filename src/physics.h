@@ -52,7 +52,7 @@ struct sPhysicsWorld {
 
       // Integrate gravity
       // TODO: Gravity constatn cleanup
-      speed[i].y += -0.098f * elapsed_time;
+      speed[i].y += -0.98f * elapsed_time;
     }
 
   }

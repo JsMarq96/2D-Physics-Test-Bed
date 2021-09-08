@@ -92,7 +92,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   // We evaluate the collisions in obj1's local space
   sTransform new_transf = obj1_transform.inverse().multiply(obj2_transform);
 
-  ImGui::Text("%f %f %f", new_transf.scale.x, new_transf.scale.y, new_transf.scale.z);
+  //ImGui::Text("%f %f %f", new_transf.scale.x, new_transf.scale.y, new_transf.scale.z);
 
   sRawGeometry obj1 = {};
   obj1.init_cuboid(obj1_transform.scale);
@@ -107,8 +107,8 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   sVector3 p1 = new_transf.apply({1.f, 1.0f, 1.0f});
 
 
-  ImGui::Text("0 %f %f %f", p0.x, p0.y, p0.z);
-  ImGui::Text("1 %f %f %f", p1.x, p1.y, p1.z);
+  //ImGui::Text("0 %f %f %f", p0.x, p0.y, p0.z);
+  //ImGui::Text("1 %f %f %f", p1.x, p1.y, p1.z);
 
   // ========= SAT =================
   
@@ -152,13 +152,13 @@ inline bool SAT_test(const sTransform   &obj1_transform,
     reference_index = obj1_face_of_most_separation;
 
     incident_obj = &obj2_in_obj1_space;
-    ImGui::Text("Incident 2");
+    //ImGui::Text("Incident 2");
   } else {
     reference_obj = &obj2_in_obj1_space;
     reference_index = obj2_face_of_most_separation;
 
     incident_obj = &obj1;
-    ImGui::Text("Incident 1");
+    //ImGui::Text("Incident 1");
   }
 
   // Calculate the incident face
@@ -194,7 +194,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
 
   for(int i = 0; i < reference_obj->points_per_plane; i++) {
     sVector3 tmp = reference_obj->get_point_of_face(incident_index, i);
-    ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, 0.0f);
+    //ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, 0.0f);
     //swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
   }
 
@@ -232,7 +232,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
     swaps.clean_current_stack(); 
     swaps.swap(); 
   }
-  ImGui::Text("Colision points count:  %d", swaps.get_current_stacks_size());
+  //ImGui::Text("Colision points count:  %d", swaps.get_current_stacks_size());
 
   // Add the collision points to the manifold
   sPlane reference_plane = reference_obj->planes[reference_index];
