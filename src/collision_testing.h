@@ -82,6 +82,9 @@ inline float get_max_distance_in_planes_axis(const sPlane    *obj1_planes,
   return most_separation;
 }
 
+/* Note: SAT probably does not work since we change the aspect ratio,
+ *the separating angles does not coincide, so we need to remove the scale out of the
+ *transforms */
 
 inline bool SAT_test(const sTransform   &obj1_transform,
                      const sTransform   &obj2_transform,
@@ -89,12 +92,23 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   // We evaluate the collisions in obj1's local space
   sTransform new_transf = obj1_transform.inverse().multiply(obj2_transform);
 
+  ImGui::Text("%f %f %f", new_transf.scale.x, new_transf.scale.y, new_transf.scale.z);
+
   sRawGeometry obj1 = {};
-  obj1.init_cuboid();
+  obj1.init_cuboid(obj1_transform.scale);
 
   sRawGeometry obj2_in_obj1_space = {};
-  obj2_in_obj1_space.init_cuboid();
+  obj2_in_obj1_space.init_cuboid(obj2_transform.scale);
   obj2_in_obj1_space.apply_transform(new_transf);
+
+  //sVector3 p0 = obj1_transform.apply({0.f, 0.0f, 0.0f});
+  //sVector3 p1 = obj1_transform.apply({1.f, 1.0f, 1.0f});
+  sVector3 p0 = new_transf.apply({0.f, 0.0f, 0.0f});
+  sVector3 p1 = new_transf.apply({1.f, 1.0f, 1.0f});
+
+
+  ImGui::Text("0 %f %f %f", p0.x, p0.y, p0.z);
+  ImGui::Text("1 %f %f %f", p1.x, p1.y, p1.z);
 
   // ========= SAT =================
   
@@ -225,7 +239,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
     sVector3 tmp = swaps.get_element_from_current_stack(j);
     float distance = reference_plane.distance(tmp);
-    tmp = obj1_transform.apply(tmp);
+    tmp = obj1_transform.apply_without_scale(tmp);
     manifold->add_collision_point(tmp, distance);
   }
 

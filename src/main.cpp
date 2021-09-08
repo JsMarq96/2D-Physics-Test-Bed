@@ -265,8 +265,8 @@ void draw_loop(GLFWwindow *window) {
 
     phys_instance.mass_center[i] = {curr_scale.x / 2.0f, curr_scale.y / 2.0f, curr_scale.z / 2.0f};
 
-    cubes[i].init_cuboid();
-    cubes[i].apply_transform(transforms[i]);
+    //cubes[i].init_cuboid();
+    //cubes[i].apply_transform(transforms[i]);
   }
 
   phys_instance.generate_inertia_tensors();

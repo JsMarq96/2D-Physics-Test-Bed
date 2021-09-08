@@ -38,6 +38,14 @@ struct sTransform {
     return res;
   }
 
+  inline sVector3  apply_without_scale(const sVector3 &vect) const {
+    return rotation.inverse().multiply(vect.get_pure_quaternion()).multiply(rotation).get_vector().sum(position);
+  }
+
+  inline sVector3 apply_rotation(const sVector3 &vect) const {
+    return rotation.inverse().multiply(vect.get_pure_quaternion()).multiply(rotation).get_vector();
+  }
+
   inline sVector3 apply(const sVector3 &vect) const {
     sVector3 scalled = vect.mult(scale);
     sQuaternion4 q_vect = scalled.get_pure_quaternion();
@@ -85,7 +93,7 @@ struct sRawGeometry {
   unsigned int planes_size = 0;
   unsigned int points_per_plane = 0;
 
-  void init_cuboid() {
+  void init_cuboid(const sVector3 &scale) {
     // Indexes of each face
     int box_LUT_vertices[6 * 4] = {
       4, 5, 7, 6, // 0
@@ -102,13 +110,13 @@ struct sRawGeometry {
     // Raw pointers
     raw_points = (sVector3*) malloc(sizeof(sVector3) * 8);
     raw_points[0] = sVector3{0.0f, 0.0f, 0.0f};
-    raw_points[1] = sVector3{1.0f, 0.0f, 0.0f};
-    raw_points[2] = sVector3{0.0f, 1.0f, 0.0f};
-    raw_points[3] = sVector3{1.0f, 1.0f, 0.0f};
-    raw_points[4] = sVector3{0.0f, 0.0f, 1.0f};
-    raw_points[5] = sVector3{1.0f, 0.0f, 1.0f};
-    raw_points[6] = sVector3{0.0f, 1.0f, 1.0f};
-    raw_points[7] = sVector3{1.0f, 1.0f, 1.0f};
+    raw_points[1] = sVector3{scale.x, 0.0f, 0.0f};
+    raw_points[2] = sVector3{0.0f, scale.y, 0.0f};
+    raw_points[3] = sVector3{scale.x, scale.y, 0.0f};
+    raw_points[4] = sVector3{0.0f, 0.0f, scale.z};
+    raw_points[5] = sVector3{scale.x, 0.0f, scale.z};
+    raw_points[6] = sVector3{0.0f, scale.y, scale.z};
+    raw_points[7] = sVector3{scale.x, scale.y, scale.z};
 
     // Generate planes
     planes = (sPlane*) malloc(sizeof(sPlane) * 6);
@@ -186,11 +194,12 @@ struct sRawGeometry {
 
   inline void apply_transform(const sTransform &transf) {
     for(int i = 0; i < vertices_size; i++) {
-      raw_points[i] = transf.apply(raw_points[i]);
+      raw_points[i] = transf.apply_without_scale(raw_points[i]);
     }
 
-    for(int i = 0; i< planes_size; i++) {
-      transf.apply(&planes[i]);
+    for(int i = 0; i < planes_size; i++) {
+      planes[i].origin_point = transf.apply_without_scale(planes[i].origin_point);
+      planes[i].normal = transf.apply_rotation(planes[i].normal);
     }
   }
 
