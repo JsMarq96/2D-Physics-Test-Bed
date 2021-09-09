@@ -4,13 +4,16 @@
 #include "math.h"
 #include "types.h"
 #include "collision_types.h"
+#include "collision_testing.h"
 
 #define INSTANCE_SIZE 4
 
 struct sPhysicsWorld {
+  // Shared transforms
   sTransform  *transforms;
 
   float     mass                  [INSTANCE_SIZE] = {0.0f};
+  float     friction              [INSTANCE_SIZE] = {0.0f};
   float     restitution           [INSTANCE_SIZE] = {0.0f};
   bool      is_static             [INSTANCE_SIZE] = {false};
   sVector3  mass_center           [INSTANCE_SIZE] = {{0.0f}};
@@ -126,13 +129,10 @@ struct sPhysicsWorld {
     // Bounciness of the materials
     float col_restitution = MIN(restitution[obj1], restitution[obj2]); 
 
-    // 1/ma+1/mb+(ra×n)•([Ia]-1(ra×n))+(rb×n)•([Ib]-1(rb×n))
-    // INVMAS + (ra x n) dot (Inv[InertiaA] * (ra x n)) +
-    //          (rb x n) dot (Inv[InectiaB] * (rb x n))
     // Compute an impulse for each contact point
-    // using the formula https://www.euclideanspace.com/physics/dynamics/collision/index.htm 
-    // me = invM1 + invM2 + dot( r1 x n, invI1 * (r1 x n) ) + dot( r2 x n, invI2 * (r2 x n) )
+    // using the formula https://www.euclideanspace.com/physics/dynamics/collision/index.htm
     float max_depth = FLT_MAX;
+    // Added 3 iterations
     for(int p = 0; p < 3; p++) {
     for(int i = 0; i < manifold.contact_point_count; i++) {
       sVector3 point_center_1 = manifold.contact_points[i].subs(mass_center_obj1);
@@ -171,24 +171,21 @@ struct sPhysicsWorld {
       angular_speed[obj1] = angular_speed[obj1].sum(inv_inertia_tensors[obj1].multiply(cross_prod(point_center_1, impulse)));
       angular_speed[obj2] = angular_speed[obj2].sum(inv_inertia_tensors[obj2].multiply(cross_prod(point_center_2, impulse.invert())));
 
+      // Second impulse to solve the depth
+      float depth_impulse_force = 0.001f * MAX(-manifold.points_depth[i] - 0.01f, 0.0f) / elapsed_time;// / (elapsed_time * to_divide);
+      sVector3 depth_impulse = manifold.collision_normal.mult(depth_impulse_force);
+
+      add_impulse(obj1, depth_impulse);
+      add_impulse(obj2, depth_impulse.invert());
+
+      // Penetration correction
+      // TODO: More stable, via baumgarte or add a non penetration impulse
       float penetration = 0.2 * MAX(-manifold.points_depth[i] - 0.001f, 0.0f) / (inv_mass1 + inv_mass2);
       sVector3 correction = manifold.collision_normal.mult(penetration);
 
-      transforms[obj1].position = transforms[obj1].position.sum(correction.mult(inv_mass1));
-      transforms[obj2].position = transforms[obj2].position.subs(correction.mult(inv_mass2));
+      //transforms[obj1].position = transforms[obj1].position.sum(correction.mult(inv_mass1));
+      //transforms[obj2].position = transforms[obj2].position.subs(correction.mult(inv_mass2));
     }
-
-    /*/// Penetration correction
-    // TODO: Work a bit better the solution, without moving the objects http://allenchou.net/2013/12/game-physics-constraints-sequential-impulse/
-    float penetration_allowance = 0.001f;
-    float penetration = MAX(-max_depth - penetration_allowance, 0.0f) / (inv_mass1 + inv_mass2);
-    //std::cout << manifold.points_depth[i] << " " << penetration << std::endl;
-    penetration *= 0.3f * manifold.contact_point_count;
-    sVector3 correction = {penetration * manifold.collision_normal.x, penetration * manifold.collision_normal.y, penetration * manifold.collision_normal.z};
-
-    transforms[obj1].position = transforms[obj1].position.sum(sVector3{inv_mass1 * correction.x, inv_mass1 * correction.y, inv_mass1 * correction.z});
-    transforms[obj2].position = transforms[obj2].position.sum(sVector3{-inv_mass2 * correction.x, -inv_mass2 * correction.y, -inv_mass2 * correction.z});
-    */
     }
   }
 };
