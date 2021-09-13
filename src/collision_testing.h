@@ -94,23 +94,12 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   // We evaluate the collisions in obj1's local space
   sTransform new_transf = obj1_transform.inverse().multiply(obj2_transform);
 
-  //ImGui::Text("%f %f %f", new_transf.scale.x, new_transf.scale.y, new_transf.scale.z);
-
   sRawGeometry obj1 = {};
   obj1.init_cuboid(obj1_transform.scale);
 
   sRawGeometry obj2_in_obj1_space = {};
   obj2_in_obj1_space.init_cuboid(obj2_transform.scale);
   obj2_in_obj1_space.apply_transform(new_transf);
-
-  //sVector3 p0 = obj1_transform.apply({0.f, 0.0f, 0.0f});
-  //sVector3 p1 = obj1_transform.apply({1.f, 1.0f, 1.0f});
-  sVector3 p0 = new_transf.apply({0.f, 0.0f, 0.0f});
-  sVector3 p1 = new_transf.apply({1.f, 1.0f, 1.0f});
-
-
-  //ImGui::Text("0 %f %f %f", p0.x, p0.y, p0.z);
-  //ImGui::Text("1 %f %f %f", p1.x, p1.y, p1.z);
 
   // ========= SAT =================
   
@@ -248,7 +237,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
     swaps.clean_current_stack();
     swaps.swap();
     mirror_ids_swaps.clean_current_stack();
-    swaps.swap();
+    mirror_ids_swaps.swap();
   }
   //ImGui::Text("Colision points count:  %d", swaps.get_current_stacks_size());
 
@@ -258,17 +247,17 @@ inline bool SAT_test(const sTransform   &obj1_transform,
     sVector3 tmp = swaps.get_element_from_current_stack(j);
     sVector3 ids = mirror_ids_swaps.get_element_from_current_stack(j);
 
-    ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
+    //ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
 
     float distance = reference_plane.distance(tmp);
     tmp = obj1_transform.apply_without_scale(tmp);
-    ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
+    //ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
 
     manifold->add_collision_point(tmp, distance, {(uint16_t) ids.x, (uint16_t) ids.y});
-    ImGui::Separator();
+    //ImGui::Separator();
   }
 
-  ImGui::Text("ENDOL ====");
+  //ImGui::Text("ENDOL ====");
   manifold->collision_normal = reference_plane.normal;
 
   swaps.clean(); 

@@ -56,7 +56,7 @@ union sFeatureDescriptor {
 
 struct sPhysArbiter {
     // Arbiter data
-    bool           in_use          [MAX_ARBITERS_SIZE] = {};
+    bool           enabled         [MAX_ARBITERS_SIZE] = {};
     bool           used_in_frame   [MAX_ARBITERS_SIZE] = {};
     sArbiterKey    keys            [MAX_ARBITERS_SIZE] = {};
     sVector3       separating_axis [MAX_ARBITERS_SIZE] = {};
@@ -70,7 +70,8 @@ struct sPhysArbiter {
 
     void init() {
         for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
-            in_use[i] = false;
+            used_in_frame[i] = false;
+            enabled[i] = false;
         }
     }
 
@@ -82,7 +83,7 @@ struct sPhysArbiter {
         to_find.init(obj1, obj2);
 
         for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
-            if (!in_use[i]) {
+            if (!enabled[i]) {
                 continue;
             }
 
@@ -98,12 +99,13 @@ struct sPhysArbiter {
     int create_arbiter(const int obj1,
                        const int obj2) {
         for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
-            if (in_use[i]) {
+            if (enabled[i] || used_in_frame[i]) {
                 continue;
             }
 
             keys[i].init(obj1, obj2);
             used_in_frame[i] = true;
+            enabled[i] = true;
             return i;
         }
 
@@ -111,8 +113,17 @@ struct sPhysArbiter {
     }
 
     void remove_arbiter(const int id) {
-        in_use[id] = false;
+        enabled[id] = false;
         used_in_frame[id] = false;
+    }
+
+    void remove_unused_arbiters() {
+        for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
+            if (enabled[i] && !used_in_frame[i]) {
+                enabled[i] = false;
+                used_in_frame[i] = false;
+            }
+        }
     }
 
     void add_manifold(const int arbiter_id,
@@ -122,10 +133,12 @@ struct sPhysArbiter {
         new_descriptor.inc_obj = manifold.incident_face;
         new_descriptor.ref_obj = manifold.reference_face;
 
-        in_use[arbiter_id] = true;
+        used_in_frame[arbiter_id] = true;
 
         reference_ids[arbiter_id] = manifold.reference_index;
         incident_ids[arbiter_id] = manifold.incident_index;
+
+        separating_axis[arbiter_id] = manifold.collision_normal;
 
         if (descriptors[arbiter_id].data == new_descriptor.data) {
             sPhysContactData *contact = contact_data[arbiter_id];
@@ -160,7 +173,6 @@ struct sPhysArbiter {
         }
         // The descriptors does not match, so we celan and replace contact
         // points
-
         sPhysContactData *contact_it = contact_data[arbiter_id];
         for(int i = 0; i < manifold.contact_point_count; i++) {
             contact_it->distance = manifold.points_depth[i];
@@ -170,16 +182,6 @@ struct sPhysArbiter {
             contact_it++;
         }
         contact_size[arbiter_id] = manifold.contact_point_count;
-    }
-
-    void pre_step() {
-        for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
-            if (!in_use[i]) {
-                continue;
-            }
-
-
-        }
     }
 };
 

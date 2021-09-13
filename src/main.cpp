@@ -278,13 +278,9 @@ void draw_loop(GLFWwindow *window) {
     sVector3 curr_scale = transforms[i].scale;
 
     phys_instance.mass_center[i] = {curr_scale.x / 2.0f, curr_scale.y / 2.0f, curr_scale.z / 2.0f};
-
-    //cubes[i].init_cuboid();
-    //cubes[i].apply_transform(transforms[i]);
   }
 
-  phys_instance.generate_inertia_tensors();
-  //phys_instance.config_simulation();
+  phys_instance.config_simulation();
 
   cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
@@ -331,7 +327,6 @@ void draw_loop(GLFWwindow *window) {
 		double elapsed_time = curr_frame_time - prev_frame_time;
     prev_frame_time = curr_frame_time;
 
-    std::cout << elapsed_time << std::endl;
     ImGui::Begin("Physics");
     phys_instance.step(elapsed_time);
     ImGui::End();
