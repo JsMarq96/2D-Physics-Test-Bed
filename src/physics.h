@@ -6,11 +6,18 @@
 #include "collision_types.h"
 #include "collision_testing.h"
 
+#include "phys_arbiter.h"
+#include <cstdint>
+
+#include "imgui/imgui.h"
+
 #define INSTANCE_SIZE 4
 
 struct sPhysicsWorld {
   // Shared transforms
   sTransform  *transforms;
+
+  sPhysArbiter arbiter = {};
 
   float     mass                  [INSTANCE_SIZE] = {0.0f};
   float     friction              [INSTANCE_SIZE] = {0.0f};
@@ -20,86 +27,103 @@ struct sPhysicsWorld {
   sVector3  speed                 [INSTANCE_SIZE] = {{}};
   sVector3  angular_speed         [INSTANCE_SIZE] = {{}};
   sMat33    inv_inertia_tensors   [INSTANCE_SIZE] = {};
-  bool      is_awake              [INSTANCE_SIZE] = { false };
+
+  void config_simulation();
 
 
-  void config_simulation() {
-    generate_inertia_tensors();
+  void step(const double elapsed_time);
 
-    for(int i = 0; i < INSTANCE_SIZE; i++) {
-      is_awake[i] = true;
+
+  void generate_inertia_tensors();
+
+  void apply_gravity(const double elapsed_time);
+
+  // Integrate the speeds to the position & rotation
+  void integrate (const double elapsed_time);
+
+  void pre_step(const double elapsed_time) {
+    for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
+      if (!arbiter.used_in_frame[i]) {
+        continue;
+      }
+
+      uint16_t ref_id = arbiter.reference_ids[i];
+      uint16_t inc_id = arbiter.incident_ids[i];
+
+      // Get the mass centers in worldspace
+      sVector3 mass_center_ref = {}, mass_center_inc = {};
+
+      mass_center_ref = transforms[ref_id].apply(mass_center[ref_id]);
+      mass_center_inc = transforms[inc_id].apply(mass_center[inc_id]);
+
+
+      sPhysContactData *contact = arbiter.contact_data[i];
+      for(int j = 0; j < arbiter.contact_size[i]; j++) {
+        sVector3 ref_contact_cross_normal = cross_prod(contact[j].contanct_point.subs(mass_center_ref),
+                                                       arbiter.separating_axis[i]);
+        sVector3 inc_contact_cross_normal = cross_prod(contact[j].contanct_point.subs(mass_center_inc),
+                                                       arbiter.separating_axis[i]);
+
+        // t1 = (inv_inertia * (contact x normal)) x (contact - mass_Center)
+        sVector3 t1 = cross_prod(inv_inertia_tensors[ref_id].multiply(ref_contact_cross_normal), contact[j].contanct_point.subs(mass_center_ref));
+        sVector3 t2 = cross_prod(inv_inertia_tensors[inc_id].multiply(inc_contact_cross_normal), contact[j].contanct_point.subs(mass_center_inc));
+
+        // Calculate the normal impulse mass
+        float normal_mass = (mass[ref_id] != 0.0f) ? 1.0f / mass[ref_id] : 0.0f;
+        normal_mass += (mass[inc_id] != 0.0f) ? 1.0f / mass[inc_id] : 0.0f;
+        normal_mass += dot_prod(t1.sum(t2), arbiter.separating_axis[i]);
+
+        contact[j].normal_mass = 1.0f / normal_mass;
+
+        // Calcilate de bias impulse
+        // 0.2 is teh bias factor and 0.01 is the penetration tollerance
+        contact[j].impulse_bias = -0.2f * (1.0f / elapsed_time) * MIN(0.0f, contact[j].distance + 0.01f);
+
+        // TODO: accolulate impulses..?
+      }
     }
   }
 
-  // Based on https://en.wikipedia.org/wiki/List_of_moments_of_inertia 
-  void generate_inertia_tensors() {
-     for(int i = 0; i < INSTANCE_SIZE; i++) {
-       if (is_static[i]) {
-        //inv_inertia_tensors[i].set_identity();
-        inv_inertia_tensors[i].sx1 = 0.0f;
-        inv_inertia_tensors[i].sy2 = 0.0f;
-        inv_inertia_tensors[i].tmp3 = 0.0f;
-        continue;
-       }
-        sVector3 scale = transforms[i].scale;
-
-        sMat33 tmp = {};
-        tmp.set_identity();
-
-        float half_x = scale.x / 2.0f;
-        float half_y = scale.y / 2.0f;
-        float half_z = scale.z / 2.0f;
-
-        tmp.sx1 = mass[i] * (half_y * half_y + half_z * half_z) / 12.0f;
-        tmp.sy2 = mass[i] * (half_x * half_x + half_z * half_z) / 12.0f;
-        tmp.tmp3 = mass[i] * (half_x * half_x + half_y * half_y) / 12.0f;
-        tmp.invert(&inv_inertia_tensors[i]);
-     }
-  }
-
-  void apply_gravity(const double elapsed_time) {
-    for(int i = 0; i < INSTANCE_SIZE; i++) {
-      if (is_static[i] || !is_awake[i]) {
+  void apply_impulses(double elapsed_time) {
+    for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
+      if (!arbiter.used_in_frame[i]) {
         continue;
       }
+      uint16_t ref_id = arbiter.reference_ids[i];
+      uint16_t inc_id = arbiter.incident_ids[i];
 
-      // Integrate gravity
-      // TODO: Gravity constatn cleanup
-      speed[i].y += -0.98f * elapsed_time;
-    }
+      // Get the mass centers in worldspace
+      sVector3 mass_center_ref = {}, mass_center_inc = {};
 
-  }
+      mass_center_ref = transforms[ref_id].apply(mass_center[ref_id]);
+      mass_center_inc = transforms[inc_id].apply(mass_center[inc_id]);
 
-  void update(const double elapsed_time) {
-    for(int i = 0; i < INSTANCE_SIZE; i++) {
-      if (is_static[i] || !is_awake[i]) {
-        continue;
+      sPhysContactData *contact = arbiter.contact_data[i];
+      for(int j = 0; j < arbiter.contact_size[i]; j++) {
+        // Compute relative velocity
+        sVector3 ref_contact_center = contact[j].contanct_point.subs(mass_center_ref);
+        sVector3 inc_contact_center = contact[j].contanct_point.subs(mass_center_inc);
+
+        sVector3 ref_contactd_speed = cross_prod(angular_speed[ref_id], ref_contact_center).sum(speed[ref_id]);
+        sVector3 inc_contactd_speed = cross_prod(angular_speed[inc_id], inc_contact_center).sum(speed[inc_id]);
+
+        // separating axis is the collision normal
+        float relative_normal_speed = dot_prod(arbiter.separating_axis[i], ref_contactd_speed.subs(inc_contactd_speed));
+
+        float force_normal_impulse = contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
+
+        force_normal_impulse = MAX(force_normal_impulse, 0.0f);
+
+        sVector3 normal_impulse = arbiter.separating_axis[i].mult(force_normal_impulse);
+
+        add_impulse(ref_id, ref_contact_center, normal_impulse);
+        add_impulse(inc_id, inc_contact_center, normal_impulse.invert());
       }
-
-      // Put to sleep if the speed is near to 0
-      if (speed[i].magnitude() <= 0.005f) {
-      //  is_awake[i] = false;
-     //   continue;
-      }
-
-      // Integrate speed
-      transforms[i].position.x += speed[i].x * elapsed_time;
-      transforms[i].position.y += speed[i].y * elapsed_time;
-      transforms[i].position.z += speed[i].z * elapsed_time;
-
-      // Integrate angular speed
-      sQuaternion4 tmp_quat = {0.0f, angular_speed[i].x, angular_speed[i].y, angular_speed[i].z};
-      tmp_quat = tmp_quat.multiply(0.5f).multiply(elapsed_time);
-
-      sQuaternion4 rot_quat = transforms[i].rotation;
-      rot_quat = rot_quat.sum(tmp_quat.multiply(rot_quat));
-      rot_quat = rot_quat.normalize();
-
-      transforms[i].set_rotation(rot_quat);
     }
   }
 
   inline void add_impulse(const int       index,
+                          const sVector3 &position,
                           const sVector3 &impulse) {
     sVector3 tmp = speed[index];
     float inv_mass = (is_static[index]) ? 0.0f : 1.0f / mass[index];
@@ -109,7 +133,7 @@ struct sPhysicsWorld {
 
     speed[index] = tmp;
 
-    is_awake[index] = true;
+    angular_speed[index] = angular_speed[index].sum(inv_inertia_tensors[index].multiply(cross_prod(position, impulse)));
   }
 
   void resolve_collision(const sCollisionManifold &manifold,
@@ -165,8 +189,8 @@ struct sPhysicsWorld {
 
       sVector3 impulse = manifold.collision_normal.mult(impulse_force_complete);
 
-      add_impulse(obj1, impulse);
-      add_impulse(obj2, impulse.invert());
+      add_impulse(obj1, point_center_1, impulse);
+      add_impulse(obj2, point_center_2, impulse.invert());
 
       angular_speed[obj1] = angular_speed[obj1].sum(inv_inertia_tensors[obj1].multiply(cross_prod(point_center_1, impulse)));
       angular_speed[obj2] = angular_speed[obj2].sum(inv_inertia_tensors[obj2].multiply(cross_prod(point_center_2, impulse.invert())));
@@ -175,8 +199,8 @@ struct sPhysicsWorld {
       float depth_impulse_force = 0.001f * MAX(-manifold.points_depth[i] - 0.01f, 0.0f) / elapsed_time;// / (elapsed_time * to_divide);
       sVector3 depth_impulse = manifold.collision_normal.mult(depth_impulse_force);
 
-      add_impulse(obj1, depth_impulse);
-      add_impulse(obj2, depth_impulse.invert());
+      //add_impulse(obj1, depth_impulse);
+      //add_impulse(obj2, depth_impulse.invert());
 
       // Penetration correction
       // TODO: More stable, via baumgarte or add a non penetration impulse

@@ -283,8 +283,8 @@ void draw_loop(GLFWwindow *window) {
     //cubes[i].apply_transform(transforms[i]);
   }
 
-  //phys_instance.generate_inertia_tensors();
-  phys_instance.config_simulation();
+  phys_instance.generate_inertia_tensors();
+  //phys_instance.config_simulation();
 
   cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
@@ -331,47 +331,10 @@ void draw_loop(GLFWwindow *window) {
 		double elapsed_time = curr_frame_time - prev_frame_time;
     prev_frame_time = curr_frame_time;
 
-    phys_instance.apply_gravity(elapsed_time);
-
-    ImGui::Begin("Collisions");
-    for (int iter = 0; iter < 1; iter++) {
-    for(int i = 0; i < 4; i++) {
-      for(int j = i+1; j < 4; j++) {
-        //ImGui::Text("Obj %d %d", i, j);
-        sCollisionManifold manifold;
-
-        if (SAT_test(transforms[i],
-                     transforms[j],
-                     &manifold)) {
-          // Collision!
-          ImGui::Text("Collision between Obj1 %s and obj2 %s", names[i], names[j]);
-          sMat44 points_models[6] = {};
-          sVector4 point_colors[6] = {};
-          for(int x = 0; x < manifold.contact_point_count; x++) {
-            points_models[x].set_identity();
-            points_models[x].set_scale({0.5, 0.05, 0.5});
-            points_models[x].set_position(manifold.contact_points[x]);
-            point_colors[x] = colors[j];//{1.0f, 0.0f, 0.0f, 1.0f};
-          }
-
-          //cube_renderer_render(&renderer, points_models, point_colors, manifold.contact_point_count, &proj_mat);
-          
-          // Fill the manifold with the index data
-          manifold.obj1_index = i;
-          manifold.obj2_index = j;
-
-          phys_instance.resolve_collision(manifold, elapsed_time);
-        } else {
-          // no collision
-        }
-        //ImGui::Separator();
-      }
-    }
-    }
+    std::cout << elapsed_time << std::endl;
+    ImGui::Begin("Physics");
+    phys_instance.step(elapsed_time);
     ImGui::End();
-
-    phys_instance.update(elapsed_time);
-
 
     sMat44 models[4] = {};
 
@@ -380,28 +343,6 @@ void draw_loop(GLFWwindow *window) {
       //ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
     }
 
-
-    /*ImGui::Begin("Rotations");
-    for(int i = 0; i < 4; i++) {
-      sQuaternion4 quat = transforms[i].rotation;
-      sVector3 ang_speed = phys_instance.angular_speed[i];
-      ImGui::Text("%s", names[i]);
-      ImGui::Text("Rot: %f %f %f %f", quat.w, quat.x, quat.y, quat.z);
-      ImGui::Text("Ang speed: %f %f %f",  ang_speed.x, ang_speed.y, ang_speed.z);
-      ImGui::Separator();
-    }
-    ImGui::End();
-
-    ImGui::Begin("Objects");
-    for(int i = 0; i < 4; i++) {
-      models[i].set_identity();
-      models[i].set_scale(transforms[i].scale);
-      // Rotation
-      models[i].set_position(transforms[i].position);
-      models[i].rotate(&transforms[i].rotation);
-      ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
-    }
-    ImGui::End();*/
     cube_renderer_render(&renderer, models, colors, 4, &proj_mat);
 
     ImGui::Render();

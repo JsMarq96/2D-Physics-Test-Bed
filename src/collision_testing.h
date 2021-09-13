@@ -10,6 +10,8 @@
 
 #include "imgui/imgui.h"
 
+#include <cstdint>
+
 inline bool test_overlap_on_axis(const sVector3  *shape1_vertices, 
                                  const int       shape1_size,
                                  const sVector3  *shape2_vertices,
@@ -152,12 +154,18 @@ inline bool SAT_test(const sTransform   &obj1_transform,
     reference_index = obj1_face_of_most_separation;
 
     incident_obj = &obj2_in_obj1_space;
+
+    manifold->reference_index = manifold->obj1_index;
+    manifold->incident_index = manifold->obj2_index;
     //ImGui::Text("Incident 2");
   } else {
     reference_obj = &obj2_in_obj1_space;
     reference_index = obj2_face_of_most_separation;
 
     incident_obj = &obj1;
+
+    manifold->reference_index = manifold->obj2_index;
+    manifold->incident_index = manifold->obj1_index;
     //ImGui::Text("Incident 1");
   }
 
@@ -172,8 +180,13 @@ inline bool SAT_test(const sTransform   &obj1_transform,
       incident_facing = facing;
     }
   }
+
+  // Add the faces to the manifold
+  manifold->incident_face = incident_index;
+  manifold->reference_face = reference_index;
  
   // Sutherland-Hgdman clipping ====
+  // TODO: Only clip agains adjacent planes
   /*
    * Use the Swapable stacks for iterating the vertices and one for
    * storing the modified ones, and then swp then back, for iterating the
@@ -182,14 +195,18 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   int incident_vertex_count = obj1.points_per_plane;
 
   sSwapableVector3Stacks swaps;
+  // In order to store the IDS of the points
+  sSwapableVector3Stacks mirror_ids_swaps;
 
-  swaps.init(incident_obj->points_per_plane * 3); 
+  swaps.init(incident_obj->points_per_plane * 3);
+  mirror_ids_swaps.init(incident_obj->points_per_plane * 3);
 
   // Add to the stack the points 
   for(int i = 0; i < incident_obj->points_per_plane; i++) {
     sVector3 tmp = incident_obj->get_point_of_face(incident_index, i);
     //ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, 0.0f);
     swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
+    mirror_ids_swaps.add_element_to_current_stack(sVector3{(float)i, (float)i, 0.0});
   }
 
 
@@ -198,8 +215,9 @@ inline bool SAT_test(const sTransform   &obj1_transform,
    
     int element_count = swaps.get_current_stacks_size(); 
     for(int j = 0; j < element_count; j++) {
+      int end_index = (j+1) % element_count;
       sVector3 begin = swaps.get_element_from_current_stack(j);
-      sVector3 end = swaps.get_element_from_current_stack((j+1) % element_count);
+      sVector3 end = swaps.get_element_from_current_stack(end_index);
 
       float begin_dist = curr_plane->distance(begin);
       float end_dist = curr_plane->distance(end);
@@ -210,6 +228,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
         if (begin_dist < 1e-6f) {
           // Add the end point
           swaps.add_element_to_secundary_stack(end);
+          mirror_ids_swaps.add_element_to_secundary_stack({(float)end_index, (float)end_index});
         }
       } else {
         // If the sing is negative, then the points are in different sides of
@@ -217,15 +236,19 @@ inline bool SAT_test(const sTransform   &obj1_transform,
         
         // Add the intersection point
         swaps.add_element_to_secundary_stack(curr_plane->get_intersection_point(end, begin));
+        mirror_ids_swaps.add_element_to_secundary_stack({(float)end_index, (float)i});
         if (begin_dist > 1e-6f) {
           // Add the end point
           swaps.add_element_to_secundary_stack(end);
+          mirror_ids_swaps.add_element_to_secundary_stack({(float)end_index, (float)end_index});
         }
       }
     }
 
-    swaps.clean_current_stack(); 
-    swaps.swap(); 
+    swaps.clean_current_stack();
+    swaps.swap();
+    mirror_ids_swaps.clean_current_stack();
+    swaps.swap();
   }
   //ImGui::Text("Colision points count:  %d", swaps.get_current_stacks_size());
 
@@ -233,6 +256,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   sPlane reference_plane = reference_obj->planes[reference_index];
   for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
     sVector3 tmp = swaps.get_element_from_current_stack(j);
+    sVector3 ids = mirror_ids_swaps.get_element_from_current_stack(j);
 
     ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
 
@@ -240,7 +264,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
     tmp = obj1_transform.apply_without_scale(tmp);
     ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
 
-    manifold->add_collision_point(tmp, distance);
+    manifold->add_collision_point(tmp, distance, {(uint16_t) ids.x, (uint16_t) ids.y});
     ImGui::Separator();
   }
 

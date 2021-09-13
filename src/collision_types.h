@@ -7,28 +7,36 @@
 
 #include "math.h"
 #include "geometry.h"
+#include "utils.h"
 #include "imgui/imgui.h"
 
 #include <iostream>
 
 struct sCollisionManifold {
-    int obj1_index            = -1;
-    int obj2_index            = -1;
+  int obj1_index = -1;
+  int obj2_index = -1;
 
-    int face_obj1 = -1;
-    int face_obj2 = -1;
+    int incident_index            = -1;
+    int reference_index            = -1;
+
+    int incident_face = -1;
+    int reference_face = -1;
 
     sVector3  collision_normal     = {};
     sVector3  contact_points    [6] = {};
     float     points_depth      [6] = {};
+    uUIntTuple point_ids         [6] = {};
     int       contact_point_count   = 0;
 
-    inline void add_collision_point(const sVector3& point, const float depth) {
+    inline void add_collision_point(const sVector3& point,
+                                    const float depth,
+                                    const uUIntTuple id) {
       if (contact_point_count == 5) {
         return;
       }
 
       contact_points[contact_point_count] = point;
+      point_ids[contact_point_count] = id;
       points_depth[contact_point_count++] = depth;
     }
 };
@@ -37,7 +45,7 @@ struct sCollisionManifold {
 // The vertices are ordered via neighboors, so the 
 // lines that compose the face 0 are:
 // 0-1, 1-3, 3-2 and 2-0
-unsigned int BOX_3D_LUT_FACE_VERTICES[6][4] = {
+static unsigned int BOX_3D_LUT_FACE_VERTICES[6][4] = {
   {0, 1, 3, 2},
   {6, 7, 3, 2},
   {0, 2, 6, 4},
