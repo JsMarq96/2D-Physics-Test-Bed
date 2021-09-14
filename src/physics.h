@@ -77,7 +77,9 @@ struct sPhysicsWorld {
 
         // Calcilate de bias impulse
         // 0.2 is teh bias factor and 0.01 is the penetration tollerance
-        contact[j].impulse_bias = -0.2f * (1.0f / elapsed_time) * MIN(0.0f, contact[j].distance + 0.01f);
+        contact[j].impulse_bias = 0.1f * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - 0.01f);
+
+        contact[j].restitution = MIN(restitution[ref_id], restitution[inc_id]);
 
         // TODO: accolulate impulses..?
       }
@@ -112,7 +114,10 @@ struct sPhysicsWorld {
         // separating axis is the collision normal
         float relative_normal_speed = dot_prod(arbiter.separating_axis[i], ref_contactd_speed.subs(inc_contactd_speed));
 
-        float force_normal_impulse = contact[j].normal_mass * -relative_normal_speed;//(-relative_normal_speed + contact[j].impulse_bias);
+        //float force_normal_impulse = contact[j].normal_mass * -relative_normal_speed;//(-relative_normal_speed + contact[j].impulse_bias);
+        float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed - contact[j].impulse_bias);
+        //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed - contact[j].impulse_bias);
+        //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed);
 
         //ImGui::Text("impulse %f", force_normal_impulse);
         //force_normal_impulse = MAX(force_normal_impulse, 0.0f);

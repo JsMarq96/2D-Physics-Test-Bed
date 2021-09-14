@@ -43,6 +43,7 @@ struct sPhysContactData {
     float          normal_mass     = 0.0f;
     float          impulse_bias    = 0.0f;
     float          distance        = 0.0f;
+    float          restitution     = 0.0f;
     uUIntTuple     point_id       = {};
 };
 
