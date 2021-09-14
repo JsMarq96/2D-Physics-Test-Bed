@@ -57,12 +57,16 @@ struct sPhysicsWorld {
       mass_center_inc = transforms[inc_id].apply(mass_center[inc_id]);
 
 
+      sVector3 normal = arbiter.separating_axis[i];
+      //sVector3 tangent = cross_prod(normal.invert(), cross());
+
       sPhysContactData *contact = arbiter.contact_data[i];
       for(int j = 0; j < arbiter.contact_size[i]; j++) {
+
         sVector3 ref_contact_cross_normal = cross_prod(contact[j].contanct_point.subs(mass_center_ref),
-                                                       arbiter.separating_axis[i]);
+                                                       normal);
         sVector3 inc_contact_cross_normal = cross_prod(contact[j].contanct_point.subs(mass_center_inc),
-                                                       arbiter.separating_axis[i]);
+                                                       normal);
 
         // t1 = (inv_inertia * (contact x normal)) x (contact - mass_Center)
         sVector3 t1 = cross_prod(inv_inertia_tensors[ref_id].multiply(ref_contact_cross_normal), contact[j].contanct_point.subs(mass_center_ref));
@@ -75,9 +79,12 @@ struct sPhysicsWorld {
 
         contact[j].normal_mass = 1.0f / normal_mass;
 
+        // Calculate the tangent impulse mass
+
+
         // Calcilate de bias impulse
         // 0.2 is teh bias factor and 0.01 is the penetration tollerance
-        contact[j].impulse_bias = 0.1f * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - 0.01f);
+        contact[j].impulse_bias = 0.1f * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - 0.05f);
 
         contact[j].restitution = MIN(restitution[ref_id], restitution[inc_id]);
 
