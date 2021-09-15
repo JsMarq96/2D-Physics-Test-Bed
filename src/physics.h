@@ -7,6 +7,8 @@
 #include "collision_testing.h"
 
 #include "phys_arbiter.h"
+#include "phys_parameters.h"
+
 #include <cstdint>
 
 #include "imgui/imgui.h"
@@ -87,7 +89,7 @@ struct sPhysicsWorld {
 
         // Calcilate de bias impulse
         // 0.2 is teh bias factor and 0.01 is the penetration tollerance
-        contact[j].impulse_bias = -0.2f * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - 0.005f);
+        contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - PENETRATION_SLOP);
 
         contact[j].restitution = MIN(restitution[ref_id], restitution[inc_id]);
 

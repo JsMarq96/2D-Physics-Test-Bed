@@ -123,8 +123,8 @@ struct sPhysArbiter {
         for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
             if (enabled[i] && !used_in_frame[i]) {
                 enabled[i] = false;
-                used_in_frame[i] = false;
             }
+            used_in_frame[i] = false;
         }
     }
 
