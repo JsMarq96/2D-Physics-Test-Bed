@@ -258,12 +258,12 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.transforms = &transforms[0];
 
   phys_instance.mass[0] = 0.0f;
-  phys_instance.mass[1] = 9.0f;
-  phys_instance.mass[2] = 2.0f;
-  phys_instance.mass[3] = 1.0f;
+  phys_instance.mass[1] = 29.0f;
+  phys_instance.mass[2] = 11.0f;
+  phys_instance.mass[3] = 9.0f;
 
   phys_instance.restitution[0] = 0.5f;
-  phys_instance.restitution[1] = 0.8f;
+  phys_instance.restitution[1] = 0.3f;
   phys_instance.restitution[2] = 0.5f;
   phys_instance.restitution[3] = 0.2f;
 

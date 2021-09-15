@@ -1,6 +1,7 @@
 #ifndef PHYS_ARBITER_H_
 #define PHYS_ARBITER_H_
 
+#include "imgui/imgui.h"
 #include "math.h"
 #include "collision_types.h"
 #include "types.h"
@@ -142,6 +143,7 @@ struct sPhysArbiter {
         separating_axis[arbiter_id] = manifold.collision_normal;
 
         if (descriptors[arbiter_id].data == new_descriptor.data) {
+            ImGui::Text("Common points");
             sPhysContactData *contact = contact_data[arbiter_id];
 
             sPhysContactData tmp_list[MAX_CONTANT_POINTS] = {};
@@ -167,13 +169,13 @@ struct sPhysArbiter {
                 tmp_list_it++;
                 tmp_size++;
             }
-
             memcpy(contact_data[arbiter_id], tmp_list, sizeof(tmp_list));
             contact_size[arbiter_id] = tmp_size;
             return;
         }
         // The descriptors does not match, so we celan and replace contact
         // points
+        ImGui::Text("No common points");
         sPhysContactData *contact_it = contact_data[arbiter_id];
         for(int i = 0; i < manifold.contact_point_count; i++) {
             contact_it->distance = manifold.points_depth[i];
@@ -183,6 +185,7 @@ struct sPhysArbiter {
             contact_it++;
         }
         contact_size[arbiter_id] = manifold.contact_point_count;
+        descriptors[arbiter_id] = new_descriptor;
     }
 };
 
