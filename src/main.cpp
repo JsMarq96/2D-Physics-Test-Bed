@@ -263,9 +263,9 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.mass[3] = 9.0f;
 
   phys_instance.restitution[0] = 0.5f;
-  phys_instance.restitution[1] = 0.3f;
-  phys_instance.restitution[2] = 0.5f;
-  phys_instance.restitution[3] = 0.2f;
+  phys_instance.restitution[1] = 0.15f;
+  phys_instance.restitution[2] = 0.1f;
+  phys_instance.restitution[3] = 0.1f;
 
   phys_instance.friction[0] = 0.8f;
   phys_instance.friction[1] = 0.5f;

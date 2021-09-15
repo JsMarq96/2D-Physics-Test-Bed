@@ -87,7 +87,7 @@ struct sPhysicsWorld {
 
         // Calcilate de bias impulse
         // 0.2 is teh bias factor and 0.01 is the penetration tollerance
-        contact[j].impulse_bias = -0.2f * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - 0.01f);
+        contact[j].impulse_bias = -0.2f * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - 0.005f);
 
         contact[j].restitution = MIN(restitution[ref_id], restitution[inc_id]);
 
@@ -96,6 +96,18 @@ struct sPhysicsWorld {
 
         apply_impulse(ref_id, r1, impulse);
         apply_impulse(inc_id, r2, impulse.invert());
+
+        sVector3 ref_contactd_speed = cross_prod(angular_speed[ref_id], r1).sum(speed[ref_id]);
+        sVector3 inc_contactd_speed = cross_prod(angular_speed[inc_id], r2).sum(speed[inc_id]);
+
+        // separating axis is the collision normal
+        float new_relative_normal_speed = dot_prod(normal, ref_contactd_speed.subs(inc_contactd_speed));
+
+        // If the speed is
+        if (new_relative_normal_speed < -0.0f) {
+          contact[i].impulse_bias += -contact[j].restitution * new_relative_normal_speed;
+        }
+
       }
     }
   }
