@@ -2,8 +2,13 @@
 #include "imgui/imgui.h"
 #include <X11/Xlib.h>
 
+#include "math.h"
+#include "render_cubes.h"
 
-void sPhysicsWorld::step(const double elapsed_time) {
+void sPhysicsWorld::step(const double elapsed_time, const sMat44 *proj_mat) {
+    sCubeRenderer renderer;
+
+    cube_renderer_init(&renderer);
     // 0.- Apply gravity
     apply_gravity(elapsed_time);
     // 1.- Broadphase detection
@@ -38,11 +43,32 @@ void sPhysicsWorld::step(const double elapsed_time) {
     }
     ImGui::Separator();
 
+    int contact_count = 0;
     for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
         if (arbiter.used_in_frame[i]){
+            contact_count += arbiter.contact_size[i];
             ImGui::Text("Arbiter %d Contact count %d", i, arbiter.contact_size[i]);
         }
     }
+
+    sMat44 *models = (sMat44*) malloc(sizeof(sMat44) * contact_count);
+    sVector4 *colors = (sVector4*) malloc(sizeof(sVector4) * contact_count);
+
+    int it_index = 0;
+    for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
+        if (arbiter.used_in_frame[i]){
+            for(int j = 0; j < arbiter.contact_size[i]; j++) {
+                models[it_index].set_identity();
+                models[it_index].set_position(arbiter.contact_data[i][j].contanct_point);
+                models[it_index].set_scale({0.05f, 0.1f, 0.1f});
+                colors[it_index] = {1.0f, 0.0f, 0.0f, 1.0f};
+                it_index++;
+            }
+        }
+    }
+
+    cube_renderer_render(&renderer, models, colors, contact_count, proj_mat);
+
 
     // 3.- Prestep (?)
     pre_step(elapsed_time);

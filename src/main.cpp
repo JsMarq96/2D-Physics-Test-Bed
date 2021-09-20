@@ -263,7 +263,7 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.mass[3] = 9.0f;
 
   phys_instance.restitution[0] = 0.5f;
-  phys_instance.restitution[1] = 0.15f;
+  phys_instance.restitution[1] = 0.1f;
   phys_instance.restitution[2] = 0.1f;
   phys_instance.restitution[3] = 0.1f;
 
@@ -328,7 +328,7 @@ void draw_loop(GLFWwindow *window) {
     prev_frame_time = curr_frame_time;
 
     ImGui::Begin("Physics");
-    phys_instance.step(elapsed_time);
+    phys_instance.step(elapsed_time, &proj_mat);
     ImGui::End();
 
     sMat44 models[4] = {};

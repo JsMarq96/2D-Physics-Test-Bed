@@ -95,7 +95,11 @@ inline void cube_renderer_init(sCubeRenderer *renderer) {
 }
 
 
-inline void cube_renderer_render(sCubeRenderer *renderer, sMat44 *models, sVector4 *colors, int obj_count, sMat44 *proj_mat) {
+inline void cube_renderer_render(sCubeRenderer *renderer,
+                                 const sMat44 *models,
+                                 const sVector4 *colors,
+                                 const int obj_count,
+                                 const sMat44 *proj_mat) {
     glBindVertexArray(renderer->VAO);
 
     renderer->shader.activate();

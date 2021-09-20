@@ -33,7 +33,7 @@ struct sPhysicsWorld {
   void config_simulation();
 
 
-  void step(const double elapsed_time);
+  void step(const double elapsed_time, const sMat44 *prpj_mat);
 
 
   void generate_inertia_tensors();
