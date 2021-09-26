@@ -75,7 +75,7 @@ void sPhysicsWorld::step(const double elapsed_time, const sMat44 *proj_mat) {
 
     // 4.- Generate impulses
     for(int i = 0; i < PHYS_SOLVER_ITERATIONS; i++) {
-        generate_impulses(elapsed_time);
+        step(elapsed_time);
     }
 
     for(int i = 0; i < INSTANCE_SIZE; i++) {

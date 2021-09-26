@@ -89,9 +89,13 @@ struct sPhysicsWorld {
 
         // Calcilate de bias impulse
         // 0.2 is teh bias factor and 0.01 is the penetration tollerance
-        contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - PENETRATION_SLOP);
+        //contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - PENETRATION_SLOP);
+        contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * -contact[j].distance;
+
 
         contact[j].restitution = MIN(restitution[ref_id], restitution[inc_id]);
+
+        //contact[j].impulse_bias += contact[j].restitution
 
         // TODO: accolulate impulses..?
         sVector3 impulse = normal.mult(contact[j].normal_impulse);
@@ -114,7 +118,7 @@ struct sPhysicsWorld {
     }
   }
 
-  void generate_impulses(double elapsed_time) {
+  void step(double elapsed_time) {
     for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
       if (!arbiter.used_in_frame[i]) {
         continue;
@@ -144,8 +148,11 @@ struct sPhysicsWorld {
         float relative_normal_speed = dot_prod(arbiter.separating_axis[i], ref_contactd_speed.subs(inc_contactd_speed));
 
         //float force_normal_impulse = contact[j].normal_mass * -relative_normal_speed;//(-relative_normal_speed + contact[j].impulse_bias);
-        //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed - contact[j].impulse_bias);
-        float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
+        //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
+
+        //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
+        float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias + (contact[j].restitution * -relative_normal_speed));
+
         //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed);
 
         //ImGui::Text("impulse %f", force_normal_impulse);

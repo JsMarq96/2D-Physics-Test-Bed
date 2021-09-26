@@ -234,11 +234,11 @@ void draw_loop(GLFWwindow *window) {
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
   transforms[1].position = {0.0f, 4.0f, 0.0f};
-  transforms[1].scale = {1.0f, 1.0f, 1.0f};
+  transforms[1].scale = {1.0f, 1.5f, 1.0f};
   transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[1].rotation.set_identity();
 
-  transforms[2].position = {0.7f, 5.5f, 0.0f};
+  transforms[2].position = {0.7f, 6.5f, 0.0f};
   transforms[2].scale = {1.0f, 1.0f, 1.0f};
   transforms[2].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
   //transforms[2].rotation.set_identity();
