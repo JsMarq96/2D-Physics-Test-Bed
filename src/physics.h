@@ -132,48 +132,21 @@ struct sPhysicsWorld {
       mass_center_ref = transforms[ref_id].apply(mass_center[ref_id]);
       mass_center_inc = transforms[inc_id].apply(mass_center[inc_id]);
 
+      /**/
+
       sPhysContactData *contact = arbiter.contact_data[i];
-      //ImGui::Text("Contact points %d", arbiter.contact_size[i]);
+      sVector3 normal = arbiter.separating_axis[i];
+
+
+
       for(int j = 0; j < arbiter.contact_size[i]; j++) {
-        //ImGui::Text("Normal mass %f", contact[j].impulse_bias);
+        sVector3 r1 = contact[j].contanct_point.subs(mass_center_ref);
+        sVector3 r2 = contact[j].contanct_point.subs(mass_center_inc);
 
-        // Compute relative velocity
-        sVector3 ref_contact_center = contact[j].contanct_point.subs(mass_center_ref);
-        sVector3 inc_contact_center = contact[j].contanct_point.subs(mass_center_inc);
-
-        sVector3 ref_contactd_speed = cross_prod(angular_speed[ref_id], ref_contact_center).sum(speed[ref_id]);
-        sVector3 inc_contactd_speed = cross_prod(angular_speed[inc_id], inc_contact_center).sum(speed[inc_id]);
-
-        // separating axis is the collision normal
-        float relative_normal_speed = dot_prod(arbiter.separating_axis[i], ref_contactd_speed.subs(inc_contactd_speed));
-
-        //float force_normal_impulse = contact[j].normal_mass * -relative_normal_speed;//(-relative_normal_speed + contact[j].impulse_bias);
-        //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
-
-        //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
-        float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias + (contact[j].restitution * -relative_normal_speed));
-
-        //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed);
-
-        //ImGui::Text("impulse %f", force_normal_impulse);
-        //force_normal_impulse = MAX(force_normal_impulse, 0.0f);
-
-        // Accululating impulses & clampping
-        float tmp_impulse = contact[j].normal_impulse;
-        contact[j].normal_impulse = tmp_impulse + force_normal_impulse;
-
-        if (contact[j].normal_impulse > 0.0f) {
-          contact[j].normal_impulse = 0.0f;
-        }
-
-        force_normal_impulse = contact[j].normal_impulse - tmp_impulse;
-
-        sVector3 normal_impulse = arbiter.separating_axis[i].mult(force_normal_impulse);
-
-        //ImGui::Text("normal imp %f %f %f", normal_impulse.x, normal_impulse.y, normal_impulse.z);
-
-        apply_impulse(ref_id, ref_contact_center, normal_impulse);
-        apply_impulse(inc_id, inc_contact_center, normal_impulse.invert());
+        sVector3 ref_contact_cross_normal = cross_prod(r1,
+                                                       normal);
+        sVector3 inc_contact_cross_normal = cross_prod(r2,
+                                                       normal);
       }
     }
   }

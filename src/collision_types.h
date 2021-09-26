@@ -84,7 +84,7 @@ struct sBoxCollider {
       vertices[i].multiply(scale);
     }
 
-    transform.rotate(&rot);
+    transform.rotate(rot);
     transform.set_position(position);
 
     rotation = rot;
@@ -96,7 +96,7 @@ struct sBoxCollider {
     rotation = rot;  
   
     for(int i = 0; i < 6; i++) {
-      axis[i] = rotate_vector3(axis[i], rot);
+      axis[i] = axis[i].rotate(rot);
       planes[i] = get_plane_of_face(i, false);
     }
 
@@ -143,7 +143,7 @@ struct sBoxCollider {
     }
 
     return sPlane{sVector3{avg_x / 4.0f, avg_y / 4.0f, avg_z / 4.0f}, 
-                  rotate_vector3( axis[face_index], rotation )};
+                  axis[face_index].rotate( rotation )};
   };
 
   inline void get_lines_of_face(const int face_index, 
