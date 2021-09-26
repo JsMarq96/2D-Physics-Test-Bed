@@ -61,6 +61,5 @@ union sVector4 {
     float raw_values[4];
 };
 
-#include "vector.inl"
 
 #endif // VECTOR_H_
