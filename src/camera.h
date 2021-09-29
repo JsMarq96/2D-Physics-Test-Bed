@@ -31,15 +31,13 @@ struct sCamera {
     int        vp_height  = 0.0f;
     int        vp_width   = 0.0f;
 
-    static sCamera*
-    shared_instance() {
-        static sCamera instance;
+    static sCamera* shared_instance() {
+        static sCamera instance  ={};
         return &instance;
     };
 
     // Orthografic projection is the only one by default
-    void
-    get_ortho_projection_matrix(sMat44     *result) const {
+    void get_ortho_projection_matrix(sMat44     *result) const {
         result->set_identity();
 
         float left = (position.y -vp_width) * zoom / 2.0f;
@@ -54,8 +52,7 @@ struct sCamera {
         result->mat_values[3][1] = -(top + bottom) / (top - bottom);
     };
 
-    void
-    get_perspective_projection_matrix(const float FOV,
+    void get_perspective_projection_matrix(const float FOV,
                                       const float far,
                                       const float near,
                                       const float aspect_ratio,
