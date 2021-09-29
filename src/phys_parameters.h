@@ -3,9 +3,9 @@
 
 // Constants for the physics simulation
 
-#define PHYS_SOLVER_ITERATIONS 10
+#define PHYS_SOLVER_ITERATIONS 20
 
-#define BAUMGARTE_TERM 0.20f
+#define BAUMGARTE_TERM 0.2f
 
 #define PENETRATION_SLOP 0.01f
 

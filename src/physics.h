@@ -89,8 +89,8 @@ struct sPhysicsWorld {
 
         // Calcilate de bias impulse
         // 0.2 is teh bias factor and 0.01 is the penetration tollerance
-        //contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - PENETRATION_SLOP);
-        contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * -contact[j].distance;
+        contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - PENETRATION_SLOP);
+        //contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * -contact[j].distance;
 
 
         contact[j].restitution = MIN(restitution[ref_id], restitution[inc_id]);
@@ -111,7 +111,7 @@ struct sPhysicsWorld {
 
         // If the speed is
         if (new_relative_normal_speed < -0.0f) {
-          contact[i].impulse_bias += -contact[j].restitution * new_relative_normal_speed;
+          //contact[i].impulse_bias += -contact[j].restitution * new_relative_normal_speed;
         }
 
       }
@@ -151,9 +151,9 @@ struct sPhysicsWorld {
         //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
 
         //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
-        float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias + (contact[j].restitution * -relative_normal_speed));
+        //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias + (contact[j].restitution * -relative_normal_speed));
 
-        //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed);
+        float force_normal_impulse = contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
 
         //ImGui::Text("impulse %f", force_normal_impulse);
         //force_normal_impulse = MAX(force_normal_impulse, 0.0f);
