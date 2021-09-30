@@ -56,7 +56,11 @@ union sVector3 {
 
     inline sVector3 invert() const {
       return sVector3{-x, -y, -z};
-    }; 
+    };
+
+    inline float dot(const sVector3 vect) const {
+        return vect.x * x + vect.y * y + vect.z * z;
+    }
 
     inline sVector3 normalize() const {
       float magnitude = sqrt((x*x)+ (y*y) + (z*z));

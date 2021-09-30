@@ -78,9 +78,12 @@ struct sPhysicsWorld {
         sVector3 t2 = cross_prod(inv_inertia_tensors[inc_id].multiply(inc_contact_cross_normal), contact[j].contanct_point.subs(mass_center_inc));
 
         // Calculate the normal impulse mass
-        float normal_mass = (mass[ref_id] != 0.0f) ? 1.0f / mass[ref_id] : 0.0f;
+        /*float normal_mass = (mass[ref_id] != 0.0f) ? 1.0f / mass[ref_id] : 0.0f;
         normal_mass += (mass[inc_id] != 0.0f) ? 1.0f / mass[inc_id] : 0.0f;
-        normal_mass += dot_prod(t1.sum(t2), arbiter.separating_axis[i]);
+        normal_mass += dot_prod(t1.sum(t2), arbiter.separating_axis[i]);*/
+
+        float normal_mass = dot_prod(normal, normal.mult(((mass[ref_id] != 0.0f) ? 1.0f / mass[ref_id] : 0.0f) + ((mass[inc_id] != 0.0f) ? 1.0f / mass[inc_id] : 0.0f)));
+        normal_mass += dot_prod(cross_prod(inv_inertia_tensors[ref_id].multiply(cross_prod(r1, normal)), r1).sum(cross_prod(inv_inertia_tensors[inc_id].multiply(cross_prod(r2, normal)), r2)), normal);
 
         contact[j].normal_mass = 1.0f / normal_mass;
 
@@ -110,8 +113,8 @@ struct sPhysicsWorld {
         float new_relative_normal_speed = dot_prod(normal, ref_contactd_speed.subs(inc_contactd_speed));
 
         // If the speed is
-        if (new_relative_normal_speed < -0.0f) {
-          //contact[i].impulse_bias += -contact[j].restitution * new_relative_normal_speed;
+        if (new_relative_normal_speed < -1.0f) {
+          contact[i].impulse_bias += -contact[j].restitution * new_relative_normal_speed;
         }
 
       }
@@ -148,12 +151,12 @@ struct sPhysicsWorld {
         float relative_normal_speed = dot_prod(arbiter.separating_axis[i], ref_contactd_speed.subs(inc_contactd_speed));
 
         //float force_normal_impulse = contact[j].normal_mass * -relative_normal_speed;//(-relative_normal_speed + contact[j].impulse_bias);
-        //float force_normal_impulse = (contact[j].restitution) * contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
+        float force_normal_impulse = contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
 
         //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
         //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias + (contact[j].restitution * -relative_normal_speed));
 
-        float force_normal_impulse = contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
+       // float force_normal_impulse = contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
 
         //ImGui::Text("impulse %f", force_normal_impulse);
         //force_normal_impulse = MAX(force_normal_impulse, 0.0f);
@@ -174,6 +177,7 @@ struct sPhysicsWorld {
 
         apply_impulse(ref_id, ref_contact_center, normal_impulse);
         apply_impulse(inc_id, inc_contact_center, normal_impulse.invert());
+
       }
     }
   }
