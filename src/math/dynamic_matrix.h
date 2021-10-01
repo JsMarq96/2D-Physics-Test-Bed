@@ -8,6 +8,11 @@
 
 #include "vector.h"
 
+/**
+ * A dynamic matrix format
+ * This is only for using on the physics solver, and MAYBE some other place
+ * */
+
 struct sDynMatrix {
     uint8_t   width   = 0;
     uint8_t   height  = 0;
@@ -41,7 +46,7 @@ struct sDynMatrix {
 
     void multiply(const sDynMatrix   &a,
                   const sDynMatrix   &b) {
-        assert(a.height == b.width && "You cannot multiply different sized matrices");
+        assert(a.height == b.width && "You cannot multiply different sized matrices idk");
 
         if (values != NULL) {
             free(values);
@@ -52,10 +57,23 @@ struct sDynMatrix {
             for(int y = 0; y < height; y++) {
                 float tmp = 0.0f;
 
-                for(int i = 0; i < )
+                for(int i = 0; i < width; i++) {
+                    tmp += a.get(i, y) + b.get(x, i);
+                }
+
+                set(x, y, tmp);
             }
         }
+    }
 
+    void transpose_to(sDynMatrix *a) const {
+        a->init(width, height, 0.0f);
+
+        for(int x = 0; x < height; x++) {
+            for(int y = 0; y < width; y++) {
+                a->set(y,x, get(x, y));
+            }
+        }
     }
 };
 
