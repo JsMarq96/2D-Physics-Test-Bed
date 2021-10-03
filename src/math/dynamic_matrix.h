@@ -5,8 +5,10 @@
 #include <cmath>
 #include <cstring>
 #include <cassert>
+#include <iostream>
 
 #include "vector.h"
+#include "matrix33.h"
 
 /**
  * A dynamic matrix format
@@ -22,11 +24,20 @@ struct sDynMatrix {
     void init(const uint8_t   i_width,
               const uint8_t   i_height,
               const float     default_value) {
+
+        if (values != NULL) {
+            free(values);
+        }
+
         values = (float*) malloc(sizeof(float) * i_width * i_height);
         memset(values, default_value, sizeof(float) * i_width * i_height);
 
         width = i_width;
         height = i_height;
+    }
+
+    void clean() {
+        free(values);
     }
 
     inline float get(const uint8_t   x,
@@ -46,19 +57,19 @@ struct sDynMatrix {
 
     void multiply(const sDynMatrix   &a,
                   const sDynMatrix   &b) {
-        assert(a.height == b.width && "You cannot multiply different sized matrices idk");
+        assert(a.width == b.height && "You cannot multiply different sized matrices idk");
 
         if (values != NULL) {
             free(values);
         }
-        init(a.height, b.width, 0.0f);
+        init(b.width, a.height, 0.0f);
 
         for(int x = 0; x < width; x++) {
             for(int y = 0; y < height; y++) {
                 float tmp = 0.0f;
 
                 for(int i = 0; i < width; i++) {
-                    tmp += a.get(i, y) + b.get(x, i);
+                    tmp += a.get(y, i) * b.get(x, i);
                 }
 
                 set(x, y, tmp);
@@ -73,6 +84,27 @@ struct sDynMatrix {
             for(int y = 0; y < width; y++) {
                 a->set(y,x, get(x, y));
             }
+        }
+    }
+
+    void copy_matrix_inside(const uint8_t    origin_x,
+                            const uint8_t    origin_y,
+                            const sMat33     &a) {
+        assert(origin_x+3 >= width && origin_y+3 >= height && "Cannot copy insde matrix since it does not fit");
+
+        for(int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
+                set(x + origin_x, y + origin_y, a.mat_values[x][y]);
+            }
+        }
+    }
+
+    void print() const {
+        for(int i = 0; i < width; i++) {
+            for(int j = 0; j < height; j++) {
+                std::cout << get(i, j) << " ";
+            }
+            std::cout << std::endl;
         }
     }
 };

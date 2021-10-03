@@ -13,6 +13,7 @@
 #include "math/vector.h"
 #include "math/matrix33.h"
 #include "math/matrix44.h"
+#include "math/dynamic_matrix.h"
 #include "math/quaternion.h"
 
 // TODO: cleanup a bit, its getting a bit messy bro

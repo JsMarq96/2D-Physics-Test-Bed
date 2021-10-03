@@ -2,6 +2,7 @@
 #define _PHYSICS_H_
 
 #include "math.h"
+#include "math/dynamic_matrix.h"
 #include "types.h"
 #include "collision_types.h"
 #include "collision_testing.h"
@@ -44,87 +45,34 @@ struct sPhysicsWorld {
   void integrate (const double elapsed_time);
 
   void pre_step(const double elapsed_time) {
-    for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
-      if (!arbiter.used_in_frame[i]) {
-        continue;
-      }
-
-      uint16_t ref_id = arbiter.reference_ids[i];
-      uint16_t inc_id = arbiter.incident_ids[i];
-
-      // Get the mass centers in worldspace
-      sVector3 mass_center_ref = {}, mass_center_inc = {};
-
-      mass_center_ref = transforms[ref_id].apply(mass_center[ref_id]);
-      mass_center_inc = transforms[inc_id].apply(mass_center[inc_id]);
-
-
-      sVector3 normal = arbiter.separating_axis[i];
-      //sVector3 tangent = cross_prod(normal.invert(), cross());
-
-      sPhysContactData *contact = arbiter.contact_data[i];
-      for(int j = 0; j < arbiter.contact_size[i]; j++) {
-
-        sVector3 r1 = contact[j].contanct_point.subs(mass_center_ref);
-        sVector3 r2 = contact[j].contanct_point.subs(mass_center_inc);
-
-        sVector3 ref_contact_cross_normal = cross_prod(r1,
-                                                       normal);
-        sVector3 inc_contact_cross_normal = cross_prod(r2,
-                                                       normal);
-
-        // t1 = (inv_inertia * (contact x normal)) x (contact - mass_Center)
-        sVector3 t1 = cross_prod(inv_inertia_tensors[ref_id].multiply(ref_contact_cross_normal), contact[j].contanct_point.subs(mass_center_ref));
-        sVector3 t2 = cross_prod(inv_inertia_tensors[inc_id].multiply(inc_contact_cross_normal), contact[j].contanct_point.subs(mass_center_inc));
-
-        // Calculate the normal impulse mass
-        float normal_mass = (mass[ref_id] != 0.0f) ? 1.0f / mass[ref_id] : 0.0f;
-        normal_mass += (mass[inc_id] != 0.0f) ? 1.0f / mass[inc_id] : 0.0f;
-        normal_mass += dot_prod(t1.sum(t2), arbiter.separating_axis[i]);
-
-        contact[j].normal_mass = 1.0f / normal_mass;
-
-        // Calculate the tangent impulse mass
-
-
-        // Calcilate de bias impulse
-        // 0.2 is teh bias factor and 0.01 is the penetration tollerance
-        //contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - PENETRATION_SLOP);
-        contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * -contact[j].distance;
-
-
-        contact[j].restitution = MIN(restitution[ref_id], restitution[inc_id]);
-
-        //contact[j].impulse_bias += contact[j].restitution
-
-        // TODO: accolulate impulses..?
-        sVector3 impulse = normal.mult(contact[j].normal_impulse);
-
-        apply_impulse(ref_id, r1, impulse);
-        apply_impulse(inc_id, r2, impulse.invert());
-
-        sVector3 ref_contactd_speed = cross_prod(angular_speed[ref_id], r1).sum(speed[ref_id]);
-        sVector3 inc_contactd_speed = cross_prod(angular_speed[inc_id], r2).sum(speed[inc_id]);
-
-        // separating axis is the collision normal
-        float new_relative_normal_speed = dot_prod(normal, ref_contactd_speed.subs(inc_contactd_speed));
-
-        // If the speed is
-        if (new_relative_normal_speed < -0.0f) {
-          contact[i].impulse_bias += -contact[j].restitution * new_relative_normal_speed;
-        }
-
-      }
-    }
+    // Empty.. for now
+    // TODO: Prestep calculation for the non iterating parts of gauss seidel
   }
 
   void step(double elapsed_time) {
+    // Get the number of arbiters used in each frame
+    // TODO: This could be optimized by adding while checking the boradphase
+    int collision_count = 0;
+    for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
+      if (!arbiter.used_in_frame[i]) {
+        continue;
+      }
+      collision_count++;
+    }
+
+    sDynMatrix* jmj_mats = (sDynMatrix*) malloc(sizeof(sDynMatrix) * collision_count);
+    uUIntTuple* mats_ids = (uUIntTuple*) malloc(sizeof(uUIntTuple) * collision_count);
+    uint16_t mats_insert_id = 0;
+
     for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
       if (!arbiter.used_in_frame[i]) {
         continue;
       }
       uint16_t ref_id = arbiter.reference_ids[i];
       uint16_t inc_id = arbiter.incident_ids[i];
+
+      // Store the ids
+      mats_ids[mats_insert_id] = {ref_id, inc_id};
 
       // Get the mass centers in worldspace
       sVector3 mass_center_ref = {}, mass_center_inc = {};
@@ -133,10 +81,8 @@ struct sPhysicsWorld {
       mass_center_inc = transforms[inc_id].apply(mass_center[inc_id]);
 
       /**/
-
       sPhysContactData *contact = arbiter.contact_data[i];
       sVector3 normal = arbiter.separating_axis[i];
-
 
 
       for(int j = 0; j < arbiter.contact_size[i]; j++) {
