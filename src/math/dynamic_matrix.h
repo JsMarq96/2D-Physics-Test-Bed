@@ -90,12 +90,22 @@ struct sDynMatrix {
     void copy_matrix_inside(const uint8_t    origin_x,
                             const uint8_t    origin_y,
                             const sMat33     &a) {
-        assert(origin_x+3 >= width && origin_y+3 >= height && "Cannot copy insde matrix since it does not fit");
+        assert(origin_x+3 < width && origin_y+3 < height && "Cannot copy insde matrix since it does not fit");
 
         for(int x = 0; x < 3; x++) {
             for (int y = 0; y < 3; y++) {
                 set(x + origin_x, y + origin_y, a.mat_values[x][y]);
             }
+        }
+    }
+
+    void copy_vector3_inside(const uint8_t    origin_x,
+                             const uint8_t    origin_y,
+                             const sVector3   &a) {
+        assert(origin_x+3 < width && origin_y < height && "Cannot copy insde vector since it does not fit");
+
+        for (int x = 0; x < 3; x++) {
+            set(x + origin_x, origin_y, a.raw_values[x]);
         }
     }
 

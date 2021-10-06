@@ -61,6 +61,7 @@ struct sPhysicsWorld {
     }
 
     sDynMatrix* jmj_mats = (sDynMatrix*) malloc(sizeof(sDynMatrix) * collision_count);
+    sDynMatrix* min_max_mats = (sDynMatrix*) malloc(sizeof(sDynMatrix) * collision_count);
     uUIntTuple* mats_ids = (uUIntTuple*) malloc(sizeof(uUIntTuple) * collision_count);
     uint16_t mats_insert_id = 0;
 
@@ -84,8 +85,20 @@ struct sPhysicsWorld {
       sPhysContactData *contact = arbiter.contact_data[i];
       sVector3 normal = arbiter.separating_axis[i];
 
+      jmj_mats[mats_insert_id].init(12, 12, 0.0f);
+      min_max_mats[mats_insert_id].init(2, arbiter.contact_size[i] + 4, 0.0f);
 
+      sDynMatrix j_mat = {};
+      j_mat.init(12, arbiter.contact_size[i] * 3, 0.0f);
+
+      // Generate J matrix fom constraints & max-mins
       for(int j = 0; j < arbiter.contact_size[i]; j++) {
+        // calculate tangent, r vectors and cross products before
+        sVector3 t1 = {}, t2 = {};
+        plane_space(normal, t1, t2);
+
+        float collision_friction = MAX(friction[ref_id], friction[inc_id]);
+
         sVector3 r1 = contact[j].contanct_point.subs(mass_center_ref);
         sVector3 r2 = contact[j].contanct_point.subs(mass_center_inc);
 
@@ -93,7 +106,51 @@ struct sPhysicsWorld {
                                                        normal);
         sVector3 inc_contact_cross_normal = cross_prod(r2,
                                                        normal);
-      }
+
+        sVector3 ref_contact_cross_tang1 = cross_prod(r1,
+                                                       t1);
+        sVector3 inc_contact_cross_tang1 = cross_prod(r2,
+                                                       t1);
+
+        sVector3 ref_contact_cross_tang2 = cross_prod(r1,
+                                                       t2);
+        sVector3 inc_contact_cross_tang2 = cross_prod(r2,
+                                                       t2);
+
+        // Generate the constrains's jacobians
+        int mat_id = j * 3;
+        // Normal constriant
+        j_mat.copy_vector3_inside(0, mat_id, normal.invert());
+        j_mat.copy_vector3_inside(3, mat_id, ref_contact_cross_normal.invert());
+        j_mat.copy_vector3_inside(6, mat_id, normal);
+        j_mat.copy_vector3_inside(9, mat_id, inc_contact_cross_normal.invert());
+
+        min_max_mats[mats_insert_id].set(0, mat_id, 0.0f);
+        min_max_mats[mats_insert_id].set(1, mat_id, FLT_MAX);
+        mat_id++;
+
+        // tangent constraint 1
+        j_mat.copy_vector3_inside(0, mat_id, t1.invert());
+        j_mat.copy_vector3_inside(3, mat_id, ref_contact_cross_tang1.invert());
+        j_mat.copy_vector3_inside(6, mat_id, t1);
+        j_mat.copy_vector3_inside(9, mat_id, inc_contact_cross_tang1.invert());
+
+        min_max_mats[mats_insert_id].set(0, mat_id, -1.0f * mass[ref_id] * collision_friction);
+        min_max_mats[mats_insert_id].set(1, mat_id, mass[ref_id] * collision_friction);
+        mat_id++;
+
+         // tangent constraint 2
+        j_mat.copy_vector3_inside(0, mat_id, t2.invert());
+        j_mat.copy_vector3_inside(3, mat_id, ref_contact_cross_tang2.invert());
+        j_mat.copy_vector3_inside(6, mat_id, t2);
+        j_mat.copy_vector3_inside(9, mat_id, inc_contact_cross_tang2.invert());
+
+        min_max_mats[mats_insert_id].set(0, mat_id, -1.0f * mass[inc_id] * collision_friction);
+        min_max_mats[mats_insert_id].set(1, mat_id, mass[inc_id] * collision_friction);
+       }
+
+      // Generate mass matrix
+      mats_insert_id++;
     }
   }
 

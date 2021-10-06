@@ -289,7 +289,6 @@ void draw_loop(GLFWwindow *window) {
 
   camera.position = {5.0f, 3.5f, 5.0f};
 
-
 	while(!glfwWindowShouldClose(window)) {
 		// Draw loop
 		int width, heigth;
