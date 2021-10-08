@@ -71,7 +71,7 @@ struct sTransform {
     scale_mat.set_identity();
     scale_mat.set_scale(scale);
 
-    convert_quaternion_to_matrix(&rotation, &rot_mat);
+    rot_mat.convert_quaternion_to_matrix(rotation);
 
     rot_mat.multiply(&scale_mat);
 
