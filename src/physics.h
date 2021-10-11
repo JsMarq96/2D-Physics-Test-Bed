@@ -30,6 +30,9 @@ struct sPhysicsWorld {
   sVector3  angular_speed         [INSTANCE_SIZE] = {{}};
   sMat33    inv_inertia_tensors   [INSTANCE_SIZE] = {};
 
+  sMat33    rot_inv_inertia_tensors   [INSTANCE_SIZE] = {};
+
+
   void config_simulation();
 
 
@@ -64,62 +67,42 @@ struct sPhysicsWorld {
 
       sPhysContactData *contact = arbiter.contact_data[i];
       for(int j = 0; j < arbiter.contact_size[i]; j++) {
+          // FRICTION
+        // Precalculate JM^-1J for the friction constraint
 
         sVector3 r1 = contact[j].contanct_point.subs(mass_center_ref);
         sVector3 r2 = contact[j].contanct_point.subs(mass_center_inc);
 
-        sVector3 ref_contact_cross_normal = cross_prod(r1,
-                                                       normal);
-        sVector3 inc_contact_cross_normal = cross_prod(r2,
-                                                       normal);
+        sVector3 r1_cross_n = cross_prod(r1, normal);
+        sVector3 r2_cross_n = cross_prod(r2, normal);
 
-        // t1 = (inv_inertia * (contact x normal)) x (contact - mass_Center)
-        sVector3 t1 = cross_prod(inv_inertia_tensors[ref_id].multiply(ref_contact_cross_normal), contact[j].contanct_point.subs(mass_center_ref));
-        sVector3 t2 = cross_prod(inv_inertia_tensors[inc_id].multiply(inc_contact_cross_normal), contact[j].contanct_point.subs(mass_center_inc));
+        // Calculate mass
+        float linear_mass = ((mass[ref_id] == 0.0f) ? 0.0f : 1.0f / mass[ref_id]) + ((mass[inc_id] == 0.0f) ? 0.0f : 1.0f / mass[inc_id]);
+        float angular_mass = dot_prod(inv_inertia_tensors[ref_id].multiply(r1_cross_n).sum(inv_inertia_tensors[inc_id].multiply(r2_cross_n)), normal);
+        //float angular_mass = dot_prod(rot_inv_inertia_tensors[ref_id].multiply(r1_cross_n).sum(rot_inv_inertia_tensors[inc_id].multiply(r2_cross_n)), normal);
+        //float angular_mass = dot_prod(r1_cross_n, rot_inv_inertia_tensors[ref_id].multiply(r1_cross_n)) + dot_prod(r2_cross_n, rot_inv_inertia_tensors[inc_id].multiply(r2_cross_n));
+        //float angular_mass = dot_prod(r1_cross_n, inv_inertia_tensors[ref_id].multiply(r1_cross_n)) + dot_prod(r2_cross_n, inv_inertia_tensors[inc_id].multiply(r2_cross_n));
+        float constraint_mass = (linear_mass + angular_mass);
+        contact->normal_mass = (constraint_mass > 0.0f) ? 1.0f / constraint_mass : 0.0f;
+        //contact->normal_mass = constraint_mass;
 
-        // Calculate the normal impulse mass
-        /*float normal_mass = (mass[ref_id] != 0.0f) ? 1.0f / mass[ref_id] : 0.0f;
-        normal_mass += (mass[inc_id] != 0.0f) ? 1.0f / mass[inc_id] : 0.0f;
-        normal_mass += dot_prod(t1.sum(t2), arbiter.separating_axis[i]);*/
+        // Calculate bias for the Baumgarte stabilization
+        contact->impulse_bias = (-BAUMGARTE_TERM / elapsed_time) * MAX(0.0f, -contact->distance - PENETRATION_SLOP);
 
-        float normal_mass = dot_prod(normal, normal.mult(((mass[ref_id] != 0.0f) ? 1.0f / mass[ref_id] : 0.0f) + ((mass[inc_id] != 0.0f) ? 1.0f / mass[inc_id] : 0.0f)));
-        normal_mass += dot_prod(cross_prod(inv_inertia_tensors[ref_id].multiply(cross_prod(r1, normal)), r1).sum(cross_prod(inv_inertia_tensors[inc_id].multiply(cross_prod(r2, normal)), r2)), normal);
+        // WARM START
+        // Generate normal impulse from prev iteration
+        sVector3 warm_normal_impulse = normal.mult(contact->normal_impulse);
 
-        contact[j].normal_mass = 1.0f / normal_mass;
-
-        // Calculate the tangent impulse mass
-
-
-        // Calcilate de bias impulse
-        // 0.2 is teh bias factor and 0.01 is the penetration tollerance
-        contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MAX(0.0f, -contact[j].distance - PENETRATION_SLOP);
-        //contact[j].impulse_bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * -contact[j].distance;
-
-
-        contact[j].restitution = MIN(restitution[ref_id], restitution[inc_id]);
-
-        //contact[j].impulse_bias += contact[j].restitution
-
-        // TODO: accolulate impulses..?
-        sVector3 impulse = normal.mult(contact[j].normal_impulse);
-
-        apply_impulse(ref_id, r1, impulse);
-        apply_impulse(inc_id, r2, impulse.invert());
-
-        sVector3 ref_contactd_speed = cross_prod(angular_speed[ref_id], r1).sum(speed[ref_id]);
-        sVector3 inc_contactd_speed = cross_prod(angular_speed[inc_id], r2).sum(speed[inc_id]);
-
-        // separating axis is the collision normal
-        float new_relative_normal_speed = dot_prod(normal, ref_contactd_speed.subs(inc_contactd_speed));
-
-        // If the speed is
-        if (new_relative_normal_speed < -1.0f) {
-          contact[i].impulse_bias += -contact[j].restitution * new_relative_normal_speed;
-        }
-
+        //apply_impulse(ref_id, r1, warm_normal_impulse.invert());
+        //apply_impulse(inc_id, r2, warm_normal_impulse);
+        // Restutitution
+        // if the diference in speed among the normal is bigger than > -1.0 apply restitution ??
       }
     }
   }
+
+  // TODO: transformar matriz de inercia a coordenadas de mundo
+  // Solo rotacion..? Al ser para velocidades devera de estar bien
 
   void step(double elapsed_time) {
     for(int i = 0; i < MAX_ARBITERS_SIZE; i++) {
@@ -135,49 +118,39 @@ struct sPhysicsWorld {
       mass_center_ref = transforms[ref_id].apply(mass_center[ref_id]);
       mass_center_inc = transforms[inc_id].apply(mass_center[inc_id]);
 
+      sVector3 normal = arbiter.separating_axis[i];
       sPhysContactData *contact = arbiter.contact_data[i];
       //ImGui::Text("Contact points %d", arbiter.contact_size[i]);
       for(int j = 0; j < arbiter.contact_size[i]; j++) {
-        //ImGui::Text("Normal mass %f", contact[j].impulse_bias);
+        sVector3 r1 = contact[j].contanct_point.subs(mass_center_ref);
+        sVector3 r2 = contact[j].contanct_point.subs(mass_center_inc);
 
-        // Compute relative velocity
-        sVector3 ref_contact_center = contact[j].contanct_point.subs(mass_center_ref);
-        sVector3 inc_contact_center = contact[j].contanct_point.subs(mass_center_inc);
+        // Compute top part xD
+        sVector3 linear_velocity_1 = speed[ref_id].sum(cross_prod(angular_speed[ref_id], r1));
+        sVector3 linear_velocity_2 = speed[inc_id].sum(cross_prod(angular_speed[inc_id], r2));
+        sVector3 relative_velocity = linear_velocity_2.subs(linear_velocity_1);
 
-        sVector3 ref_contactd_speed = cross_prod(angular_speed[ref_id], ref_contact_center).sum(speed[ref_id]);
-        sVector3 inc_contactd_speed = cross_prod(angular_speed[inc_id], inc_contact_center).sum(speed[inc_id]);
+        relative_velocity = speed[inc_id].sum(cross_prod(angular_speed[inc_id], r2)).subs(speed[ref_id]).subs(cross_prod(angular_speed[ref_id], r1));
+        //sVector3 relative_velocity = speed[inc_id].subs(speed[ref_id]);
+        float projection = dot_prod(relative_velocity, normal);
 
-        // separating axis is the collision normal
-        float relative_normal_speed = dot_prod(arbiter.separating_axis[i], ref_contactd_speed.subs(inc_contactd_speed));
+        // If is > 0.0 the velocity is separating the objects and the constraint is solved
+        // Impulse
+        float lambda = (-projection) * contact->normal_mass;
+        //float lambda = (-projection + contact->impulse_bias) * contact->normal_mass;
 
-        //float force_normal_impulse = contact[j].normal_mass * -relative_normal_speed;//(-relative_normal_speed + contact[j].impulse_bias);
-        float force_normal_impulse = contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
+        lambda = MAX(lambda, 0.0f);
+        // Clamp the impulse
+        //float old_impulse = contact->normal_impulse;
+        //contact->normal_impulse = MAX(old_impulse + lambda, 0.0f);
+        //lambda = contact->normal_impulse - old_impulse;
 
-        //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
-        //float force_normal_impulse =  contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias + (contact[j].restitution * -relative_normal_speed));
+        sVector3 impulse = normal.mult(lambda);
 
-       // float force_normal_impulse = contact[j].normal_mass * (-relative_normal_speed + contact[j].impulse_bias);
-
-        //ImGui::Text("impulse %f", force_normal_impulse);
-        //force_normal_impulse = MAX(force_normal_impulse, 0.0f);
-
-        // Accululating impulses & clampping
-        float tmp_impulse = contact[j].normal_impulse;
-        contact[j].normal_impulse = tmp_impulse + force_normal_impulse;
-
-        if (contact[j].normal_impulse > 0.0f) {
-          contact[j].normal_impulse = 0.0f;
-        }
-
-        force_normal_impulse = contact[j].normal_impulse - tmp_impulse;
-
-        sVector3 normal_impulse = arbiter.separating_axis[i].mult(force_normal_impulse);
-
-        //ImGui::Text("normal imp %f %f %f", normal_impulse.x, normal_impulse.y, normal_impulse.z);
-
-        apply_impulse(ref_id, ref_contact_center, normal_impulse);
-        apply_impulse(inc_id, inc_contact_center, normal_impulse.invert());
-
+        apply_impulse(ref_id, r1, impulse.invert());
+        apply_impulse(inc_id, r2, impulse);
+        //apply_impulse(ref_id, r1, impulse);
+        //apply_impulse(inc_id, r2, impulse.invert());
       }
     }
   }
@@ -193,6 +166,7 @@ struct sPhysicsWorld {
 
     speed[index] = tmp;
 
+    //angular_speed[index] = angular_speed[index].sum(rot_inv_inertia_tensors[index].multiply(cross_prod(position, impulse)));
     angular_speed[index] = angular_speed[index].sum(inv_inertia_tensors[index].multiply(cross_prod(position, impulse)));
   }
 };

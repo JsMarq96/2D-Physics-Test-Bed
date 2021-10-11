@@ -3,10 +3,10 @@
 
 // Constants for the physics simulation
 
-#define PHYS_SOLVER_ITERATIONS 20
+#define PHYS_SOLVER_ITERATIONS 1
 
-#define BAUMGARTE_TERM 0.1f
+#define BAUMGARTE_TERM 0.2f
 
-#define PENETRATION_SLOP 0.01f
+#define PENETRATION_SLOP 0.0001f
 
 #endif // PHYS_PARAMETERS_H_

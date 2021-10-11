@@ -9,6 +9,19 @@ void sPhysicsWorld::step(const double elapsed_time, const sMat44 *proj_mat) {
     sCubeRenderer renderer;
 
     cube_renderer_init(&renderer);
+    // 1.- Rotate inertia tensor
+    std::cout << "================================" << std::endl;
+    inv_inertia_tensors[1].print();
+    for(int i = 0; i < INSTANCE_SIZE; i ++) {
+        sMat33 r_mat = {}, r_mat_t = {}, inv_inertia = {};
+        r_mat.convert_quaternion_to_matrix(transforms[i].rotation);
+        r_mat.transponse_to(&r_mat_t);
+
+        // Rotate the inertia tensor: I^-1 = r * I^-1 * r^t
+        inv_inertia_tensors[i].multiply_to(&r_mat_t, &inv_inertia);
+        r_mat.multiply_to(&inv_inertia, &rot_inv_inertia_tensors[i]);
+    }
+    rot_inv_inertia_tensors[1].print();
     // 0.- Apply gravity
     apply_gravity(elapsed_time);
     // 1.- Broadphase detection

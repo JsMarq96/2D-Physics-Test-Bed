@@ -95,11 +95,14 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   sTransform new_transf = obj1_transform.inverse().multiply(obj2_transform);
 
   sRawGeometry obj1 = {};
-  obj1.init_cuboid(obj1_transform.scale);
+  obj1.init_cuboid(obj1_transform);
+  //obj1.init_cuboid(sVector3{1.0f, 1.0f, 1.0f});
 
   sRawGeometry obj2_in_obj1_space = {};
-  obj2_in_obj1_space.init_cuboid(obj2_transform.scale);
-  obj2_in_obj1_space.apply_transform(new_transf);
+  //obj2_in_obj1_space.init_cuboid(new_transf);
+  obj2_in_obj1_space.init_cuboid(obj2_transform);
+  //obj2_in_obj1_space.init_cuboid(obj2_transform);
+  //obj2_in_obj1_space.apply_transform(new_transf);
 
   // ========= SAT =================
   
@@ -226,6 +229,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
         // Add the intersection point
         swaps.add_element_to_secundary_stack(curr_plane->get_intersection_point(end, begin));
         mirror_ids_swaps.add_element_to_secundary_stack({(float)end_index, (float)i});
+
         if (begin_dist > 1e-6f) {
           // Add the end point
           swaps.add_element_to_secundary_stack(end);
@@ -233,7 +237,6 @@ inline bool SAT_test(const sTransform   &obj1_transform,
         }
       }
     }
-
     swaps.clean_current_stack();
     swaps.swap();
     mirror_ids_swaps.clean_current_stack();
@@ -260,7 +263,8 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   //ImGui::Text("ENDOL ====");
   manifold->collision_normal = reference_plane.normal;
 
-  swaps.clean(); 
+  swaps.clean();
+  obj1.clean();
   obj2_in_obj1_space.clean();
   return true;
 }

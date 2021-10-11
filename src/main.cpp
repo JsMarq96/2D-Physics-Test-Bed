@@ -114,13 +114,13 @@ void test_draw_loop(GLFWwindow *window) {
   cube_renderer_init(&renderer);
 
   sCamera camera = {};
-  camera.position = {2.0f, 0.2f, 2.0f};
+  camera.position = {3.0f, 0.5f, 2.0f};
 
   double prev_frame_time = glfwGetTime();
 
   sTransform transf[2] = {{}};
 
-  transf[0].position = {0.3f, 0.0f, -0.3f};
+  transf[0].position = {0.3f, 0.79f, -0.3f};
   transf[0].scale = {1.0f, 0.5f, 2.0f};
   transf[0].rotation = sQuaternion4{1.0f, 0.f, 0.0f, 0.0f};
 
@@ -128,7 +128,11 @@ void test_draw_loop(GLFWwindow *window) {
   transf[1].scale = {10.0f, 0.5f, 1.0f};
   transf[1].rotation = sQuaternion4{1.0f, 2.0f,0.0f, 0.0f}.normalize();
 
-  transf[0] = transf[1].multiply( transf[1].inverse().multiply(transf[0]));
+  //transf[0] = transf[1].multiply( transf[1].inverse().multiply(transf[0]));
+  transf[1] = transf[0].inverse().multiply(transf[1]);
+  transf[0].position = {0.0f};
+  transf[0].scale = {1.0f, 1.0f, 1.0f};
+  transf[0].rotation = {1.0f, 0.0f, 0.0f, 0.0f};
 
   sVector4 colors[3] = {{1.0f, 0.0f, 0.0f, 1.0f},
                         {0.0f, 1.0f, 0.0f, 1.0f},
@@ -185,14 +189,14 @@ void test_draw_loop(GLFWwindow *window) {
 
     sCollisionManifold manifold = {};
 
-    if (SAT_test(transf[0], transf[1], &manifold)) {
-      ImGui::Text("Collision");
-      sMat44 col_points[6] = {};
-      sVector4 col_color[6] = {};
+    sMat44 col_points[10] = {};
+      sVector4 col_color[10] = {};
 
+    if (SAT_test(transf[0], transf[1], &manifold)) {
+      ImGui::Text("Collision: %i points", manifold.contact_point_count);
       for(int i = 0; i < manifold.contact_point_count; i++) {
         col_points[i].set_identity();
-        col_points[i].set_scale({0.25, 1.05, 0.25});
+        col_points[i].set_scale({0.05, 1.05, 0.05});
         col_points[i].set_position(manifold.contact_points[i]);
         col_color[i] = {0.0f, 0.0f, 1.0f, 1.0f};
       }
@@ -200,9 +204,31 @@ void test_draw_loop(GLFWwindow *window) {
       cube_renderer_render(&renderer, col_points, col_color, manifold.contact_point_count, &proj_mat);
     }
 
-    model[2].set_identity();
-    model[2].set_position(t);
-    model[2].set_scale({0.05f, 0.05f, 0.05f});
+    sRawGeometry obj1 = {};
+      obj1.init_cuboid(transf[1]);
+      //obj1.apply_transform(transf[1]);
+      //obj1_space.apply_transform(new_transf);
+
+      for(int i = 0; i < 8; i++) {
+        col_points[i].set_identity();
+        col_points[i].set_scale({0.05, 0.05, 0.15});
+        col_points[i].set_position(obj1.raw_points[i]);
+        col_color[i] = {0.0f, 0.0f, 1.0f, 1.0f};
+      }
+
+      cube_renderer_render(&renderer, col_points, col_color, 8, &proj_mat);
+
+      for(int i = 0; i < 6; i++) {
+        col_points[i].set_identity();
+        col_points[i].set_scale({0.05, 0.05, 0.15});
+        col_points[i].set_position(obj1.planes[i].origin_point);
+        col_color[i] = {0.0f, 1.0f, 1.0f, 1.0f};
+      }
+
+      cube_renderer_render(&renderer, col_points, col_color, 6, &proj_mat);
+
+
+
 
     ImGui::End();
 
@@ -278,6 +304,7 @@ void draw_loop(GLFWwindow *window) {
     sVector3 curr_scale = transforms[i].scale;
 
     phys_instance.mass_center[i] = {curr_scale.x / 2.0f, curr_scale.y / 2.0f, curr_scale.z / 2.0f};
+    std::cout << phys_instance.mass_center[i].x << " " <<  phys_instance.mass_center[i].y << std::endl;
   }
 
   phys_instance.config_simulation();
@@ -329,6 +356,10 @@ void draw_loop(GLFWwindow *window) {
 
     ImGui::Begin("Physics");
     phys_instance.step(elapsed_time, &proj_mat);
+
+    for(int i = 0; i < 4; i++) {
+      ImGui::Text("Speed obj%i: %f %f %f", i, phys_instance.speed[i].x,  phys_instance.speed[i].y, phys_instance.speed[i].z);
+    }
     ImGui::End();
 
     sMat44 models[4] = {};
@@ -381,8 +412,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_draw_loop(window);
+      //draw_loop(window);
+      test_draw_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
