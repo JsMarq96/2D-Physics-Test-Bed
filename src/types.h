@@ -122,6 +122,7 @@ struct sRawGeometry {
 
     neighbor_indexes = (int*) malloc(sizeof(int) * 6 * 4);
     memcpy(neighbor_indexes, neighboor_faces_LUT, sizeof(int) * 6 * 4);
+    neighbor_faces_per_face = 4;
 
     // Raw pointers
     // TODO: optimize
@@ -194,6 +195,7 @@ struct sRawGeometry {
 
     neighbor_indexes = (int*) malloc(sizeof(int) * 6 * 4);
     memcpy(neighbor_indexes, neighboor_faces_LUT, sizeof(int) * 6 * 4);
+    neighbor_faces_per_face = 4;
 
     // Raw pointers
     // TODO: optimize
