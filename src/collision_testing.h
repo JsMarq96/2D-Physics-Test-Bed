@@ -5,12 +5,17 @@
 #include "geometry.h"
 #include "types.h"
 #include "collision_types.h"
-
-#include "data_structs/swapable_stack.h"
+#include "clipping.h"
 
 #include "imgui/imgui.h"
 
 #include <cstdint>
+
+enum eColType : uint8_t {
+  FACE_FACE = 0,
+  FACE_VERTEX,
+  VERTEX_VERTEX
+};
 
 inline bool test_overlap_on_axis(const sVector3  *shape1_vertices, 
                                  const int       shape1_size,
@@ -105,7 +110,8 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   //obj2_in_obj1_space.apply_transform(new_transf);
 
   // ========= SAT =================
-  
+
+  eColType collision_type = FACE_FACE;
   // First, we evaluate the planes and directions of obj1 vs the points of obj2
   int obj1_face_of_most_separation = -1;
   float obj1_nearest_distance = get_max_distance_in_planes_axis(obj1.planes, 
@@ -130,6 +136,8 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   if (obj2_nearest_distance > 0.0f) {
     return false;
   }
+
+  // TODO: VERTEX-VERTEX TEST
  
 
   // ======= Manifold generation =================
@@ -162,108 +170,46 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   }
 
   // Calculate the incident face
-  sVector3 reference_normal = reference_obj->planes[reference_index].normal;
+  // TODO: Fill reference normal
+  sVector3 reference_normal = {};// = reference_obj->planes[reference_index].normal;
   incident_index = -1;
-  float incident_facing = FLT_MAX;
+  float incident_facing = -FLT_MAX;
   for(int i = 0; i < incident_obj->planes_size; i++) {
     float facing = dot_prod(reference_normal, incident_obj->planes[i].normal);
-    if (facing < incident_facing) {
+    if (facing > incident_facing) {
       incident_index = i;
       incident_facing = facing;
     }
   }
+
+  //manifold->add_collision_point(incident_obj->planes[incident_index].origin_point, 0.0f, {0,0});
+
+  switch(collision_type) {
+    case FACE_FACE:
+      plain_plain_clipping(reference_index,
+                           incident_index,
+                           reference_obj,
+                           incident_obj,
+                           obj1_transform,
+                           manifold);
+      break;
+    case FACE_VERTEX: break; // TODO
+    case VERTEX_VERTEX: break; // TODO
+  }
+
+
 
   // Add the faces to the manifold
   manifold->incident_face = incident_index;
   manifold->reference_face = reference_index;
  
   // Sutherland-Hgdman clipping ====
-  // TODO: Only clip agains adjacent planes
-  /*
-   * Use the Swapable stacks for iterating the vertices and one for
-   * storing the modified ones, and then swp then back, for iterating the
-   * previusly modified vertices, and storing on the (cleaned) old iterating buffer
-   * */
-  int incident_vertex_count = obj1.points_per_plane;
+    int incident_vertex_count = obj1.points_per_plane;
 
-  sSwapableVector3Stacks swaps;
-  // In order to store the IDS of the points
-  sSwapableVector3Stacks mirror_ids_swaps;
-
-  swaps.init(incident_obj->points_per_plane * 3);
-  mirror_ids_swaps.init(incident_obj->points_per_plane * 3);
-
-  // Add to the stack the points 
-  for(int i = 0; i < incident_obj->points_per_plane; i++) {
-    sVector3 tmp = incident_obj->get_point_of_face(incident_index, i);
-    //ImGui::Text(" col point %f %f %f / dist : %f", tmp.x, tmp.y, tmp.z, 0.0f);
-    swaps.add_element_to_current_stack(incident_obj->get_point_of_face(incident_index, i));
-    mirror_ids_swaps.add_element_to_current_stack(sVector3{(float)i, (float)i, 0.0});
-  }
-
-
-  for(int i = 0; i < reference_obj->neighbor_faces_per_face; i++) {
-    sPlane *curr_plane = reference_obj->get_neighboring_plane(reference_index, i);
-   
-    int element_count = swaps.get_current_stacks_size(); 
-    for(int j = 0; j < element_count; j++) {
-      int end_index = (j+1) % element_count;
-      sVector3 begin = swaps.get_element_from_current_stack(j);
-      sVector3 end = swaps.get_element_from_current_stack(end_index);
-
-      float begin_dist = curr_plane->distance(begin);
-      float end_dist = curr_plane->distance(end);
-
-      if (begin_dist * end_dist > 1e-6f) {
-        // If both have the same sign, and the begin distance is negative,
-        // both are inside, if not, both are inside
-        if (begin_dist < 1e-6f) {
-          // Add the end point
-          swaps.add_element_to_secundary_stack(end);
-          mirror_ids_swaps.add_element_to_secundary_stack({(float)end_index, (float)end_index});
-        }
-      } else {
-        // If the sing is negative, then the points are in different sides of
-        // the plane
-        
-        // Add the intersection point
-        swaps.add_element_to_secundary_stack(curr_plane->get_intersection_point(end, begin));
-        mirror_ids_swaps.add_element_to_secundary_stack({(float)end_index, (float)i});
-
-        if (begin_dist > 1e-6f) {
-          // Add the end point
-          swaps.add_element_to_secundary_stack(end);
-          mirror_ids_swaps.add_element_to_secundary_stack({(float)end_index, (float)end_index});
-        }
-      }
-    }
-    swaps.clean_current_stack();
-    swaps.swap();
-    mirror_ids_swaps.clean_current_stack();
-    mirror_ids_swaps.swap();
-  }
-  //ImGui::Text("Colision points count:  %d", swaps.get_current_stacks_size());
-
-  // Add the collision points to the manifold
-  sPlane reference_plane = reference_obj->planes[reference_index];
-  for(int j = 0; j < swaps.get_current_stacks_size(); j++) {
-    sVector3 tmp = swaps.get_element_from_current_stack(j);
-    sVector3 ids = mirror_ids_swaps.get_element_from_current_stack(j);
-
-    //ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
-
-    float distance = reference_plane.distance(tmp);
-    tmp = obj1_transform.apply_without_scale(tmp);
-    //ImGui::Text("%f %f %f", tmp.x, tmp.y, tmp.z);
-
-    manifold->add_collision_point(tmp, distance, {(uint16_t) ids.x, (uint16_t) ids.y});
-    //ImGui::Separator();
-  }
 
   //ImGui::Text("ENDOL ====");
-  manifold->collision_normal = reference_plane.normal;
+  manifold->collision_normal = reference_normal;
 
-  swaps.clean();
   obj1.clean();
   obj2_in_obj1_space.clean();
   return true;

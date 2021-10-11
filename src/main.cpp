@@ -196,9 +196,9 @@ void test_draw_loop(GLFWwindow *window) {
       ImGui::Text("Collision: %i points", manifold.contact_point_count);
       for(int i = 0; i < manifold.contact_point_count; i++) {
         col_points[i].set_identity();
-        col_points[i].set_scale({0.05, 1.05, 0.05});
+        col_points[i].set_scale({0.05, 2.05, 0.05});
         col_points[i].set_position(manifold.contact_points[i]);
-        col_color[i] = {0.0f, 0.0f, 1.0f, 1.0f};
+        col_color[i] = {1.0f, 0.0f, 1.0f, 1.0f};
       }
 
       cube_renderer_render(&renderer, col_points, col_color, manifold.contact_point_count, &proj_mat);

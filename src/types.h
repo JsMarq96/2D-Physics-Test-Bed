@@ -84,10 +84,11 @@ struct sTransform {
 
 
 struct sRawGeometry {
-  sVector3  *raw_points;
-  sPlane    *planes;
+  sVector3  *raw_points = NULL;
+  sVector3  *normals = NULL;
+  sPlane    *planes = NULL;
 
-  int *face_indexes;
+  int *face_indexes = NULL;
   int *neighbor_indexes = NULL;
   // TODO: generalize the face indexes and add w,h if needed
 
@@ -177,7 +178,7 @@ struct sRawGeometry {
       6, 7, 3, 2, // 1
       1, 3, 7, 5, // 5
       0, 1, 3, 2, // 3
-      0, 1, 5,
+      0, 1, 5, 4, // 4
       0, 2, 6, 4 // 2
     };
 
@@ -288,6 +289,12 @@ struct sRawGeometry {
                                        const int   neighboor) const {
     return &planes[neighbor_indexes[neighboor + (current_face * neighbor_faces_per_face)]];
   }
+
+  inline int     get_neighboring_index(const int   current_face,
+                                       const int   neighboor) const {
+    return neighbor_indexes[neighboor + (current_face * neighbor_faces_per_face)];
+  }
+
 
   inline void apply_transform(const sTransform &transf) {
     for(int i = 0; i < vertices_size; i++) {
