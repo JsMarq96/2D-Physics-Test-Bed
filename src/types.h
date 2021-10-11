@@ -284,6 +284,11 @@ struct sRawGeometry {
     return raw_points[index];
   }
 
+  inline sPlane* get_neighboring_plane(const int   current_face,
+                                       const int   neighboor) const {
+    return &planes[neighbor_indexes[neighboor + (current_face * neighbor_faces_per_face)]];
+  }
+
   inline void apply_transform(const sTransform &transf) {
     for(int i = 0; i < vertices_size; i++) {
       raw_points[i] = transf.apply(raw_points[i]);

@@ -203,7 +203,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
 
 
   for(int i = 0; i < reference_obj->neighbor_faces_per_face; i++) {
-    sPlane *curr_plane = &reference_obj->planes[i];
+    sPlane *curr_plane = reference_obj->get_neighboring_plane(reference_index, i);
    
     int element_count = swaps.get_current_stacks_size(); 
     for(int j = 0; j < element_count; j++) {
