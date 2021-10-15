@@ -12,7 +12,8 @@
 
 
 // Using sutherland hogman clipping between the two faces
-inline void plain_plain_clipping(const int reference_face,
+// TODO: is this a bit poopy?
+inline void plane_plane_clipping(const int reference_face,
                                  const int incident_face,
                                  const sRawGeometry *reference_obj,
                                  const sRawGeometry *incident_obj,

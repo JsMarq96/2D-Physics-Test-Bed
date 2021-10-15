@@ -94,6 +94,7 @@ struct sRawGeometry {
 
   bool is_cube = false;
 
+  unsigned int normal_count = 0; // TODO: Fill normal count
   unsigned int vertices_size = 0;
   unsigned int planes_size = 0;
   unsigned int points_per_plane = 0;

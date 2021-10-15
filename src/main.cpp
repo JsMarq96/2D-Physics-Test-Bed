@@ -114,13 +114,13 @@ void test_draw_loop(GLFWwindow *window) {
   cube_renderer_init(&renderer);
 
   sCamera camera = {};
-  camera.position = {3.0f, 0.5f, 2.0f};
+  camera.position = {3.0f, -0.2f, 2.0f};
 
   double prev_frame_time = glfwGetTime();
 
   sTransform transf[2] = {{}};
 
-  transf[0].position = {0.3f, 0.79f, -0.3f};
+  transf[0].position = {0.2f, 1.f, -0.3f};
   transf[0].scale = {1.0f, 0.5f, 2.0f};
   transf[0].rotation = sQuaternion4{1.0f, 0.f, 0.0f, 0.0f};
 

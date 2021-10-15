@@ -9,6 +9,7 @@
 
 #include "imgui/imgui.h"
 
+#include <cfloat>
 #include <cstdint>
 
 enum eColType : uint8_t {
@@ -17,7 +18,7 @@ enum eColType : uint8_t {
   VERTEX_VERTEX
 };
 
-inline bool test_overlap_on_axis(const sVector3  *shape1_vertices, 
+inline float test_overlap_on_axis(const sVector3  *shape1_vertices,
                                  const int       shape1_size,
                                  const sVector3  *shape2_vertices,
                                  const int       shape2_size,
@@ -45,7 +46,7 @@ inline bool test_overlap_on_axis(const sVector3  *shape1_vertices,
   float shape2_len = max_shape2 - min_shape2;
   float total_shapes_len = MAX(max_shape1, max_shape2) - MIN(min_shape1, min_shape2); 
 
-  return (shape1_len + shape2_len) > total_shapes_len;
+  return total_shapes_len - (shape1_len + shape2_len);
 }
 
 inline sVector3 get_support_point_on_dir(const sVector3  &direction,
@@ -65,11 +66,11 @@ inline sVector3 get_support_point_on_dir(const sVector3  &direction,
   return support;
 }
 
-inline float get_max_distance_in_planes_axis(const sPlane    *obj1_planes,
-                                             const int        obj1_planes_size,
-                                             const sVector3  *obj2_vertices,
-                                             const int        obj2_vertices_size,
-                                                   int        *obj1_most_reparation_plane) {
+inline float get_max_face_face_distance_in_planes_axis(const sPlane    *obj1_planes,
+                                                       const int        obj1_planes_size,
+                                                       const sVector3  *obj2_vertices,
+                                                       const int        obj2_vertices_size,
+                                                       int        *obj1_most_reparation_plane) {
   int most_separation_plane = -1;
   float most_separation = -FLT_MAX;
   for(int i = 0; i < obj1_planes_size; i++) {
@@ -89,10 +90,49 @@ inline float get_max_distance_in_planes_axis(const sPlane    *obj1_planes,
   return most_separation;
 }
 
+// TODO: Rename
+inline float get_max_vertex_distance_in_axis(const sRawGeometry &obj1,
+                                             const sRawGeometry &obj2,
+                                                   int          *edge_obj1,
+                                                   int          *edge_obj2) {
+  int most_separating_axis = -1;
+  float most_separation = -FLT_MAX;
+  int obj1_normal = -1;
+  int obj2_normal = -1;
+  for(int i = 0; i < obj1.planes_size; i++) {
+    for(int j = 0; j < obj2.planes_size; j++) {
+      sVector3 cross_normal = cross_prod(obj1.planes[i].normal, obj2.planes[i].normal);
+
+      if (cross_normal.x == 0.0f && cross_normal.y == 0.0f && cross_normal.z == 0.0f) {
+        continue;
+      }
+      cross_normal = cross_normal.normalize();
+
+      float distance = test_overlap_on_axis(obj1.raw_points,
+                                            obj1.vertices_size,
+                                            obj2.raw_points,
+                                            obj2.vertices_size,
+                                            cross_normal);
+      if (most_separation < distance) {
+        obj1_normal = i;
+        obj2_normal = j;
+        most_separation = distance;
+      }
+    }
+  }
+
+  *edge_obj1 = obj1_normal;
+  *edge_obj2 = obj2_normal;
+  return most_separation;
+}
+
+
 /* Note: SAT probably does not work since we change the aspect ratio,
  *the separating angles does not coincide, so we need to remove the scale out of the
  *transforms */
-
+// NOTE this is only for colliding Box and Box
+// It might be expanded with mesh colliders, but i am afraid that
+// other colliders, such as capsule collidres, will need a different implementation
 inline bool SAT_test(const sTransform   &obj1_transform,
                      const sTransform   &obj2_transform,
                            sCollisionManifold    *manifold) {
@@ -114,11 +154,11 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   eColType collision_type = FACE_FACE;
   // First, we evaluate the planes and directions of obj1 vs the points of obj2
   int obj1_face_of_most_separation = -1;
-  float obj1_nearest_distance = get_max_distance_in_planes_axis(obj1.planes, 
-                                                                obj1.planes_size,
-                                                                obj2_in_obj1_space.raw_points,
-                                                                obj2_in_obj1_space.vertices_size,
-                                                                &obj1_face_of_most_separation);
+  float obj1_nearest_distance = get_max_face_face_distance_in_planes_axis(obj1.planes,
+                                                                          obj1.planes_size,
+                                                                          obj2_in_obj1_space.raw_points,
+                                                                          obj2_in_obj1_space.vertices_size,
+                                                                          &obj1_face_of_most_separation);
 
   // The nearest point is outside of the figure, so no collisions
   if (obj1_nearest_distance > 0.0f) {
@@ -127,18 +167,26 @@ inline bool SAT_test(const sTransform   &obj1_transform,
 
   // Now, evaluate the points of obj1 vs the planes and direction of obj2
   int obj2_face_of_most_separation = -1;
-  float obj2_nearest_distance = get_max_distance_in_planes_axis(obj2_in_obj1_space.planes, 
-                                                                obj2_in_obj1_space.planes_size,
-                                                                obj1.raw_points,
-                                                                obj1.vertices_size,
-                                                                &obj2_face_of_most_separation);
+  float obj2_nearest_distance = get_max_face_face_distance_in_planes_axis(obj2_in_obj1_space.planes,
+                                                                          obj2_in_obj1_space.planes_size,
+                                                                          obj1.raw_points,
+                                                                          obj1.vertices_size,
+                                                                          &obj2_face_of_most_separation);
   
   if (obj2_nearest_distance > 0.0f) {
     return false;
   }
 
-  // TODO: VERTEX-VERTEX TEST
- 
+  // Edge-Edge case
+  int obj1_edge = -1;
+  int obj2_edge = -1;
+  float edge_test_nearest_distance = get_max_vertex_distance_in_axis(obj1,
+                                                                     obj2_in_obj1_space,
+                                                                     &obj1_edge,
+                                                                     &obj2_edge);
+  if (edge_test_nearest_distance > 0.0f) {
+    return false;
+  }
 
   // ======= Manifold generation =================
 
@@ -146,8 +194,32 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   // the refrence face is the one whose normal has the axiss of
   // more penetrarion, and the incident is the most facing
   // face of the other body
+  //
+  // Also, we need to test the other inverse direction of the reference,
+  // so we can choose wich face for the clipping
   int incident_index, reference_index;
   const sRawGeometry *incident_obj, *reference_obj;
+
+  /**
+   * Check face of normal
+   * if (dot(pos_1 - pos2, normal) < 0.0f) {
+   *  normal = - normal;
+   * }
+   * */
+
+  if (MIN(obj1_nearest_distance, obj2_nearest_distance) > edge_test_nearest_distance) {
+    // This is an Edge-Edge collision
+    ImGui::Text("Collision via edge %d %d", obj1_edge, obj2_edge);
+    sVector3 normal = cross_prod(obj1.planes[obj1_edge].normal, obj2_in_obj1_space.planes[obj2_edge].normal);
+
+    sPlane plane_1 = obj1.planes[obj2_edge];
+    manifold->add_collision_point(plane_1.origin_point.sum(normal), 0.0f, {0,0});
+
+    ImGui::Text("Axis %f %f %f", normal.x, normal.y, normal.z);
+    std::cout << normal.x << " " << normal.y << " " << normal.z << std::endl;
+
+    return true;
+  }
 
   if (obj1_nearest_distance + 1e-6f < obj2_nearest_distance) {
     reference_obj = &obj1;
@@ -173,10 +245,10 @@ inline bool SAT_test(const sTransform   &obj1_transform,
   // TODO: Fill reference normal
   sVector3 reference_normal = {};// = reference_obj->planes[reference_index].normal;
   incident_index = -1;
-  float incident_facing = -FLT_MAX;
+  float incident_facing = FLT_MAX;
   for(int i = 0; i < incident_obj->planes_size; i++) {
     float facing = dot_prod(reference_normal, incident_obj->planes[i].normal);
-    if (facing > incident_facing) {
+    if (facing < incident_facing) {
       incident_index = i;
       incident_facing = facing;
     }
@@ -186,7 +258,7 @@ inline bool SAT_test(const sTransform   &obj1_transform,
 
   switch(collision_type) {
     case FACE_FACE:
-      plain_plain_clipping(reference_index,
+      plane_plane_clipping(reference_index,
                            incident_index,
                            reference_obj,
                            incident_obj,
