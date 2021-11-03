@@ -56,6 +56,8 @@ struct sHalfEdgeMesh {
 
 
     void load_OBJ_mesh(const char* mesh_dir);
+
+    void clean();
 };
 
 #endif // HALF_EDGE_H_

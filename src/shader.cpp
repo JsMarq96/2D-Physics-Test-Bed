@@ -144,11 +144,11 @@ void sShader::load_shaders(const char*   vertex_shader_raw,
     glDeleteShader(fragment_id);
 };
 
-void sShader::activate() {
+void sShader::activate() const {
     glUseProgram(ID);
 }
 
-void sShader::deactivate() {
+void sShader::deactivate() const {
     int i = 0;
 }
 

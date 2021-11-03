@@ -136,6 +136,7 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             half_edges[half_edge_index].face = face_count;
 
             // If there is an already stored vertex, create teh association
+            // Edge 1 Half Edge
             uKey half_edge_key = uKey(index1, index2);
             int result = KVS_get_int(&half_edge_map, half_edge_key.str, 32);
             if (result == -1) {
@@ -147,6 +148,7 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
 
             half_edge_index++;
 
+            // Edge 2 Hlaf edge
             half_edges[half_edge_index].vertex_1 = index2;
             half_edges[half_edge_index].vertex_2 = index3;
             half_edges[half_edge_index].next = half_edge_index+1;
@@ -163,6 +165,7 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
 
             half_edge_index++;
 
+            // Edge 3 Half Edge
             half_edges[half_edge_index].vertex_1 = index3;
             half_edges[half_edge_index].vertex_2 = index1;
             half_edges[half_edge_index].next = half_edge_index-2;
@@ -194,7 +197,22 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
     }
 
     free(tmp_uvs);
+    free(temp_normals);
 
     fclose(mesh_file);
+    KVS_clean(&half_edge_map);
     // TODO: cleanup for the KVs
+}
+
+
+void sHalfEdgeMesh::clean() {
+    free(vertices_index);
+    free(vertices);
+    free(half_edges);
+    free(face_normals);
+
+    vertex_count = 0;
+    half_edge_count = 0;
+    face_count = 0;
+    indexing_count = 0;
 }

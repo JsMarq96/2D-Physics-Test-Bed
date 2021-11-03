@@ -49,11 +49,11 @@ inline void RN_init(sRadNode *node) {
 }
 
 inline void RN_clean(sRadNode *node) {
-
-    //TODO: cleaning up..
+    free(node->key);
     for(int i = 0; i < 256; i++) {
         if (node->is_full[i]) {
-
+            RN_clean(node->children[i]);
+            free(node->children[i]);
         }
     }
 }
@@ -184,6 +184,10 @@ struct sKVStorage {
 inline void KVS_init(sKVStorage *storage) {
     storage->root_node = (sRadNode*) malloc(sizeof(sRadNode));
     RN_init(storage->root_node);
+}
+
+inline void KVS_clean(sKVStorage *storage) {
+    RN_clean(storage->root_node);
 }
 
 inline void KVS_discard(sKVStorage *storage) {

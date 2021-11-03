@@ -21,8 +21,8 @@ struct sShader {
     void load_file_shaders(const char* v_shader_dir, const char* f_shader_dir);
     void load_shaders(const char* vertex_shader, const char* frag_shader_dir);
 
-    void activate();
-    void deactivate();
+    void activate() const;
+    void deactivate() const;
 
     // Setters for the shader's uniforms
     void set_uniform(const char* name, const float value) const;
