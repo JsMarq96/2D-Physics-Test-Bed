@@ -15,23 +15,22 @@ struct sSpeed {
 };
 
 struct sPhysWorld {
-    sTransform *transforms;
+    bool               enabled             [PHYS_INSTANCE_COUNT] = {};
+    bool               is_static           [PHYS_INSTANCE_COUNT] = {};
+    eColiderTypes      collider            [PHYS_INSTANCE_COUNT] = {};
 
-    sSpeed obj_speeds[PHYS_INSTANCE_COUNT];
+    sTransform         *transforms                               = NULL;
+    sSpeed             obj_speeds          [PHYS_INSTANCE_COUNT];
 
-    bool enabled[PHYS_INSTANCE_COUNT] = {};
-    bool is_static[PHYS_INSTANCE_COUNT] = {};
-    eColiderTypes collider [PHYS_INSTANCE_COUNT] = {};
+    float              radius              [PHYS_INSTANCE_COUNT] = {};
+    float              mass                [PHYS_INSTANCE_COUNT] = {};
+    float              inv_mass            [PHYS_INSTANCE_COUNT] = {};
+    float              restitution         [PHYS_INSTANCE_COUNT] = {};
 
-    float radius[PHYS_INSTANCE_COUNT] = {};
-    float mass[PHYS_INSTANCE_COUNT] = {};
-    float inv_mass[PHYS_INSTANCE_COUNT] = {};
-    float restitution[PHYS_INSTANCE_COUNT] = {};
+    sMat33             inv_inertia_tensors [PHYS_INSTANCE_COUNT] = {};
 
-    sMat33 inv_inertia_tensors[PHYS_INSTANCE_COUNT] = {};
-
-    sCollisionManifold _manifolds[PHYS_INSTANCE_COUNT] = {};
-    int _manifold_count = 0;
+    sCollisionManifold _manifolds          [PHYS_INSTANCE_COUNT] = {};
+    int                _manifold_count                           = 0;
 
     void set_default_values() {
         // Set default values
@@ -106,8 +105,11 @@ struct sPhysWorld {
             }
         }
         // 4 - Collision Resolution
-        for(int i = 0; i < _manifold_count; i++) {
-            impulse_response(_manifolds[i], elapsed_time);
+        for(int iter = 0; iter < PHYS_SOLVER_ITERATIONS; iter++) {
+            for(int i = 0; i < _manifold_count; i++) {
+                impulse_response(_manifolds[i], elapsed_time);
+            }
+
         }
 
         // 5 - Integrate solutions
@@ -131,7 +133,6 @@ struct sPhysWorld {
             }
 
         }
-
 
         _manifold_count = 0;
     }
@@ -201,12 +202,12 @@ struct sPhysWorld {
             // Contact's angular mass: dot(inv_in1 * r1_cross_n + inv_in2 * r2_cross_n, normal)
             float angular_mass = dot_prod(inv_inertia_tensors[id_1].multiply(r1_cross_n).sum(inv_inertia_tensors[id_2].multiply(r2_cross_n)), manifold.normal);
 
-            // Calculate impulse
             float proj_magnitude = dot_prod(contact_speed, manifold.normal);
 
             // Baumgarte Stabilization
             float bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MIN(0.0f, (manifold.contact_depth[i] + PENETRATION_SLOP));
 
+            // Calculate impulse
             float impulse_magnitude = proj_magnitude / (linear_mass + angular_mass);
 
             sVector3 impulse = manifold.normal.mult(-impulse_magnitude + bias);
