@@ -4,10 +4,12 @@
 #include <string.h>
 #include <assert.h>
 #include <cmath>
+
 #include <iostream>
 
 #include "vector.h"
 #include "quaternion.h"
+
 
 union sMat33 {
     float raw_values[9];

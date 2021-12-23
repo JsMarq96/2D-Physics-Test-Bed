@@ -43,11 +43,6 @@ union sVector3 {
       return sVector3{-x, -y, -z};
     };
 
-  // TODO: std??
-  inline sVector3 abs() const {
-    return {std::abs(x), std::abs(y), std::abs(z)};
-  }
-
     inline sVector3 normalize() const {
       float magnitude = sqrt((x*x)+ (y*y) + (z*z));
       return sVector3{x / magnitude, y / magnitude, z / magnitude};
