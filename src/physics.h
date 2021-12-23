@@ -188,16 +188,26 @@ struct sPhysWorld {
             sVector3 r1 = transf_1->position.subs(manifold.contact_points[i]);
             sVector3 r2 = transf_2->position.subs(manifold.contact_points[i]);
 
+            sVector3 r1_cross_n = cross_prod(r1, manifold.normal);
+            sVector3 r2_cross_n = cross_prod(r2, manifold.normal);
+
             // Contact speed: (a_speed + (a_ang_speed x ra)) - (b_speed + (b_ang_speed x rb))
             sVector3 contact_speed = (speed_1->linear.sum(cross_prod(speed_1->angular, r1)));
             contact_speed = contact_speed.subs(speed_2->linear.sum(cross_prod(speed_2->angular, r2)));
 
+            // Contac's linear mass: 1.0f / mass1 + 1.0f / mass2
+            float linear_mass = ((is_static[id_1]) ? 0.0f : 1.0f / mass[id_1]) + ((is_static[id_2]) ? 0.0f : 1.0f / mass[id_2]);
+
+            // Contact's angular mass: dot(inv_in1 * r1_cross_n + inv_in2 * r2_cross_n, normal)
+            float angular_mass = dot_prod(inv_inertia_tensors[id_1].multiply(r1_cross_n).sum(inv_inertia_tensors[id_2].multiply(r2_cross_n)), manifold.normal);
+
             // Calculate impulse
-            float impulse_magnitude = dot_prod(contact_speed, manifold.normal);
+            float proj_magnitude = dot_prod(contact_speed, manifold.normal);
 
             // Baumgarte Stabilization
-            std::cout << manifold.contact_depth[i] << std::endl;
             float bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MIN(0.0f, (manifold.contact_depth[i] + PENETRATION_SLOP));
+
+            float impulse_magnitude = proj_magnitude / (linear_mass + angular_mass);
 
             sVector3 impulse = manifold.normal.mult(-impulse_magnitude + bias);
 

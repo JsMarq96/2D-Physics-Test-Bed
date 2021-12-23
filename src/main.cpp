@@ -167,7 +167,7 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.transforms = &transforms[0];
 
   phys_instance.mass[0] = 0.0f;
-  phys_instance.mass[1] = 29.0f;
+  phys_instance.mass[1] = 5.0f;
   //phys_instance.mass[2] = 11.0f;
   //phys_instance.mass[3] = 9.0f;
 
