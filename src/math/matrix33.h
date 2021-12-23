@@ -5,7 +5,11 @@
 #include <assert.h>
 #include <cmath>
 
+#include <iostream>
+
 #include "vector.h"
+#include "quaternion.h"
+
 
 union sMat33 {
     float raw_values[9];
@@ -68,6 +72,14 @@ union sMat33 {
         }
     }
 
+    inline void transponse_to(sMat33 *b) const {
+        for (int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
+                b->mat_values[y][x] = mat_values[x][y];
+            }
+        }
+    }
+
     inline void set_position(const sVector2    vec) {
         px = vec.x;
         py = vec.y;
@@ -97,6 +109,46 @@ union sMat33 {
         inverse->mat_values[1][2] = - (mat_values[0][0] * mat_values[1][2] - mat_values[1][0] * mat_values[0][2]) * determinant;
         inverse->mat_values[2][2] = + (mat_values[0][0] * mat_values[1][1] - mat_values[1][0] * mat_values[0][1]) * determinant;
       }
+
+    inline void convert_quaternion_to_matrix(const sQuaternion4 &quat) {
+        float qx2 = quat.x + quat.x;
+        float qy2 = quat.y + quat.y;
+        float qz2 = quat.z + quat.z;
+        float qxqx2 = quat.x * qx2;
+        float qxqy2 = quat.x * qy2;
+        float qxqz2 = quat.x * qz2;
+        float qxqw2 = quat.w * qx2;
+
+        float qyqy2 = quat.y * qy2;
+        float qyqz2 = quat.y * qz2;
+        float qyqw2 = quat.w * qy2;
+
+        float qzqz2 = quat.z * qz2;
+        float qzqw2 = quat.w * qz2;
+
+        set_identity();
+        mat_values[0][0] = 1.0f - qyqy2 - qzqz2;
+        mat_values[0][1] = qxqy2 + qzqw2;
+        mat_values[0][2] = qxqz2 - qyqw2;
+
+        mat_values[1][0] = qxqy2 - qzqw2;
+        mat_values[1][1] = 1.0f - qxqx2 - qzqz2;
+        mat_values[1][2] = qyqz2 + qxqw2;
+
+        mat_values[2][0] = qxqz2 + qyqw2;
+        mat_values[2][1] = qyqz2 - qxqw2;
+        mat_values[2][2] = 1.0f - qxqx2 - qyqy2;
+    }
+
+    inline void print() const {
+        for (int x = 0; x < 3; x++) {
+            for (int y = 0; y < 3; y++) {
+                std::cout << mat_values[x][y] << " ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "----------" << std::endl;
+    }
 
 };
 

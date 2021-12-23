@@ -19,7 +19,7 @@
 #define SQRT12 0.7071067811865475244008443621048490f
 
 // TODO: cleanup a bit, its getting a bit messy bro
-// tired fixing it a bit
+// tried fixing it a bit
 
 //// VECTOR QUATERNION FUNCTIONS
 inline sQuaternion4 sVector3::get_pure_quaternion() const {
@@ -86,6 +86,7 @@ inline sVector3 cross_prod(const sVector3 &v1, const sVector3 &v2) {
                     v1.x * v2.y - v1.y * v2.x};
 }
 
+// ?? For generting tangent vectors
 inline void plane_space(const sVector3  &normal,
                               sVector3  &p,
                               sVector3  &q) {

@@ -1,6 +1,7 @@
 #ifndef __TYPES_H_
 #define __TYPES_H_
 
+#include <cstring>
 #include <stdlib.h>
 
 #include "math.h"
@@ -13,8 +14,7 @@ struct sTransform {
   sVector3 scale = sVector3{1.0f, 1.0f, 1.0f};
 
 
-  //https://math.stackexchange.com/questions/1693067/differences-between-quaternion-integration-methods 
-
+  //https://math.stackexchange.com/questions/1693067/differences-between-quaternion-integration-methods
   void set_rotation(const sQuaternion4 quat) {
     rotation = quat;
   }
@@ -47,11 +47,19 @@ struct sTransform {
   }
 
   inline sVector3 apply(const sVector3 &vect) const {
-    sVector3 scalled = vect.mult(scale);
+    sVector3 scalled = vect.mult(scale).subs(scale.mult(0.5f));
     sQuaternion4 q_vect = scalled.get_pure_quaternion();
 
     // Using a' = Q * a * Q^-1
     return rotation.inverse().multiply(q_vect).multiply(rotation).get_vector().sum(position);
+  }
+
+  inline sEdge apply(const sEdge &edge) const {
+    return sEdge{apply(edge.p1), apply(edge.p2)};
+  }
+
+  inline sEdge apply_without_scale(const sEdge &edge) const {
+    return sEdge{apply_without_scale(edge.p1), apply_without_scale(edge.p2)};
   }
 
   inline void apply(sPlane *plane) const {
@@ -62,7 +70,7 @@ struct sTransform {
 
   // Generate model matrix
   inline void get_model(sMat44 *mat) const {
-    sMat44 scale_mat = {}, rot_mat = {};
+    sMat44 scale_mat = {}, rot_mat = {}, cent_mat = {};
 
     // Order of transforms: Position <- Rotation <- Scale
     mat->set_identity();
@@ -70,6 +78,8 @@ struct sTransform {
 
     scale_mat.set_identity();
     scale_mat.set_scale(scale);
+    // For centering arround 0
+    scale_mat.add_position(scale.mult(-0.5f));
 
     rot_mat.convert_quaternion_to_matrix(rotation);
 
@@ -80,18 +90,23 @@ struct sTransform {
 };
 
 
-struct sRawGeometry {
-  sVector3  *raw_points;
-  sPlane    *planes;
 
-  int *face_indexes;
+struct sRawGeometry {
+  sVector3  *raw_points = NULL;
+  sVector3  *normals = NULL;
+  sPlane    *planes = NULL;
+
+  int *face_indexes = NULL;
+  int *neighbor_indexes = NULL;
   // TODO: generalize the face indexes and add w,h if needed
 
   bool is_cube = false;
 
+  unsigned int normal_count = 0; // TODO: Fill normal count
   unsigned int vertices_size = 0;
   unsigned int planes_size = 0;
   unsigned int points_per_plane = 0;
+  unsigned int neighbor_faces_per_face = 0;
 
   void init_cuboid(const sVector3 &scale) {
     // Indexes of each face
@@ -103,20 +118,34 @@ struct sRawGeometry {
       0, 1, 5, 4, // 4 
       0, 2, 6, 4 // 2
     };
+    int neighboor_faces_LUT[4 * 6] = {
+      4, 5, 2, 1, // Face 0
+      0, 3, 2, 5, // 1
+      3, 4, 1, 0, // 2
+      1, 2, 4, 5, // 3
+      3, 2, 5, 0, // 4
+      0, 1, 3, 4  // 5
+   };
 
     face_indexes = (int*) malloc(sizeof(int) * 6 * 4);
     memcpy(face_indexes, box_LUT_vertices, sizeof(box_LUT_vertices));
 
+    neighbor_indexes = (int*) malloc(sizeof(int) * 6 * 4);
+    memcpy(neighbor_indexes, neighboor_faces_LUT, sizeof(int) * 6 * 4);
+    neighbor_faces_per_face = 4;
+
     // Raw pointers
+    // TODO: optimize
+    sVector3 half_scale_vect = scale.mult(0.5f);
     raw_points = (sVector3*) malloc(sizeof(sVector3) * 8);
-    raw_points[0] = sVector3{0.0f, 0.0f, 0.0f};
-    raw_points[1] = sVector3{scale.x, 0.0f, 0.0f};
-    raw_points[2] = sVector3{0.0f, scale.y, 0.0f};
-    raw_points[3] = sVector3{scale.x, scale.y, 0.0f};
-    raw_points[4] = sVector3{0.0f, 0.0f, scale.z};
-    raw_points[5] = sVector3{scale.x, 0.0f, scale.z};
-    raw_points[6] = sVector3{0.0f, scale.y, scale.z};
-    raw_points[7] = sVector3{scale.x, scale.y, scale.z};
+    raw_points[0] = sVector3{0.0f, 0.0f, 0.0f}.subs(half_scale_vect);
+    raw_points[1] = sVector3{scale.x, 0.0f, 0.0f}.subs(half_scale_vect);
+    raw_points[2] = sVector3{0.0f, scale.y, 0.0f}.subs(half_scale_vect);
+    raw_points[3] = sVector3{scale.x, scale.y, 0.0f}.subs(half_scale_vect);
+    raw_points[4] = sVector3{0.0f, 0.0f, scale.z}.subs(half_scale_vect);
+    raw_points[5] = sVector3{scale.x, 0.0f, scale.z}.subs(half_scale_vect);
+    raw_points[6] = sVector3{0.0f, scale.y, scale.z}.subs(half_scale_vect);
+    raw_points[7] = sVector3{scale.x, scale.y, scale.z}.subs(half_scale_vect);
 
     // Generate planes
     planes = (sPlane*) malloc(sizeof(sPlane) * 6);
@@ -150,6 +179,79 @@ struct sRawGeometry {
     is_cube = true; // This signalizes to only test 3 axis, instead of all the surface
                     // normals
   };
+
+  void init_cuboid(const sTransform &transform) {
+    // Indexes of each face
+    int box_LUT_vertices[6 * 4] = {
+      4, 5, 7, 6, // 0
+      6, 7, 3, 2, // 1
+      1, 3, 7, 5, // 5
+      0, 1, 3, 2, // 3
+      0, 1, 5, 4, // 4
+      0, 2, 6, 4 // 2
+    };
+
+    int neighboor_faces_LUT[4 * 6] = {
+      4, 5, 2, 1, // Face 0
+      0, 3, 2, 5, // 1
+      3, 4, 1, 0, // 2
+      1, 2, 4, 5, // 3
+      3, 2, 5, 0, // 4
+      0, 1, 3, 4  // 5
+   };
+
+    face_indexes = (int*) malloc(sizeof(int) * 6 * 4);
+    memcpy(face_indexes, box_LUT_vertices, sizeof(box_LUT_vertices));
+
+    neighbor_indexes = (int*) malloc(sizeof(int) * 6 * 4);
+    memcpy(neighbor_indexes, neighboor_faces_LUT, sizeof(int) * 6 * 4);
+    neighbor_faces_per_face = 4;
+
+    // Raw pointers
+    // TODO: optimize
+    raw_points = (sVector3*) malloc(sizeof(sVector3) * 8);
+    raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f});
+    raw_points[1] = transform.apply(sVector3{1.0f, 0.0f, 0.0f});
+    raw_points[2] = transform.apply(sVector3{0.0f, 1.0f, 0.0f});
+    raw_points[3] = transform.apply(sVector3{1.0f, 1.0f, 0.0f});
+    raw_points[4] = transform.apply(sVector3{0.0f, 0.0f, 1.0f});
+    raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f});
+    raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f});
+    raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f});
+
+    // Generate planes
+    planes = (sPlane*) malloc(sizeof(sPlane) * 6);
+    for(int i = 0; i < 6; i++) {
+      sVector3 center = {};
+
+      for(int j = 0; j < 4; j++) {
+        sVector3 tmp = raw_points[ box_LUT_vertices[(i * 4) + j] ];
+        center.x += tmp.x;
+        center.y += tmp.y;
+        center.z += tmp.z;
+      }
+
+      center.x /= 4.0f;
+      center.y /= 4.0f;
+      center.z /= 4.0f;
+
+      planes[i].origin_point = center;//transform.apply_without_scale(center);
+    }
+    // Plane orientations
+    planes[0].normal = transform.apply_rotation(sVector3{0.0f, 0.0f, 1.0f});
+    planes[1].normal = transform.apply_rotation(sVector3{0.0f, 1.0f, 0.0f});
+    planes[2].normal = transform.apply_rotation(sVector3{1.0f, 0.0f, 0.0f});
+    planes[3].normal = transform.apply_rotation(sVector3{0.0f, 0.0f, -1.0f});
+    planes[4].normal = transform.apply_rotation(sVector3{0.0f, -1.0f, 0.0f});
+    planes[5].normal = transform.apply_rotation(sVector3{-1.0f, 0.0f, 0.0f});
+
+    vertices_size = 8;
+    planes_size = 6;
+    points_per_plane = 4;
+    is_cube = true; // This signalizes to only test 3 axis, instead of all the surface
+                    // normals
+  };
+
 
   void duplicate(sRawGeometry *copy_to) const {
     copy_to->is_cube = is_cube;
@@ -192,9 +294,20 @@ struct sRawGeometry {
     return raw_points[index];
   }
 
+  inline sPlane* get_neighboring_plane(const int   current_face,
+                                       const int   neighboor) const {
+    return &planes[neighbor_indexes[neighboor + (current_face * neighbor_faces_per_face)]];
+  }
+
+  inline int     get_neighboring_index(const int   current_face,
+                                       const int   neighboor) const {
+    return neighbor_indexes[neighboor + (current_face * neighbor_faces_per_face)];
+  }
+
+
   inline void apply_transform(const sTransform &transf) {
     for(int i = 0; i < vertices_size; i++) {
-      raw_points[i] = transf.apply_without_scale(raw_points[i]);
+      raw_points[i] = transf.apply(raw_points[i]);
     }
 
     for(int i = 0; i < planes_size; i++) {
@@ -205,6 +318,7 @@ struct sRawGeometry {
 
   void clean() {
     free(face_indexes);
+    free(neighbor_indexes);
     free(raw_points);
     free(planes);
 

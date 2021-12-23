@@ -1,176 +1,232 @@
-#ifndef _PHYSICS_H_
-#define _PHYSICS_H_
+#ifndef PHYSICS_H_
+#define PHYSICS_H_
 
+#include "imgui/imgui.h"
 #include "math.h"
+#include "collision_detection.h"
+#include "phys_parameters.h"
 #include "types.h"
-#include "collision_types.h"
-#include "collision_testing.h"
 
-#define INSTANCE_SIZE 4
+#define PHYS_INSTANCE_COUNT 100
 
-struct sPhysicsWorld {
-  // Shared transforms
-  sTransform  *transforms;
-
-  float     mass                  [INSTANCE_SIZE] = {0.0f};
-  float     friction              [INSTANCE_SIZE] = {0.0f};
-  float     restitution           [INSTANCE_SIZE] = {0.0f};
-  bool      is_static             [INSTANCE_SIZE] = {false};
-  sVector3  mass_center           [INSTANCE_SIZE] = {{0.0f}};
-  sVector3  speed                 [INSTANCE_SIZE] = {{}};
-  sVector3  angular_speed         [INSTANCE_SIZE] = {{}};
-  sMat33    inv_inertia_tensors   [INSTANCE_SIZE] = {};
-  bool      is_awake              [INSTANCE_SIZE] = { false };
-
-
-  void config_simulation() {
-    generate_inertia_tensors();
-
-    for(int i = 0; i < INSTANCE_SIZE; i++) {
-      is_awake[i] = true;
-    }
-  }
-
-  // Based on https://en.wikipedia.org/wiki/List_of_moments_of_inertia 
-  void generate_inertia_tensors() {
-     for(int i = 0; i < INSTANCE_SIZE; i++) {
-       if (is_static[i]) {
-        //inv_inertia_tensors[i].set_identity();
-        inv_inertia_tensors[i].sx1 = 0.0f;
-        inv_inertia_tensors[i].sy2 = 0.0f;
-        inv_inertia_tensors[i].tmp3 = 0.0f;
-        continue;
-       }
-        sVector3 scale = transforms[i].scale;
-
-        sMat33 tmp = {};
-        tmp.set_identity();
-
-        float half_x = scale.x / 2.0f;
-        float half_y = scale.y / 2.0f;
-        float half_z = scale.z / 2.0f;
-
-        tmp.sx1 = mass[i] * (half_y * half_y + half_z * half_z) / 12.0f;
-        tmp.sy2 = mass[i] * (half_x * half_x + half_z * half_z) / 12.0f;
-        tmp.tmp3 = mass[i] * (half_x * half_x + half_y * half_y) / 12.0f;
-        tmp.invert(&inv_inertia_tensors[i]);
-     }
-  }
-
-  void apply_gravity(const double elapsed_time) {
-    for(int i = 0; i < INSTANCE_SIZE; i++) {
-      if (is_static[i] || !is_awake[i]) {
-        continue;
-      }
-
-      // Integrate gravity
-      // TODO: Gravity constatn cleanup
-      speed[i].y += -0.98f * elapsed_time;
-    }
-
-  }
-
-  void update(const double elapsed_time) {
-    for(int i = 0; i < INSTANCE_SIZE; i++) {
-      if (is_static[i] || !is_awake[i]) {
-        continue;
-      }
-
-      // Put to sleep if the speed is near to 0
-      if (speed[i].magnitude() <= 0.005f) {
-      //  is_awake[i] = false;
-     //   continue;
-      }
-
-      // Integrate speed
-      transforms[i].position.x += speed[i].x * elapsed_time;
-      transforms[i].position.y += speed[i].y * elapsed_time;
-      transforms[i].position.z += speed[i].z * elapsed_time;
-
-      // Integrate angular speed
-      sQuaternion4 tmp_quat = {0.0f, angular_speed[i].x, angular_speed[i].y, angular_speed[i].z};
-      tmp_quat = tmp_quat.multiply(0.5f).multiply(elapsed_time);
-
-      sQuaternion4 rot_quat = transforms[i].rotation;
-      rot_quat = rot_quat.sum(tmp_quat.multiply(rot_quat));
-      rot_quat = rot_quat.normalize();
-
-      transforms[i].set_rotation(rot_quat);
-    }
-  }
-
-  inline void add_impulse(const int       index,
-                          const sVector3 &position,
-                          const sVector3 &impulse) {
-    sVector3 tmp = speed[index];
-    float inv_mass = (is_static[index]) ? 0.0f : 1.0f / mass[index];
-    tmp.x += inv_mass * impulse.x;
-    tmp.y += inv_mass * impulse.y;
-    tmp.z += inv_mass * impulse.z;
-
-    speed[index] = tmp;
-
-    angular_speed[index] = angular_speed[index].sum(inv_inertia_tensors[index].multiply(cross_prod(position, impulse)));
-  }
-
-  void resolve_collision(const sCollisionManifold &manifold,
-                         const double             elapsed_time) {
-    // Impulse resolution ===
-    int obj1 = manifold.obj1_index, obj2 = manifold. obj2_index; 
-
-    float inv_mass1 = (is_static[obj1]) ? 0.0f : 1.0f / mass[obj1];
-    float inv_mass2 = (is_static[obj2]) ? 0.0f : 1.0f / mass[obj2];
-
-    // Get the mass centers in worldspace
-    sVector3 mass_center_obj1 = {}, mass_center_obj2 = {};
-
-    mass_center_obj1 = transforms[obj1].apply(mass_center[obj1]);
-    mass_center_obj2 = transforms[obj2].apply(mass_center[obj2]);
-
-    // Bounciness of the materials
-    float col_restitution = MIN(restitution[obj1], restitution[obj2]); 
-
-    // Compute an impulse for each contact point
-    // using the formula https://www.euclideanspace.com/physics/dynamics/collision/index.htm
-    float max_depth = FLT_MAX;
-
-    sVector3 normal = manifold.collision_normal;
-    // Added 3 iterations
-    for(int p = 0; p < 1; p++) {
-    for(int i = 0; i < manifold.contact_point_count; i++) {
-      sVector3 r1 = mass_center_obj1.subs(manifold.contact_points[i]);
-      sVector3 r2 = mass_center_obj2.subs(manifold.contact_points[i]);
-
-      sVector3 t1 = cross_prod(inv_inertia_tensors[obj1].multiply(cross_prod(r1, normal)), r1);
-      sVector3 t2 = cross_prod(inv_inertia_tensors[obj2].multiply(cross_prod(r2, normal)), r2);
-
-
-      // COmpute constraint mass
-      float normal_mass = (is_static[obj1]) ? 0.0f : 1.0f / mass[obj1];
-      normal_mass += (is_static[obj2]) ? 0.0f : 1.0f / mass[obj2];
-      normal_mass += dot_prod(normal, t1.sum(t2));
-      normal_mass = 1.0f / normal_mass;
-
-      // Impulse bias
-      float impulse_bias = -(0.10f / elapsed_time) * MAX(0.0f, -manifold.points_depth[i] - 0.001f);
-
-      std::cout << impulse_bias << std::endl;
-
-      sVector3 obj1_contact_speed = speed[obj1].sum(cross_prod(angular_speed[obj1], r1));
-      sVector3 obj2_contact_speed = speed[obj2].sum(cross_prod(angular_speed[obj2], r2));
-
-      float collision_relative_speed = dot_prod(normal, obj2_contact_speed.subs(obj1_contact_speed));
-
-      float impulse_force = normal_mass * (-collision_relative_speed + impulse_bias);// + (col_restitution * -collision_relative_speed));
-      //float impulse_force = normal_mass * (-dot_prod(obj2_contact_speed.subs(obj1_contact_speed), normal));
-
-      sVector3 impulse = normal.mult(impulse_force);
-
-      add_impulse(obj1, r1, impulse.invert());
-      add_impulse(obj2, r2, impulse);
-      }
-    }
-  }
+struct sSpeed {
+    sVector3 linear = {0.0f, 0.0f, 0.0f};
+    sVector3 angular = {0.0f, 0.0f, 0.0f};
 };
 
-#endif
+struct sPhysWorld {
+    bool               enabled             [PHYS_INSTANCE_COUNT] = {};
+    bool               is_static           [PHYS_INSTANCE_COUNT] = {};
+    eColiderTypes      collider            [PHYS_INSTANCE_COUNT] = {};
+
+    sTransform         *transforms                               = NULL;
+    sSpeed             obj_speeds          [PHYS_INSTANCE_COUNT];
+
+    float              radius              [PHYS_INSTANCE_COUNT] = {};
+    float              mass                [PHYS_INSTANCE_COUNT] = {};
+    float              inv_mass            [PHYS_INSTANCE_COUNT] = {};
+    float              restitution         [PHYS_INSTANCE_COUNT] = {};
+
+    sMat33             inv_inertia_tensors [PHYS_INSTANCE_COUNT] = {};
+
+    sCollisionManifold _manifolds          [PHYS_INSTANCE_COUNT] = {};
+    int                _manifold_count                           = 0;
+
+    void set_default_values() {
+        // Set default values
+        memset(enabled, false, sizeof(enabled));
+        memset(is_static, false, sizeof(is_static));
+        memset(obj_speeds, 0.0f, sizeof(obj_speeds));
+
+        _manifold_count = 0;
+    }
+
+    // Set the initial values & calculate the inv_inertia tensors
+    void init(sTransform *i_transforms) {
+        transforms = i_transforms;
+
+        // COnfigure Intertia Tensors
+        sMat33 inertia_tensor = {};
+        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+            if (is_static[i] || !enabled[i]) {
+                continue;
+            }
+
+            inertia_tensor.set_identity();
+
+            //if (collider[i] == SPHERE_COLLIDER) {
+                inertia_tensor.mat_values[0][0] = 2.0f/5.0f * mass[i] * radius[i] * radius[i];
+                inertia_tensor.mat_values[1][1] = 2.0f/5.0f * mass[i] * radius[i] * radius[i];
+                inertia_tensor.mat_values[2][2] = 2.0f/5.0f * mass[i] * radius[i] * radius[i];
+            //}
+
+            inertia_tensor.invert(&inv_inertia_tensors[i]);
+        }
+
+        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+            inv_mass[i] = (is_static[i]) ? 0.0 : 1.0f/mass[i];
+        }
+
+    }
+
+    // Apply collisions & speeds, check for collisions, and resolve them
+    void step(const double elapsed_time) {
+        // 1 - Rotate inertia tensors
+        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+            sMat33 r_mat = {}, r_mat_t = {}, inv_inertia = {};
+            r_mat.convert_quaternion_to_matrix(transforms[i].rotation);
+            r_mat.transponse_to(&r_mat_t);
+
+            // Rotate the inertia tensor: I^-1 = r * I^-1 * r^t
+            inv_inertia_tensors[i].multiply_to(&r_mat_t, &inv_inertia);
+            r_mat.multiply_to(&inv_inertia, &inv_inertia_tensors[i]);
+        }
+
+        // 2 - Apply gravity
+        apply_gravity(elapsed_time);
+
+        // 3 - Collision Detection
+        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+            for(int j = i+1; j < PHYS_INSTANCE_COUNT; j++) {
+                if (!enabled[i] || !enabled[j]) {
+                    continue;
+                }
+
+                // If there is a collision, store it in the manifold array
+                if (test_sphere_sphere_collision(transforms[i].position,
+                                                 radius[i],
+                                                 transforms[j].position,
+                                                 radius[j],
+                                                 &_manifolds[_manifold_count])) {
+                    _manifolds[_manifold_count].obj1 = i;
+                    _manifolds[_manifold_count].obj2 = j;
+                    _manifold_count++;
+                }
+            }
+        }
+        // 4 - Collision Resolution
+        for(int iter = 0; iter < PHYS_SOLVER_ITERATIONS; iter++) {
+            for(int i = 0; i < _manifold_count; i++) {
+                impulse_response(_manifolds[i], elapsed_time);
+            }
+
+        }
+
+        // 5 - Integrate solutions
+        integrate(elapsed_time);
+
+        // Debug speeds
+        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+            if (!enabled[i]) {
+                continue;
+            }
+            sSpeed *speed = &obj_speeds[i];
+
+            char instance_name []= "Obj 00";
+            instance_name[6] = i;
+
+            if(ImGui::TreeNode(instance_name)) {
+                ImGui::Text("Position: %f %f %f", transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
+                ImGui::Text("Linear speed: %f %f %f", speed->linear.x, speed->linear.y, speed->linear.z);
+                ImGui::Text("Angular speed: %f %f %f", speed->angular.x, speed->angular.y, speed->angular.z);
+                ImGui::TreePop();
+            }
+
+        }
+
+        _manifold_count = 0;
+    }
+
+    // Apply the speeds to the position
+    void integrate(const double elapsed_time) {
+        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+            if (is_static[i] || !enabled[i]) {
+                continue;
+            }
+
+            sTransform *transf = &transforms[i];
+
+            // Integrate linear speed: pos += speed * elapsed_time
+            transf->position = transf->position.sum(obj_speeds[i].linear.mult(elapsed_time));
+
+            // Integrate angular speed
+            sQuaternion4 rotation_incr = obj_speeds[i].angular.get_pure_quaternion();
+            rotation_incr = rotation_incr.multiply(0.5).multiply(elapsed_time);
+
+            sQuaternion4 rotation = transf->rotation;
+            rotation = rotation.sum(rotation_incr.multiply(rotation));
+            rotation = rotation.normalize();
+
+            transf->set_rotation(rotation);
+        }
+    }
+
+    // Apply the gravity based
+    // TODO: Gravioty constant cleanup
+    void apply_gravity(const double elapsed_time) {
+        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+            if (is_static[i] || !enabled[i]) {
+                continue;
+            }
+
+            obj_speeds[i].linear.y += -0.98f * elapsed_time;
+        }
+    }
+
+    void impulse_response(const sCollisionManifold &manifold, const float elapsed_time) {
+        int id_1 = manifold.obj1;
+        int id_2 = manifold.obj2;
+
+        sTransform *transf_1 = &transforms[id_1];
+        sTransform *transf_2 = &transforms[id_2];
+
+        sSpeed *speed_1 = &obj_speeds[id_1];
+        sSpeed *speed_2 = &obj_speeds[id_2];
+
+        // Calculate impulse response for each contact point
+        for(int i = 0; i < manifold.contanct_points_count; i++) {
+             // Vector from the center to the collision point
+            sVector3 r1 = transf_1->position.subs(manifold.contact_points[i]);
+            sVector3 r2 = transf_2->position.subs(manifold.contact_points[i]);
+
+            sVector3 r1_cross_n = cross_prod(r1, manifold.normal);
+            sVector3 r2_cross_n = cross_prod(r2, manifold.normal);
+
+            // Contact speed: (a_speed + (a_ang_speed x ra)) - (b_speed + (b_ang_speed x rb))
+            sVector3 contact_speed = (speed_1->linear.sum(cross_prod(speed_1->angular, r1)));
+            contact_speed = contact_speed.subs(speed_2->linear.sum(cross_prod(speed_2->angular, r2)));
+
+            // Contac's linear mass: 1.0f / mass1 + 1.0f / mass2
+            float linear_mass = ((is_static[id_1]) ? 0.0f : 1.0f / mass[id_1]) + ((is_static[id_2]) ? 0.0f : 1.0f / mass[id_2]);
+
+            // Contact's angular mass: dot(inv_in1 * r1_cross_n + inv_in2 * r2_cross_n, normal)
+            float angular_mass = dot_prod(inv_inertia_tensors[id_1].multiply(r1_cross_n).sum(inv_inertia_tensors[id_2].multiply(r2_cross_n)), manifold.normal);
+
+            float proj_magnitude = dot_prod(contact_speed, manifold.normal);
+
+            // Baumgarte Stabilization
+            float bias = -BAUMGARTE_TERM * (1.0f / elapsed_time) * MIN(0.0f, (manifold.contact_depth[i] + PENETRATION_SLOP));
+
+            // Calculate impulse
+            float impulse_magnitude = proj_magnitude / (linear_mass + angular_mass);
+
+            sVector3 impulse = manifold.normal.mult(-impulse_magnitude + bias);
+
+            // Apply impulse
+            if (!is_static[id_1]) {
+                speed_1->linear = speed_1->linear.sum(impulse.mult(inv_mass[id_1]));
+                speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(manifold.contact_points[i], impulse)));
+            }
+
+            // Invert the direction of the impulse, when apliying it to the other body
+            impulse = impulse.mult(-1.0f);
+
+            if (!is_static[id_2]) {
+                speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));
+                speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(manifold.contact_points[i], impulse)));
+            }
+        }
+    }
+};
+
+#endif // PHYSICS_H_

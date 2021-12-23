@@ -87,7 +87,35 @@ convert_quaternion_to_matrix(const sQuaternion4 *quat, sMat44 *mat) {
 }*/
 inline void
 convert_quaternion_to_matrix(const sQuaternion4 *quat, sMat44 *mat) {
-  float qxx = quat->x * quat->x;
+  float qx2 = quat->x + quat->x;
+  float qy2 = quat->y + quat->y;
+  float qz2 = quat->z + quat->z;
+  float qxqx2 = quat->x * qx2;
+  float qxqy2 = quat->x * qy2;
+  float qxqz2 = quat->x * qz2;
+  float qxqw2 = quat->w * qx2;
+
+  float qyqy2 = quat->y * qy2;
+  float qyqz2 = quat->y * qz2;
+  float qyqw2 = quat->w * qy2;
+
+  float qzqz2 = quat->z * qz2;
+  float qzqw2 = quat->w * qz2;
+
+  mat->set_identity();
+  mat->mat_values[0][0] = 1.0f - qyqy2 - qzqz2;
+  mat->mat_values[0][1] = qxqy2 + qzqw2;
+  mat->mat_values[0][2] = qxqz2 - qyqw2;
+
+  mat->mat_values[1][0] = qxqy2 - qzqw2;
+  mat->mat_values[1][1] = 1.0f - qxqx2 - qzqz2;
+  mat->mat_values[1][2] = qyqz2 + qxqw2;
+
+  mat->mat_values[2][0] = qxqz2 + qyqw2;
+  mat->mat_values[2][1] = qyqz2 - qxqw2;
+  mat->mat_values[2][2] = 1.0f - qxqx2 - qyqy2;
+  mat->mat_values[3][3] = 1.0;
+  /*float qxx = quat->x * quat->x;
   float qyy = quat->y * quat->y;
   float qzz = quat->z * quat->z;
   float qxz = quat->w * quat->z;
@@ -108,7 +136,7 @@ convert_quaternion_to_matrix(const sQuaternion4 *quat, sMat44 *mat) {
 
   mat->mat_values[2][0] = 2.0f * (qxy + qwy);
   mat->mat_values[2][1] = 2.0f * (qyz - qwx);
-  mat->mat_values[2][2] = 1.0f - (2.0f * (qxx + qyy));
+  mat->mat_values[2][2] = 1.0f - (2.0f * (qxx + qyy));*/
   //mat->transpose();
 }
 

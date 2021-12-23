@@ -5,7 +5,7 @@
 
 #include "imgui/imgui.h"
 
-struct sLineSegment {
+struct sEdge {
     sVector3  p1;
     sVector3  p2;
 };
