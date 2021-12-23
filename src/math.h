@@ -50,6 +50,7 @@ inline float MAX(float x, float y) { return (x >= y) ? x : y; }
 inline float MIN(float x, float y) { return (x < y) ? x : y; }
 inline int MAX(int x, int y) { return (x >= y) ? x : y; }
 inline int MIN(int x, int y) { return (x < y) ? x : y; }
+inline unsigned int MIN(unsigned int x, unsigned int y) { return (x < y) ? x : y; }
 
 inline float LERP(const float a,
                   const float b,
