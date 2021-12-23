@@ -1,15 +1,16 @@
+#include <cstdint>
 #include <iostream>
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
 
+#include "geometry/half_edge.h"
 #include "shader.h"
 #include "input_layer.h"
 #include "render_cubes.h"
 #include "camera.h"
-#include "collision_testing.h"
 #include "types.h"
+
 #include "physics.h"
-#include "collision_resolution.h"
 
 // Dear IMGUI
 #include "imgui/imgui.h"
@@ -20,6 +21,7 @@
 #define WIN_HEIGHT	680
 #define WIN_NAME	"Test"
 
+#include "kv_storage.h"
 
 void temp_error_callback(int error_code, const char* descr) {
 	std::cout << "GLFW Error: " << error_code << " " << descr << std::endl;
@@ -104,144 +106,22 @@ sVector3 rotate_arround(const sVector3 pos,
   return sVector3{nx + center.x, pos.y, nz + center.z};
 }
 
+#include "kv_storage.h"
 void test_draw_loop(GLFWwindow *window) {
   glfwMakeContextCurrent(window);
 
-  // Generate geometry data
+  sKVStorage stor;
 
-  sCubeRenderer renderer = {};
+  KVS_init(&stor);
 
-  cube_renderer_init(&renderer);
+  KVS_add(&stor, "abc", 4, 20);
+  //KVS_add(&stor, "ebac", 4, 50);
+  KVS_add(&stor, "ebc", 4, 22);
 
-  sCamera camera = {};
-  camera.position = {3.0f, -0.2f, 2.0f};
-
-  double prev_frame_time = glfwGetTime();
-
-  sTransform transf[2] = {{}};
-
-  transf[0].position = {0.2f, 1.f, -0.3f};
-  transf[0].scale = {1.0f, 0.5f, 2.0f};
-  transf[0].rotation = sQuaternion4{1.0f, 0.f, 0.0f, 0.0f};
-
-  transf[1].position = {0.0f, 0.0f, 0.0f};
-  transf[1].scale = {10.0f, 0.5f, 1.0f};
-  transf[1].rotation = sQuaternion4{1.0f, 2.0f,0.0f, 0.0f}.normalize();
-
-  //transf[0] = transf[1].multiply( transf[1].inverse().multiply(transf[0]));
-  transf[1] = transf[0].inverse().multiply(transf[1]);
-  transf[0].position = {0.0f};
-  transf[0].scale = {1.0f, 1.0f, 1.0f};
-  transf[0].rotation = {1.0f, 0.0f, 0.0f, 0.0f};
-
-  sVector4 colors[3] = {{1.0f, 0.0f, 0.0f, 1.0f},
-                        {0.0f, 1.0f, 0.0f, 1.0f},
-                        {0.0f, 0.0f, 1.0f, 1.0f}};
-
-  while(!glfwWindowShouldClose(window)) {
-   // Draw loop
-    int width, heigth;
-    double temp_mouse_x, temp_mouse_y;
-
-    glfwPollEvents();
-    glfwGetFramebufferSize(window, &width, &heigth);
-    // Set to OpenGL viewport size anc coordinates
-    glViewport(0,0, width, heigth);
-
-    sMat44 proj_mat = {};
-
-    // OpenGL stuff
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-
-    float camera_rot = 1.10f;
-    camera.position = rotate_arround(camera.position,
-                                     sVector3{0.0f, 0.0f, 0.0f},
-                                     to_radians(camera_rot));
-
-    camera.look_at(sVector3{0.0f, 0.0f, 0.0f});
-    camera.get_perspective_viewprojection_matrix(90.0f,
-                                                100.0f,
-                                                0.1f,
-                                                (float)width / (float)heigth,
-                                                &proj_mat);
-
-    double curr_frame_time = glfwGetTime();
-    double elapsed_time = curr_frame_time - prev_frame_time;
-    prev_frame_time = curr_frame_time;
-
-    sMat44 model[3] = {};
-
-    transf[0].get_model(&model[0]);
-    transf[1].get_model(&model[1]);
-
-    ImGui::Begin("Rot");
-    for(int i = 0; i < 2; i++) {
-      sQuaternion4 q = transf[i].rotation;
-    }
-    sVector3 t = transf[0].apply({1.0f, 0.0f, 1.0f});
-
-    sCollisionManifold manifold = {};
-
-    sMat44 col_points[10] = {};
-      sVector4 col_color[10] = {};
-
-    if (SAT_test(transf[0], transf[1], &manifold)) {
-      ImGui::Text("Collision: %i points", manifold.contact_point_count);
-      for(int i = 0; i < manifold.contact_point_count; i++) {
-        col_points[i].set_identity();
-        col_points[i].set_scale({0.05, 2.05, 0.05});
-        col_points[i].set_position(manifold.contact_points[i]);
-        col_color[i] = {1.0f, 0.0f, 1.0f, 1.0f};
-      }
-
-      cube_renderer_render(&renderer, col_points, col_color, manifold.contact_point_count, &proj_mat);
-    }
-
-    sRawGeometry obj1 = {};
-      obj1.init_cuboid(transf[1]);
-      //obj1.apply_transform(transf[1]);
-      //obj1_space.apply_transform(new_transf);
-
-      for(int i = 0; i < 8; i++) {
-        col_points[i].set_identity();
-        col_points[i].set_scale({0.05, 0.05, 0.15});
-        col_points[i].set_position(obj1.raw_points[i]);
-        col_color[i] = {0.0f, 0.0f, 1.0f, 1.0f};
-      }
-
-      cube_renderer_render(&renderer, col_points, col_color, 8, &proj_mat);
-
-      for(int i = 0; i < 6; i++) {
-        col_points[i].set_identity();
-        col_points[i].set_scale({0.05, 0.05, 0.15});
-        col_points[i].set_position(obj1.planes[i].origin_point);
-        col_color[i] = {0.0f, 1.0f, 1.0f, 1.0f};
-      }
-
-      cube_renderer_render(&renderer, col_points, col_color, 6, &proj_mat);
-
-
-
-
-    ImGui::End();
-
-    cube_renderer_render(&renderer,
-                         model,
-                         colors,
-                         2,
-                         &proj_mat);
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    glfwSwapBuffers(window);
-  }
+  std::cout << KVS_get_int(&stor, "ebac", 5) << std::endl;
+  std::cout << KVS_get_int(&stor, "abc", 4) << std::endl;
+  std::cout << KVS_get_int(&stor, "ebc", 4) << std::endl;
+   return;
 }
 
 void draw_loop(GLFWwindow *window) {
@@ -255,12 +135,12 @@ void draw_loop(GLFWwindow *window) {
   sRawGeometry cubes[4] = {};
   sTransform   transforms[4] = {};
 
-  transforms[0].position = {-5.0f, 0.0f, -5.0f};
-  transforms[0].scale = {10.0f, 1.0f, 10.0f};
+  transforms[0].position = {0.0f, -1.0f, 0.0f};
+  transforms[0].scale = {1.0f, 1.0f, 1.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
-  transforms[1].position = {0.0f, 4.0f, 0.0f};
-  transforms[1].scale = {1.0f, 1.5f, 1.0f};
+  transforms[1].position = {0.02f, 4.0f, 0.0f};
+  transforms[1].scale = {1.0f, 1.0f, 1.0f};
   transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   //transforms[1].rotation.set_identity();
 
@@ -280,34 +160,36 @@ void draw_loop(GLFWwindow *window) {
   colors[3] = {0.0f, 0.0f, 1.0f, 1.0f};
 
   sCubeRenderer renderer;
-  sPhysicsWorld phys_instance;
+  sPhysWorld phys_instance;
+
+  phys_instance.set_default_values();
+
   phys_instance.transforms = &transforms[0];
 
   phys_instance.mass[0] = 0.0f;
   phys_instance.mass[1] = 29.0f;
-  phys_instance.mass[2] = 11.0f;
-  phys_instance.mass[3] = 9.0f;
+  //phys_instance.mass[2] = 11.0f;
+  //phys_instance.mass[3] = 9.0f;
 
   phys_instance.restitution[0] = 0.2f;
   phys_instance.restitution[1] = 0.2f;
-  phys_instance.restitution[2] = 0.2f;
-  phys_instance.restitution[3] = 0.2f;
 
-  phys_instance.friction[0] = 0.8f;
+  phys_instance.radius[0] = 0.50f;
+  phys_instance.radius[1] = 0.50f;
+  //phys_instance.restitution[2] = 0.2f;
+  //phys_instance.restitution[3] = 0.2f;
+
+  /*phys_instance.friction[0] = 0.8f;
   phys_instance.friction[1] = 0.5f;
   phys_instance.friction[2] = 0.5f;
-  phys_instance.friction[3] = 0.7f;
+  phys_instance.friction[3] = 0.7f;*/
 
   phys_instance.is_static[0] = true;
 
-  for(int i = 0; i < 4; i++) {
-    sVector3 curr_scale = transforms[i].scale;
+  phys_instance.enabled[0] = true;
+  phys_instance.enabled[1] = true;
 
-    phys_instance.mass_center[i] = {curr_scale.x / 2.0f, curr_scale.y / 2.0f, curr_scale.z / 2.0f};
-    std::cout << phys_instance.mass_center[i].x << " " <<  phys_instance.mass_center[i].y << std::endl;
-  }
-
-  phys_instance.config_simulation();
+  phys_instance.init(transforms);
 
   cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
@@ -316,22 +198,22 @@ void draw_loop(GLFWwindow *window) {
 
   camera.position = {5.0f, 3.5f, 5.0f};
 
-	while(!glfwWindowShouldClose(window)) {
-		// Draw loop
-		int width, heigth;
-		double temp_mouse_x, temp_mouse_y;
+  while(!glfwWindowShouldClose(window)) {
+    // Draw loop
+    int width, heigth;
+    double temp_mouse_x, temp_mouse_y;
 
     glfwPollEvents();
-		glfwGetFramebufferSize(window, &width, &heigth);
-		// Set to OpenGL viewport size anc coordinates
-		glViewport(0,0, width, heigth);
+    glfwGetFramebufferSize(window, &width, &heigth);
+    // Set to OpenGL viewport size anc coordinates
+    glViewport(0,0, width, heigth);
 
-		sMat44 proj_mat = {};
+    sMat44 proj_mat = {};
 
-		// OpenGL stuff
+    // OpenGL stuff
     glEnable(GL_DEPTH_TEST);  
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -351,30 +233,26 @@ void draw_loop(GLFWwindow *window) {
                                                 &proj_mat);
 
     double curr_frame_time = glfwGetTime();
-		double elapsed_time = curr_frame_time - prev_frame_time;
+    double elapsed_time = curr_frame_time - prev_frame_time;
     prev_frame_time = curr_frame_time;
 
     ImGui::Begin("Physics");
-    phys_instance.step(elapsed_time, &proj_mat);
 
-    for(int i = 0; i < 4; i++) {
-      ImGui::Text("Speed obj%i: %f %f %f", i, phys_instance.speed[i].x,  phys_instance.speed[i].y, phys_instance.speed[i].z);
-    }
+    phys_instance.step(elapsed_time);
+
     ImGui::End();
 
     sMat44 models[4] = {};
 
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 2; i++) {
       transforms[i].get_model(&models[i]);
       //ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
     }
 
-    cube_renderer_render(&renderer, models, colors, 4, &proj_mat);
+    cube_renderer_render(&renderer, models, colors, 2, &proj_mat);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    //std::cout << "==== End Frame ====" << std::endl;
 
 		glfwSwapBuffers(window);
 	}
@@ -412,8 +290,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_draw_loop(window);
+      draw_loop(window);
+      //test_draw_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

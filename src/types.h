@@ -54,6 +54,14 @@ struct sTransform {
     return rotation.inverse().multiply(q_vect).multiply(rotation).get_vector().sum(position);
   }
 
+  inline sEdge apply(const sEdge &edge) const {
+    return sEdge{apply(edge.p1), apply(edge.p2)};
+  }
+
+  inline sEdge apply_without_scale(const sEdge &edge) const {
+    return sEdge{apply_without_scale(edge.p1), apply_without_scale(edge.p2)};
+  }
+
   inline void apply(sPlane *plane) const {
     plane->origin_point = apply((plane->origin_point));
     sQuaternion4 normal_quat = plane->normal.get_pure_quaternion();

@@ -62,13 +62,19 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             uint16_t v2;
         };
 
-        char str[32];
+        char str[5];
         uKey(uint16_t x, uint16_t y) {
             if (x > y) {
                 v1 = x, v2 = y;
             } else {
                 v1 = y, v2 = x;
             }
+            // NOTE: Only for reptresentation
+            // Avoid null terminators on the middle of the key
+            for(uint16_t i = 0; i < 4; i++) {
+                str[i]++;
+            }
+            str[4] = '\0';
         }
     };
 
@@ -138,9 +144,9 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             // If there is an already stored vertex, create teh association
             // Edge 1 Half Edge
             uKey half_edge_key = uKey(index1, index2);
-            int result = KVS_get_int(&half_edge_map, half_edge_key.str, 32);
+            int result = KVS_get_int(&half_edge_map, half_edge_key.str, 5);
             if (result == -1) {
-                KVS_add(&half_edge_map, half_edge_key.str, 32, half_edge_index);
+                KVS_add(&half_edge_map, half_edge_key.str, 5, half_edge_index);
             } else {
                 half_edges[half_edge_index].twin = result;
                 half_edges[result].twin = half_edge_index;
@@ -155,9 +161,9 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             half_edges[half_edge_index].face = face_count;
 
             half_edge_key = uKey(index2, index3);
-            result = KVS_get_int(&half_edge_map, half_edge_key.str, 32);
+            result = KVS_get_int(&half_edge_map, half_edge_key.str, 5);
             if (result == -1) {
-                KVS_add(&half_edge_map, half_edge_key.str, 32, half_edge_index);
+                KVS_add(&half_edge_map, half_edge_key.str, 5, half_edge_index);
             } else {
                 half_edges[half_edge_index].twin = result;
                 half_edges[result].twin = half_edge_index;
@@ -172,9 +178,9 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             half_edges[half_edge_index].face = face_count;
 
             half_edge_key = uKey(index3, index1);
-            result = KVS_get_int(&half_edge_map, half_edge_key.str, 32);
+            result = KVS_get_int(&half_edge_map, half_edge_key.str, 5);
             if (result == -1) {
-                KVS_add(&half_edge_map, half_edge_key.str, 32, half_edge_index);
+                KVS_add(&half_edge_map, half_edge_key.str, 5, half_edge_index);
             } else {
                 half_edges[half_edge_index].twin = result;
                 half_edges[result].twin = half_edge_index;
