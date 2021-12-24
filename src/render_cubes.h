@@ -103,6 +103,9 @@ inline void cube_renderer_render(sCubeRenderer *renderer,
     glBindVertexArray(renderer->VAO);
 
     renderer->shader.activate();
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for(int i = 0; i < obj_count; i++) {
         renderer->shader.set_uniform_matrix4("u_proj", proj_mat);
         renderer->shader.set_uniform_matrix4("u_model", &models[i]);

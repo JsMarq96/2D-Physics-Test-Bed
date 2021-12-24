@@ -43,7 +43,7 @@ inline bool test_sphere_sphere_collision(const sVector3  &center1,
 
     if (center_distance < total_radius) {
         // The spheres are colliding
-        manifold->normal = center1_to_2.normalize();
+        manifold->normal = center1_to_2.normalize().mult(-1.0f);
 
         manifold->contact_points[0] = center1.sum(manifold->normal.mult(radius1));
         manifold->contact_depth[0] = center_distance - total_radius;

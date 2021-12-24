@@ -4,6 +4,7 @@
 #include <GLFW/glfw3.h>
 
 #include "geometry/half_edge.h"
+#include "glcorearb.h"
 #include "shader.h"
 #include "input_layer.h"
 #include "render_cubes.h"
@@ -143,7 +144,7 @@ void draw_loop(GLFWwindow *window) {
   transforms[0].position = {0.0f, 1.0f, 0.0f};
   transforms[0].scale = {2.0f, 2.0f, 2.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
-  phys_instance.mass[0] = 15.0f;
+  phys_instance.mass[0] = 0.0f;
   phys_instance.shape[0] = SPHERE_COLLIDER;
   phys_instance.is_static[0] = true;
   phys_instance.enabled[0] = true;
@@ -168,7 +169,7 @@ void draw_loop(GLFWwindow *window) {
   transforms[2].position = {1.9f, 0.1f, 0.1f};
   transforms[2].scale = {2.0f, 2.0f, 2.0f};
   transforms[2].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
-  phys_instance.mass[2] = 15.0f;
+  phys_instance.mass[2] = 0.0f;
   phys_instance.shape[2] = SPHERE_COLLIDER;
   phys_instance.is_static[2] = true;
   phys_instance.enabled[2] = true;
@@ -177,10 +178,10 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.init(transforms);
 
   sVector4 colors[4] = {};
-  colors[0] = {1.0f, 1.0f, 1.0f, 1.0f};
-  colors[1] = {0.0f, 0.0f, 0.0f, 1.0f};
-  colors[2] = {0.0f, 1.0f, 0.0f, 1.0f};
-  colors[3] = {0.0f, 0.0f, 1.0f, 1.0f};
+  colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
+  colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
+  colors[2] = {0.0f, 1.0f, 0.0f, 0.50f};
+  colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
 
   sCubeRenderer renderer;
 
@@ -243,6 +244,17 @@ void draw_loop(GLFWwindow *window) {
     }
 
     cube_renderer_render(&renderer, models, colors, 3, &proj_mat);
+
+    sVector4 col_color[4] = {};
+    for(int i = 0; i < phys_instance.curr_frame_col_count; i++) {
+      models[i].set_position(phys_instance._manifolds[i].contact_points[0]);
+      models[i].set_scale({0.05f, 0.05f, 0.05f});
+      col_color[i] = {1.0f, 0.0f, 0.0f, 0.90f};
+    }
+
+    glDisable(GL_DEPTH_TEST);
+    cube_renderer_render(&renderer, models, col_color, phys_instance.curr_frame_col_count, &proj_mat);
+    glEnable(GL_DEPTH_TEST);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
