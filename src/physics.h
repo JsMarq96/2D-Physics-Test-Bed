@@ -230,7 +230,6 @@ struct sPhysWorld {
         }
     }
 
-    // TODO: no anade velocidad angular
     void impulse_response(const sCollisionManifold &manifold, const float elapsed_time) {
         int id_1 = manifold.obj1;
         int id_2 = manifold.obj2;
@@ -245,23 +244,22 @@ struct sPhysWorld {
         for(int i = 0; i < manifold.contanct_points_count; i++) {
             // NORMAL IMPULSE ========
             // Vector from the center to the collision point
-            //sVector3 r1 = transf_1->position.subs(manifold.contact_points[i]);
-            //sVector3 r2 = transf_2->position.subs(manifold.contact_points[i]);
             sVector3 r1 = manifold.contact_points[i].subs(transf_1->position);
             sVector3 r2 = manifold.contact_points[i].subs(transf_2->position);
 
             sVector3 r1_cross_n = cross_prod(r1, manifold.normal);
             sVector3 r2_cross_n = cross_prod(r2, manifold.normal);
 
-            ImGui::Text("Collision Normal %f %f %f", manifold.normal.x, manifold.normal.y, manifold.normal.z);
-
+            // Calculate the collision momenton, aka the contact speed
             float collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), manifold.normal) +
                                        dot_prod(r1_cross_n, speed_1->angular) -
                                        dot_prod(r2_cross_n, speed_2->angular);
+
             float linear_mass = inv_mass[id_1] + inv_mass[id_2];
             float angular_mass = dot_prod(r1_cross_n, inv_inertia_tensors[id_1].multiply(r1_cross_n)) +
                                  dot_prod(r2_cross_n, inv_inertia_tensors[id_2].multiply(r2_cross_n));
 
+            // Baumgarte correction for the impulse
             float bias = -BAUMGARTE_TERM / elapsed_time * MIN(0.0f, manifold.contact_depth[i] + PENETRATION_SLOP);
 
             float impulse_magnitude = (collision_momentun + bias) / (linear_mass + angular_mass);
@@ -273,6 +271,7 @@ struct sPhysWorld {
                 speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(r2, impulse)));
             }
 
+            // Invert the impulse for the other body
             impulse = impulse.mult(-1.0f);
 
             if (!is_static[id_1]) {
@@ -280,8 +279,9 @@ struct sPhysWorld {
                 speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(r1, impulse)));
             }
 
-            // FRICTION ====
+            // FRICTION IMPULSES =====
 
+            // Calculate the tangent wrenches
             sVector3 tangents[2] = {};
             plane_space(manifold.normal, &tangents[0], &tangents[1]);
 
@@ -289,6 +289,7 @@ struct sPhysWorld {
                 sVector3 r1_cross_t = cross_prod(r1, tangents[tang]);
                 sVector3 r2_cross_t = cross_prod(r2, tangents[tang]);
 
+                // Calculate the momentun & impulse, but with the tangent wrench instead of the normal
                 collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), tangents[tang]) +
                                      dot_prod(r1_cross_t, speed_1->angular) -
                                      dot_prod(r2_cross_t, speed_2->angular);

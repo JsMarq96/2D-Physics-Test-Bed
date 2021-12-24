@@ -192,6 +192,18 @@ void draw_loop(GLFWwindow *window) {
 
   camera.position = {5.0f, 3.5f, 5.0f};
 
+  // Frame counter
+  int frames = 0;
+  double start_time, fps;
+  double delta_time = 0.01;
+  double accumulator = 0.0;
+
+
+  // Diagnostics
+  float physics_ticks_per_frame[6] = {0.0f, 0.0f, 0.0f, 0.0f,};
+
+  start_time = glfwGetTime();
+
   while(!glfwWindowShouldClose(window)) {
     // Draw loop
     int width, heigth;
@@ -230,14 +242,33 @@ void draw_loop(GLFWwindow *window) {
     double elapsed_time = curr_frame_time - prev_frame_time;
     prev_frame_time = curr_frame_time;
 
+    // Simulation Update ====
+
     ImGui::Begin("Physics");
+    ImGui::Text("FPS %f elapsed time %f", 1.0f / ( elapsed_time), elapsed_time);
 
-    phys_instance.step(elapsed_time);
+    int num_of_physics_steps = 0;
+    accumulator += elapsed_time;
+    while(accumulator >= delta_time) {
+      phys_instance.step(delta_time);
+      accumulator -= delta_time;
+      num_of_physics_steps++;
+    }
+    /* accumulator += elapsed_time;
+     * while(accumulator >= dt) {
+     *  step(step_size);
+     *  accumulator -= step_size;
+     * }
+     *  */
+    ImGui::End();
 
+    ImGui::Begin("Overall");
+    ImGui::Text("Num of steps: %d", num_of_physics_steps);
     ImGui::End();
 
     sMat44 models[4] = {};
 
+    // Rendering ====
     for(int i = 0; i < 3; i++) {
       transforms[i].get_model(&models[i]);
       //ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
@@ -259,8 +290,8 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-		glfwSwapBuffers(window);
-	}
+    glfwSwapBuffers(window);
+  }
 }
 
 int main() {
