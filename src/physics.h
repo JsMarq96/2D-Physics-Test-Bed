@@ -17,12 +17,11 @@ struct sSpeed {
 struct sPhysWorld {
     bool               enabled             [PHYS_INSTANCE_COUNT] = {};
     bool               is_static           [PHYS_INSTANCE_COUNT] = {};
-    eColiderTypes      collider            [PHYS_INSTANCE_COUNT] = {};
+    eColiderTypes      shape               [PHYS_INSTANCE_COUNT] = {};
 
     sTransform         *transforms                               = NULL;
     sSpeed             obj_speeds          [PHYS_INSTANCE_COUNT];
 
-    float              radius              [PHYS_INSTANCE_COUNT] = {};
     float              mass                [PHYS_INSTANCE_COUNT] = {};
     float              inv_mass            [PHYS_INSTANCE_COUNT] = {};
     float              restitution         [PHYS_INSTANCE_COUNT] = {};
@@ -31,6 +30,11 @@ struct sPhysWorld {
 
     sCollisionManifold _manifolds          [PHYS_INSTANCE_COUNT] = {};
     int                _manifold_count                           = 0;
+
+
+    inline float get_radius_of_collider(const int id) const {
+        return MAX(transforms[id].scale.x, MAX(transforms[id].scale.y, transforms[id].scale.z)) / 2.0f;
+    };
 
     void set_default_values() {
         // Set default values
@@ -54,11 +58,12 @@ struct sPhysWorld {
 
             inertia_tensor.set_identity();
 
-            //if (collider[i] == SPHERE_COLLIDER) {
-                inertia_tensor.mat_values[0][0] = 2.0f/5.0f * mass[i] * radius[i] * radius[i];
-                inertia_tensor.mat_values[1][1] = 2.0f/5.0f * mass[i] * radius[i] * radius[i];
-                inertia_tensor.mat_values[2][2] = 2.0f/5.0f * mass[i] * radius[i] * radius[i];
-            //}
+            if (shape[i] == SPHERE_COLLIDER) {
+                float radius = get_radius_of_collider(i);
+                inertia_tensor.mat_values[0][0] = 2.0f/5.0f * mass[i] * radius * radius;
+                inertia_tensor.mat_values[1][1] = 2.0f/5.0f * mass[i] * radius * radius;
+                inertia_tensor.mat_values[2][2] = 2.0f/5.0f * mass[i] * radius * radius;
+            }
 
             inertia_tensor.invert(&inv_inertia_tensors[i]);
         }
@@ -92,18 +97,63 @@ struct sPhysWorld {
                     continue;
                 }
 
-                // If there is a collision, store it in the manifold array
-                if (test_sphere_sphere_collision(transforms[i].position,
-                                                 radius[i],
-                                                 transforms[j].position,
-                                                 radius[j],
-                                                 &_manifolds[_manifold_count])) {
-                    _manifolds[_manifold_count].obj1 = i;
-                    _manifolds[_manifold_count].obj2 = j;
-                    _manifold_count++;
+                // Skip the test if its between two static bodies
+                if (is_static[i] && is_static[j]) {
+                    continue;
                 }
+
+                // If there is a collision, store it in the manifold array
+                // Test the different colliders
+                if (shape[i] == SPHERE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
+                    if (test_sphere_sphere_collision(transforms[i].position,
+                                                     get_radius_of_collider(i),
+                                                     transforms[j].position,
+                                                     get_radius_of_collider(j),
+                                                     &_manifolds[_manifold_count])) {
+                        _manifolds[_manifold_count].obj1 = i;
+                        _manifolds[_manifold_count].obj2 = j;
+                        _manifold_count++;
+                    }
+                } else if (shape[i] == PLANE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
+                    sVector3 origin = {0.0f, 0.0f, 0.0f};
+                    sVector3 normal = {0.0f, 1.0f, 0.0f};
+
+                    origin = transforms[i].apply(origin);
+                    normal = transforms[i].apply_rotation(normal);
+
+                    if (test_plane_sphere_collision(transforms[j].position,
+                                                    get_radius_of_collider(j),
+                                                    origin,
+                                                    normal,
+                                                    &_manifolds[_manifold_count])) {
+                        _manifolds[_manifold_count].obj1 = i;
+                        _manifolds[_manifold_count].obj2 = j;
+                        _manifold_count++;
+                    }
+                } else if (shape[i] == SPHERE_COLLIDER && shape[j] == PLANE_COLLIDER) {
+                    sVector3 origin = {0.0f, 0.0f, 0.0f};
+                    sVector3 normal = {0.0f, 1.0f, 0.0f};
+
+                    origin = transforms[j].apply(origin);
+                    normal = transforms[j].apply_rotation(normal);
+
+                    if (test_plane_sphere_collision(transforms[i].position,
+                                                    get_radius_of_collider(i),
+                                                    origin,
+                                                    normal,
+                                                    &_manifolds[_manifold_count])) {
+                        _manifolds[_manifold_count].obj1 = j;
+                        _manifolds[_manifold_count].obj2 = i;
+                        _manifold_count++;
+                    }
+
+                }
+
             }
         }
+
+        ImGui::Text("Collision num: %i", _manifold_count);
+
         // 4 - Collision Resolution
         for(int iter = 0; iter < PHYS_SOLVER_ITERATIONS; iter++) {
             for(int i = 0; i < _manifold_count; i++) {
@@ -123,7 +173,7 @@ struct sPhysWorld {
             sSpeed *speed = &obj_speeds[i];
 
             char instance_name []= "Obj 00";
-            instance_name[6] = i;
+            instance_name[5] = 48 + i;
 
             if(ImGui::TreeNode(instance_name)) {
                 ImGui::Text("Position: %f %f %f", transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
@@ -158,6 +208,10 @@ struct sPhysWorld {
             rotation = rotation.normalize();
 
             transf->set_rotation(rotation);
+
+            // Add some energy loss to the system
+            obj_speeds[i].linear = obj_speeds[i].linear.mult(0.999f);
+            obj_speeds[i].angular = obj_speeds[i].angular.mult(0.999f);
         }
     }
 
@@ -173,6 +227,7 @@ struct sPhysWorld {
         }
     }
 
+    // TODO: no anade velocidad angular
     void impulse_response(const sCollisionManifold &manifold, const float elapsed_time) {
         int id_1 = manifold.obj1;
         int id_2 = manifold.obj2;
@@ -185,9 +240,14 @@ struct sPhysWorld {
 
         // Calculate impulse response for each contact point
         for(int i = 0; i < manifold.contanct_points_count; i++) {
-             // Vector from the center to the collision point
-            sVector3 r1 = transf_1->position.subs(manifold.contact_points[i]);
-            sVector3 r2 = transf_2->position.subs(manifold.contact_points[i]);
+            // NORMAL IMPULSE ========
+            // Vector from the center to the collision point
+            //sVector3 r1 = transf_1->position.subs(manifold.contact_points[i]);
+            //sVector3 r2 = transf_2->position.subs(manifold.contact_points[i]);
+            sVector3 r1 = manifold.contact_points[i].subs(transf_1->position);
+            sVector3 r2 = manifold.contact_points[i].subs(transf_2->position);
+
+
 
             sVector3 r1_cross_n = cross_prod(r1, manifold.normal);
             sVector3 r2_cross_n = cross_prod(r2, manifold.normal);
@@ -197,10 +257,11 @@ struct sPhysWorld {
             contact_speed = contact_speed.subs(speed_2->linear.sum(cross_prod(speed_2->angular, r2)));
 
             // Contac's linear mass: 1.0f / mass1 + 1.0f / mass2
-            float linear_mass = ((is_static[id_1]) ? 0.0f : 1.0f / mass[id_1]) + ((is_static[id_2]) ? 0.0f : 1.0f / mass[id_2]);
+            float linear_mass = inv_mass[id_1] + inv_mass[id_2];
 
             // Contact's angular mass: dot(inv_in1 * r1_cross_n + inv_in2 * r2_cross_n, normal)
-            float angular_mass = dot_prod(inv_inertia_tensors[id_1].multiply(r1_cross_n).sum(inv_inertia_tensors[id_2].multiply(r2_cross_n)), manifold.normal);
+            float angular_mass = dot_prod(inv_inertia_tensors[id_1].multiply(r1_cross_n).sum(inv_inertia_tensors[id_2].multiply(r2_cross_n)),
+                                          manifold.normal);
 
             float proj_magnitude = dot_prod(contact_speed, manifold.normal);
 
@@ -210,12 +271,14 @@ struct sPhysWorld {
             // Calculate impulse
             float impulse_magnitude = proj_magnitude / (linear_mass + angular_mass);
 
+            std::cout << "Impl " << impulse_magnitude << std::endl;
+
             sVector3 impulse = manifold.normal.mult(-impulse_magnitude + bias);
 
             // Apply impulse
             if (!is_static[id_1]) {
                 speed_1->linear = speed_1->linear.sum(impulse.mult(inv_mass[id_1]));
-                speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(manifold.contact_points[i], impulse)));
+                speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(r1, impulse)));
             }
 
             // Invert the direction of the impulse, when apliying it to the other body
@@ -223,7 +286,49 @@ struct sPhysWorld {
 
             if (!is_static[id_2]) {
                 speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));
-                speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(manifold.contact_points[i], impulse)));
+                speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(r2, impulse)));
+            }
+
+            continue;
+
+            // FRICTION IMPULSE ========
+            sVector3 tangents[2] = {};
+            // ????
+            plane_space(manifold.normal, &tangents[0], &tangents[1]);
+
+            // Recalculate contact speed
+            contact_speed = (speed_1->linear.sum(cross_prod(speed_1->angular, r1)));
+            contact_speed = contact_speed.subs(speed_2->linear.sum(cross_prod(speed_2->angular, r2)));
+
+
+            for(int j = 0; j < 2; j++) {
+                // Calculate Tanget Momentum
+                sVector3 r1_cross_t = cross_prod(r1, tangents[j]);
+                sVector3 r2_cross_t = cross_prod(r2, tangents[j]);
+
+                angular_mass = dot_prod(inv_inertia_tensors[id_1].multiply(r1_cross_t).sum(inv_inertia_tensors[id_2].multiply(r2_cross_t)),
+                                        tangents[j]);
+
+                proj_magnitude = dot_prod(contact_speed, tangents[j]);
+
+                float tan_impulse_magnitude = proj_magnitude / (linear_mass + angular_mass);
+
+                sVector3 tang_impulse = tangents[j].mult(-tan_impulse_magnitude);
+
+                // Apply impulse
+                if (!is_static[id_1]) {
+                    speed_1->linear = speed_1->linear.sum(tang_impulse.mult(inv_mass[id_1]));
+                    speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(r2, tang_impulse)));
+                }
+
+                // Invert the direction of the impulse, when apliying it to the other body
+                tang_impulse = tang_impulse.mult(-1.0f);
+
+                if (!is_static[id_2]) {
+                    speed_2->linear = speed_2->linear.sum(tang_impulse.mult(inv_mass[id_2]));
+                    speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(r2, tang_impulse)));
+                }
+
             }
         }
     }

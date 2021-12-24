@@ -132,26 +132,49 @@ void draw_loop(GLFWwindow *window) {
     "GREN",
     "BLU"
   };
-  sRawGeometry cubes[4] = {};
-  sTransform   transforms[4] = {};
+  sRawGeometry cubes[6] = {};
+  sTransform   transforms[6] = {};
 
-  transforms[0].position = {0.0f, -1.0f, 0.0f};
-  transforms[0].scale = {1.0f, 1.0f, 1.0f};
+  sPhysWorld phys_instance;
+
+  phys_instance.set_default_values();
+
+  // Object 1: Static sphere
+  transforms[0].position = {0.0f, 1.0f, 0.0f};
+  transforms[0].scale = {2.0f, 2.0f, 2.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  phys_instance.mass[0] = 15.0f;
+  phys_instance.shape[0] = SPHERE_COLLIDER;
+  phys_instance.is_static[0] = true;
+  phys_instance.enabled[0] = true;
 
-  transforms[1].position = {0.02f, 4.0f, 0.0f};
+  // Object 2: Dynamic sphere
+  transforms[1].position = {0.07f, 4.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
   transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
-  //transforms[1].rotation.set_identity();
+  phys_instance.mass[1] = 15.0f;
+  phys_instance.shape[1] = SPHERE_COLLIDER;
+  phys_instance.enabled[1] = true;
 
-  transforms[2].position = {0.7f, 6.5f, 0.0f};
+  // Object 3: static plane
+  /*transforms[2].position = {0.0f, -3.0f, 0.0f};
   transforms[2].scale = {1.0f, 1.0f, 1.0f};
   transforms[2].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
-  //transforms[2].rotation.set_identity();
+  phys_instance.shape[2] = PLANE_COLLIDER;
+  phys_instance.is_static[2] = true;
+  phys_instance.enabled[2] = true;*/
 
-  transforms[3].position = {1.5f, 4.0f, 3.5f};
-  transforms[3].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
-  //transforms[3].rotation.set_identity();
+  // Object 4: Static sphere 2
+  transforms[2].position = {1.9f, 0.1f, 0.1f};
+  transforms[2].scale = {2.0f, 2.0f, 2.0f};
+  transforms[2].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  phys_instance.mass[2] = 15.0f;
+  phys_instance.shape[2] = SPHERE_COLLIDER;
+  phys_instance.is_static[2] = true;
+  phys_instance.enabled[2] = true;
+
+
+  phys_instance.init(transforms);
 
   sVector4 colors[4] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -160,36 +183,6 @@ void draw_loop(GLFWwindow *window) {
   colors[3] = {0.0f, 0.0f, 1.0f, 1.0f};
 
   sCubeRenderer renderer;
-  sPhysWorld phys_instance;
-
-  phys_instance.set_default_values();
-
-  phys_instance.transforms = &transforms[0];
-
-  phys_instance.mass[0] = 0.0f;
-  phys_instance.mass[1] = 15.0f;
-  //phys_instance.mass[2] = 11.0f;
-  //phys_instance.mass[3] = 9.0f;
-
-  phys_instance.restitution[0] = 0.2f;
-  phys_instance.restitution[1] = 0.2f;
-
-  phys_instance.radius[0] = 0.50f;
-  phys_instance.radius[1] = 0.50f;
-  //phys_instance.restitution[2] = 0.2f;
-  //phys_instance.restitution[3] = 0.2f;
-
-  /*phys_instance.friction[0] = 0.8f;
-  phys_instance.friction[1] = 0.5f;
-  phys_instance.friction[2] = 0.5f;
-  phys_instance.friction[3] = 0.7f;*/
-
-  phys_instance.is_static[0] = true;
-
-  phys_instance.enabled[0] = true;
-  phys_instance.enabled[1] = true;
-
-  phys_instance.init(transforms);
 
   cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
@@ -244,12 +237,12 @@ void draw_loop(GLFWwindow *window) {
 
     sMat44 models[4] = {};
 
-    for(int i = 0; i < 2; i++) {
+    for(int i = 0; i < 3; i++) {
       transforms[i].get_model(&models[i]);
       //ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
     }
 
-    cube_renderer_render(&renderer, models, colors, 2, &proj_mat);
+    cube_renderer_render(&renderer, models, colors, 3, &proj_mat);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

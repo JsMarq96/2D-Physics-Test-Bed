@@ -89,29 +89,29 @@ inline sVector3 cross_prod(const sVector3 &v1, const sVector3 &v2) {
 
 // ?? For generting tangent vectors
 inline void plane_space(const sVector3  &normal,
-                              sVector3  &p,
-                              sVector3  &q) {
+                              sVector3  *p,
+                              sVector3  *q) {
   if (fabs(normal.y) > SQRT12) {
     // Choose p in y-z plane
     float a = normal.y * normal.y + normal.z * normal.z;
     float k = 1.0f / sqrt(a);
-    p.x = 0.0f;
-    p.y = -normal.z * k;
-    p.z = normal.y * k;
+    p->x = 0.0f;
+    p->y = -normal.z * k;
+    p->z = normal.y * k;
     // q = n x p
-    q.x = a * k;
-    q.y = -normal.x * p.z;
-    q.z = normal.x * normal.y;
+    q->x = a * k;
+    q->y = -normal.x * p->z;
+    q->z = normal.x * normal.y;
    } else {
     float a = normal.x * normal.x + normal.y * normal.y;
     float k = 1.0f / sqrt(a);
-    p.x = -normal.y * k;
-    p.y = normal.x * k;
-    p.z = 0.0f;
+    p->x = -normal.y * k;
+    p->y = normal.x * k;
+    p->z = 0.0f;
     // q = n x p
-    q.x = -normal.y * p.y;
-    q.y = normal.y * p.x;
-    q.z = a * k;
+    q->x = -normal.y * p->y;
+    q->y = normal.y * p->x;
+    q->z = a * k;
   }
 
 }
