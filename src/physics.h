@@ -128,8 +128,8 @@ struct sPhysWorld {
                                                     origin,
                                                     normal,
                                                     &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = i;
-                        _manifolds[_manifold_count].obj2 = j;
+                        _manifolds[_manifold_count].obj1 = j;
+                        _manifolds[_manifold_count].obj2 = i;
                         _manifold_count++;
                     }
                 } else if (shape[i] == SPHERE_COLLIDER && shape[j] == PLANE_COLLIDER) {
@@ -144,8 +144,8 @@ struct sPhysWorld {
                                                     origin,
                                                     normal,
                                                     &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = j;
-                        _manifolds[_manifold_count].obj2 = i;
+                        _manifolds[_manifold_count].obj1 = i;
+                        _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
                     }
 
@@ -153,8 +153,6 @@ struct sPhysWorld {
 
             }
         }
-
-        ImGui::Text("Collision num: %i", _manifold_count);
 
         // 4 - Collision Resolution
         for(int iter = 0; iter < PHYS_SOLVER_ITERATIONS; iter++) {
@@ -167,12 +165,17 @@ struct sPhysWorld {
         // 5 - Integrate solutions
         integrate(elapsed_time);
 
+        curr_frame_col_count = _manifold_count;
+        _manifold_count = 0;
+    }
+
+    void debug_speeds() const {
         // Debug speeds
         for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
             if (!enabled[i]) {
                 continue;
             }
-            sSpeed *speed = &obj_speeds[i];
+            const sSpeed *speed = &obj_speeds[i];
 
             char instance_name []= "Obj 00";
             instance_name[5] = 48 + i;
@@ -185,9 +188,7 @@ struct sPhysWorld {
             }
 
         }
-
-        curr_frame_col_count = _manifold_count;
-        _manifold_count = 0;
+        ImGui::Text("Collision num: %i", _manifold_count);
     }
 
     // Apply the speeds to the position
@@ -262,7 +263,10 @@ struct sPhysWorld {
             // Baumgarte correction for the impulse
             float bias = -BAUMGARTE_TERM / elapsed_time * MIN(0.0f, manifold.contact_depth[i] + PENETRATION_SLOP);
 
-            float impulse_magnitude = (collision_momentun + bias) / (linear_mass + angular_mass);
+            // Restitution constant
+            float e = MIN(restitution[id_1], restitution[id_2]);
+
+            float impulse_magnitude = (1 + e) * (collision_momentun + bias) / (linear_mass + angular_mass);
 
             sVector3 impulse = manifold.normal.mult(impulse_magnitude);
 

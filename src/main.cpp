@@ -109,19 +109,25 @@ sVector3 rotate_arround(const sVector3 pos,
 
 #include "kv_storage.h"
 void test_draw_loop(GLFWwindow *window) {
-  glfwMakeContextCurrent(window);
+  //glfwMakeContextCurrent(window);
 
   sKVStorage stor;
 
   KVS_init(&stor);
 
-  KVS_add(&stor, "abc", 4, 20);
-  //KVS_add(&stor, "ebac", 4, 50);
-  KVS_add(&stor, "ebc", 4, 22);
+  KVS_add(&stor, "abc", 3, 20);
+  KVS_add(&stor, "ebac", 4, 50);
+  std::cout << "============" << std::endl;
+  KVS_add(&stor, "eb", 2, 22);
+  std::cout << "============" << std::endl;
+  KVS_add(&stor, "ebec", 4, 62);
+  KVS_add(&stor, "ebecabesa", 9, 63);
 
-  std::cout << KVS_get_int(&stor, "ebac", 5) << std::endl;
-  std::cout << KVS_get_int(&stor, "abc", 4) << std::endl;
-  std::cout << KVS_get_int(&stor, "ebc", 4) << std::endl;
+
+  std::cout << "ebac :" << KVS_get_int(&stor, "ebac", 4) << std::endl;
+  std::cout <<"abc :" <<  KVS_get_int(&stor, "abc", 3) << std::endl;
+  std::cout <<  "eb :" <<KVS_get_int(&stor, "eb", 2) << std::endl;
+  std::cout <<  "ebec :" <<KVS_get_int(&stor, "ebec", 4) << std::endl;
    return;
 }
 
@@ -145,6 +151,7 @@ void draw_loop(GLFWwindow *window) {
   transforms[0].scale = {2.0f, 2.0f, 2.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.mass[0] = 0.0f;
+  phys_instance.restitution[0] = 0.25f;
   phys_instance.shape[0] = SPHERE_COLLIDER;
   phys_instance.is_static[0] = true;
   phys_instance.enabled[0] = true;
@@ -153,22 +160,25 @@ void draw_loop(GLFWwindow *window) {
   transforms[1].position = {0.07f, 4.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
   transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  phys_instance.restitution[1] = 0.6f;
   phys_instance.mass[1] = 15.0f;
   phys_instance.shape[1] = SPHERE_COLLIDER;
   phys_instance.enabled[1] = true;
 
   // Object 3: static plane
-  /*transforms[2].position = {0.0f, -3.0f, 0.0f};
-  transforms[2].scale = {1.0f, 1.0f, 1.0f};
-  transforms[2].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
-  phys_instance.shape[2] = PLANE_COLLIDER;
-  phys_instance.is_static[2] = true;
-  phys_instance.enabled[2] = true;*/
+  transforms[3].position = {0.0f, -3.0f, 0.0f};
+  transforms[3].scale = {1.0f, 1.0f, 1.0f};
+  transforms[3].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
+  phys_instance.restitution[3] = 0.15f;
+  phys_instance.shape[3] = PLANE_COLLIDER;
+  phys_instance.is_static[3] = true;
+  phys_instance.enabled[3] = true;
 
   // Object 4: Static sphere 2
   transforms[2].position = {1.9f, 0.1f, 0.1f};
   transforms[2].scale = {2.0f, 2.0f, 2.0f};
   transforms[2].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  phys_instance.restitution[2] = 0.1f;
   phys_instance.mass[2] = 0.0f;
   phys_instance.shape[2] = SPHERE_COLLIDER;
   phys_instance.is_static[2] = true;
@@ -254,12 +264,8 @@ void draw_loop(GLFWwindow *window) {
       accumulator -= delta_time;
       num_of_physics_steps++;
     }
-    /* accumulator += elapsed_time;
-     * while(accumulator >= dt) {
-     *  step(step_size);
-     *  accumulator -= step_size;
-     * }
-     *  */
+
+    phys_instance.debug_speeds();
     ImGui::End();
 
     ImGui::Begin("Overall");
@@ -295,6 +301,8 @@ void draw_loop(GLFWwindow *window) {
 }
 
 int main() {
+  test_draw_loop(NULL);
+  return 0;
 	if (!glfwInit()) {
 		return EXIT_FAILURE;
 	}
