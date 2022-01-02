@@ -16,10 +16,15 @@
 // TODO: Cleanup and dealloc
 // */
 
-inline int string_similarity(char* str1,
-                             unsigned int str1_len,
-                             char* str2,
-                             unsigned int str2_len) {
+
+// =================
+//  UTILITIES
+// =================
+
+inline int string_similarity(const char* str1,
+                             const unsigned int str1_len,
+                             const char* str2,
+                             const unsigned int str2_len) {
     int count = 0;
     unsigned int min_len = MIN(str1_len, str2_len);
     for(; min_len > count ; str1++, str2++) {
@@ -32,7 +37,7 @@ inline int string_similarity(char* str1,
     return count;
 }
 
-
+// Union that stores the info of the nodes
 union uKVStorage {
     char str[30];
     int integer;
@@ -50,14 +55,13 @@ struct sRadNode {
 };
 
 inline void RN_init(sRadNode *node) {
-    memset(node->is_full, false, 256);
+    memset(node->is_full, false, sizeof(sRadNode::is_full));
     node->key_len        = 0;
     node->has_result     = false;
 }
 
 inline void RN_clean(sRadNode *node) {
-    free(node->key);
-    for(int i = 0; i < 256; i++) {
+    for(int i = 0; i < 256; i++){
         if (node->is_full[i]) {
             RN_clean(node->children[i]);
             free(node->children[i]);
@@ -68,8 +72,6 @@ inline void RN_clean(sRadNode *node) {
 inline bool RadNode_is_leaf(sRadNode *node) {
     return node->has_result;
 }
-
-#include <iostream>
 
 inline bool Rad_Node_get(sRadNode *node,
                         const char *key,
@@ -115,8 +117,10 @@ inline bool Rad_Node_get(sRadNode *node,
 inline void Rad_Node_add(sRadNode *node,
                          const char *key,
                          const int key_len,
-                         uKVStorage *to_store) {
+                         const uKVStorage *to_store) {
     sRadNode *new_node = (sRadNode*) malloc(sizeof(sRadNode));
+    //RN_init(new_node);
+    memset(new_node->is_full, false, sizeof(sRadNode::is_full));
     memcpy(&new_node->result, to_store, sizeof(uKVStorage));
     new_node->has_result = true;
 
@@ -165,6 +169,7 @@ inline void Rad_Node_add(sRadNode *node,
         if (similarity == it_key_len && it_node->key_len == similarity) {
             memcpy(&it_node->result, to_store, sizeof(uKVStorage));
             it_node->has_result = true;
+            free(new_node);
             return;
         }
 
@@ -189,79 +194,75 @@ inline void Rad_Node_add(sRadNode *node,
 
 struct sKVStorage {
     sRadNode  *root_node;
-};
 
-inline void KVS_init(sKVStorage *storage) {
-    storage->root_node = (sRadNode*) malloc(sizeof(sRadNode));
-    RN_init(storage->root_node);
-}
+    inline void init() {
+        root_node = (sRadNode*) malloc(sizeof(sRadNode));
+        RN_init(root_node);
+    }
 
-inline void KVS_clean(sKVStorage *storage) {
-    RN_clean(storage->root_node);
-}
+    inline void clean() {
+        RN_clean(root_node);
+        free(root_node);
+    }
 
-inline void KVS_discard(sKVStorage *storage) {
-
-}
-
-inline void KVS_add(sKVStorage *kv_storage, const char *key,
+    inline void add(const char *key,
                     const int key_len,
                     const int to_store) {
 
-    uKVStorage result{};
-    result.integer = to_store;
-    Rad_Node_add(kv_storage->root_node,
-                 key,
-                 key_len,
-                 &result);
-}
+        uKVStorage result{};
+        result.integer = to_store;
+        Rad_Node_add(root_node,
+                     key,
+                     key_len,
+                     &result);
+    }
 
-inline void KVS_add(sKVStorage *kv_storage, const char *key,
+    inline void add(const char *key,
                     const int key_len,
                     const float to_store) {
-    uKVStorage result{};
-    result.floating_point = to_store;
-    Rad_Node_add(kv_storage->root_node,
-                 key,
-                 key_len,
-                 &result);
-}
+        uKVStorage result{};
+        result.floating_point = to_store;
+        Rad_Node_add(root_node,
+                     key,
+                     key_len,
+                     &result);
+    }
 
-inline void KVS_add(sKVStorage *kv_storage, const char *key,
+    inline void add(const char *key,
                     const int key_len,
                     const char to_store[30]) {
-    uKVStorage result{};
-    // This is kinda yuck yuck, but since both of them are only allowed to go out of 30 chars...
-    // should be fine right..? (no, but will fix it later)
-    strcpy(&result.str[0], &to_store[0]);
-    Rad_Node_add(kv_storage->root_node,
-                 key,
-                 key_len,
-                 &result);
-}
+        uKVStorage result{};
+        // This is kinda yuck yuck, but since both of them are only allowed to go out of 30 chars...
+        // should be fine right..? (no, but will fix it later)
+        strcpy(&result.str[0], &to_store[0]);
+        Rad_Node_add(root_node,
+                     key,
+                     key_len,
+                     &result);
+    }
 
-inline int KVS_get_int(sKVStorage *kv_storage,
-                   const char* key,
-                   const int key_len) {
-    uKVStorage result;
-    bool success = Rad_Node_get(kv_storage->root_node,
-                                key,
-                                key_len,
-                                &result);
+    inline int get_int(const char* key,
+                       const int key_len) {
+        uKVStorage result;
+        bool success = Rad_Node_get(root_node,
+                                    key,
+                                    key_len,
+                                    &result);
 
-    return (success) ? result.integer : -1;
-}
+        return (success) ? result.integer : -1;
+    }
 
-inline float KVS_get_float(sKVStorage *kv_storage,
-                     const char* key,
-                     const int key_len) {
-    uKVStorage result;
-    bool success = Rad_Node_get(kv_storage->root_node,
-                                key,
-                                key_len,
-                                &result);
+    inline float get_float(const char* key,
+                           const int key_len) {
+        uKVStorage result;
+        bool success = Rad_Node_get(root_node,
+                                    key,
+                                    key_len,
+                                    &result);
 
-    return (success) ? result.floating_point : -1;
-}
+        return (success) ? result.floating_point : -1;
+    }
+
+};
 
 #endif // KV_STORAGE_H_

@@ -22,6 +22,27 @@ struct sHalfEdge {
     uint16_t  face = 0;
 };
 
+inline void get_key_of_vertex(const uint16_t v1,
+                              const uint16_t v2,
+                              char result[5]) {
+    // Using an union to map the vertex ids to a string
+    union{ struct{ uint16_t x; uint16_t y;};
+           char tmp[5];
+    } key;
+
+    // The highst is is always the x value
+    if (v1 > v2) {
+        key.x = v1;
+        key.y = v2;
+    } else {
+        key.x = v2;
+        key.y = v1;
+    }
+
+    // Return the result
+    memcpy(result, key.tmp, sizeof(char[5]));
+}
+
 struct sRawVertex {
     union {
         sVector3 vertex = {0.0f, 0.0f, 0.0f};

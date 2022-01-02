@@ -111,30 +111,10 @@ sVector3 rotate_arround(const sVector3 pos,
 void test_draw_loop(GLFWwindow *window) {
   //glfwMakeContextCurrent(window);
 
-  sKVStorage stor;
+   sHalfEdgeMesh cube;
 
-  KVS_init(&stor);
-
-  KVS_add(&stor, "abc", 3, 20);
-  KVS_add(&stor, "ebac", 4, 50);
-  std::cout << "============" << std::endl;
-  KVS_add(&stor, "eb", 2, 22);
-  std::cout << "============b" << std::endl;
-  KVS_add(&stor, "eb", 2, 32);
-  std::cout << "============e" << std::endl;
-  KVS_add(&stor, "ebecabesa", 9, 63);
-   std::cout << "============" << std::endl;
-  KVS_add(&stor, "ebec", 4, 62);
-
-
-  std::cout << "ebac :" << KVS_get_int(&stor, "ebac", 4) << std::endl;
-  std::cout <<" abc :" <<  KVS_get_int(&stor, "abc", 3) << std::endl;
-  std::cout <<  "eb :" <<KVS_get_int(&stor, "eb", 2) << std::endl;
-  std::cout << "============e" << std::endl;
-
-  std::cout <<  "ebec :" <<KVS_get_int(&stor, "ebec", 4) << std::endl;
-std::cout << "============e" << std::endl;
-  std::cout <<  "ebecacebsa: " <<KVS_get_int(&stor, "ebecabesa", 9) << std::endl;
+  cube.load_OBJ_mesh("resources/cube.obj");
+  cube.clean();
   return;
 }
 
