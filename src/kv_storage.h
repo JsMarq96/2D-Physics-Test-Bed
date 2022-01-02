@@ -69,6 +69,8 @@ inline bool RadNode_is_leaf(sRadNode *node) {
     return node->has_result;
 }
 
+#include <iostream>
+
 inline bool Rad_Node_get(sRadNode *node,
                         const char *key,
                         const int key_len,
@@ -87,8 +89,8 @@ inline bool Rad_Node_get(sRadNode *node,
     int res_key_len = key_len;
     while(true) {
         int similarity = string_similarity(it_node->key, it_node->key_len, res_key, res_key_len);
-        //std::cout << it_node->key << " "<<similarity<<"  " << res_key << std::endl;        // Found the node with the equal key
-        if (similarity == res_key_len) {
+        // Found the node, exiting the loop
+        if (similarity == res_key_len && similarity == it_node->key_len) {
             break;
         }
 
@@ -102,7 +104,9 @@ inline bool Rad_Node_get(sRadNode *node,
 
         it_node = it_node->children[*res_key];
     }
-
+    if (!it_node->has_result) {
+        return false;
+    }
     memcpy(to_retrieve, &it_node->result, sizeof(uKVStorage));
     return true;
 }
@@ -112,18 +116,13 @@ inline void Rad_Node_add(sRadNode *node,
                          const char *key,
                          const int key_len,
                          uKVStorage *to_store) {
-    // Comparar con el nodo actual
-    // Si no esta vacio
-    // Si la longitud es menos que el nodo -> Division
-    // Si no esta vacio, iterar a nuevo nodo actual
-    // Create the new node to insert
     sRadNode *new_node = (sRadNode*) malloc(sizeof(sRadNode));
     memcpy(&new_node->result, to_store, sizeof(uKVStorage));
     new_node->has_result = true;
 
     int node_key = key[0];
     if (!node->is_full[node_key]) {
-        // Insertar nodo
+        // Early out
         new_node->key_len = key_len;
         memcpy(new_node->key, key, key_len);
         node->is_full[node_key] = true;
@@ -133,58 +132,58 @@ inline void Rad_Node_add(sRadNode *node,
 
     sRadNode* it_node = node->children[node_key];
     char it_key[32] = "";
+    char crop_it_key[32] = "";
     memcpy(it_key, key, key_len * sizeof(char));
     int it_key_len = key_len;
 
-    while(it_node != NULL) {
-        int it_node_key =  it_key[0];
-
+    while(true) {
         unsigned int similarity = string_similarity(it_node->key,
                                                     it_node->key_len,
                                                     it_key,
                                                     it_key_len);
-        if (similarity < it_key_len ) {
-            // If the child is empty, insert
-            if (!it_node->is_full[it_key[similarity]]) {
-                new_node->key_len = it_key_len - similarity;
-                memcpy(new_node->key, it_key + similarity, new_node->key_len);
-                it_node->is_full[it_key[similarity]] = true;
-                it_node->children[it_key[similarity]] = new_node;
-                std::cout << similarity << " "<< it_node->key[similarity] <<" add-2" << std::endl;
-                std::cout << it_key[similarity] << std::endl;
-                return;
-            } else {
-                // If not, go to the next node
-                it_node = it_node->children[it_node_key];
-                it_key_len -= similarity;
-                memcpy(it_key, it_key + similarity, it_key_len);
-            }
-        } else {
-            if (similarity < it_node->key_len) {
-                // Slipt the old root node
-                sRadNode *old_root = (sRadNode*) malloc(sizeof(sRadNode));
-                memcpy(old_root, it_node, sizeof(sRadNode));
-                old_root->key_len -= similarity;
-                memcpy(old_root->key, old_root->key + similarity, old_root->key_len);
 
-                memset(it_node, '\0', sizeof(sRadNode));
-                it_node->key_len = similarity;
-                memcpy(it_node->key, it_key, similarity);
-                it_node->is_full[old_root->key[0]] = true;
-                it_node->children[old_root->key[0]] = old_root;
+        int crop_it_key_index =  it_key[similarity];
 
-                if (it_node->key_len == it_key_len) {
-                    it_node->has_result = true;
-                    memcpy(&it_node->result, to_store, sizeof(uKVStorage));
-                    free(new_node);
-                    return;
-                }
+        // Split the node by the similarity, generating a new child, with the old values
+        if (similarity < it_node->key_len) {
+            sRadNode *old_root = (sRadNode*) malloc(sizeof(sRadNode));
+            memcpy(old_root, it_node, sizeof(sRadNode));
+            old_root->key_len -= similarity;
+            memcpy(old_root->key, it_node->key + similarity, old_root->key_len * sizeof(char));
 
-                // Modify iterating key
-                it_key_len -= similarity;
-                memcpy(it_key, it_key + similarity, it_key_len);
-            }
+            memset(it_node->is_full, false, sizeof(sRadNode::is_full));
+            it_node->key_len = similarity;
+            //memcpy(it_node->key, it_node->key, it_node->key_len);
+            it_node->has_result = false;
+            it_node->is_full[old_root->key[0]] = true;
+            it_node->children[old_root->key[0]] = old_root;
         }
+
+
+        // If the current node is equal to the key, then store
+        // the result in the current node
+        if (similarity == it_key_len && it_node->key_len == similarity) {
+            memcpy(&it_node->result, to_store, sizeof(uKVStorage));
+            it_node->has_result = true;
+            return;
+        }
+
+        // update the iterating key
+        it_key_len -= similarity;
+        memcpy(it_key, it_key + similarity, it_key_len);
+
+        // If the next node is empty, insert
+        if (!it_node->is_full[crop_it_key_index]) {
+            // Add new node
+            new_node->key_len = it_key_len;
+            memcpy(new_node->key, it_key, it_key_len * sizeof(char));
+            it_node->is_full[crop_it_key_index] = true;
+            it_node->children[crop_it_key_index] = new_node;
+            return;
+        }
+
+        // If its not empy, go to the next node
+        it_node = it_node->children[crop_it_key_index];
     }
 }
 

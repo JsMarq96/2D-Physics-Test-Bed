@@ -119,16 +119,23 @@ void test_draw_loop(GLFWwindow *window) {
   KVS_add(&stor, "ebac", 4, 50);
   std::cout << "============" << std::endl;
   KVS_add(&stor, "eb", 2, 22);
-  std::cout << "============" << std::endl;
-  KVS_add(&stor, "ebec", 4, 62);
+  std::cout << "============b" << std::endl;
+  KVS_add(&stor, "eb", 2, 32);
+  std::cout << "============e" << std::endl;
   KVS_add(&stor, "ebecabesa", 9, 63);
+   std::cout << "============" << std::endl;
+  KVS_add(&stor, "ebec", 4, 62);
 
 
   std::cout << "ebac :" << KVS_get_int(&stor, "ebac", 4) << std::endl;
-  std::cout <<"abc :" <<  KVS_get_int(&stor, "abc", 3) << std::endl;
+  std::cout <<" abc :" <<  KVS_get_int(&stor, "abc", 3) << std::endl;
   std::cout <<  "eb :" <<KVS_get_int(&stor, "eb", 2) << std::endl;
+  std::cout << "============e" << std::endl;
+
   std::cout <<  "ebec :" <<KVS_get_int(&stor, "ebec", 4) << std::endl;
-   return;
+std::cout << "============e" << std::endl;
+  std::cout <<  "ebecacebsa: " <<KVS_get_int(&stor, "ebecabesa", 9) << std::endl;
+  return;
 }
 
 void draw_loop(GLFWwindow *window) {
@@ -141,6 +148,11 @@ void draw_loop(GLFWwindow *window) {
   };
   sRawGeometry cubes[6] = {};
   sTransform   transforms[6] = {};
+
+
+  sHalfEdgeMesh cube;
+
+  cube.load_OBJ_mesh("resources/cube.obj");
 
   sPhysWorld phys_instance;
 
