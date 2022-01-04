@@ -33,16 +33,17 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             normal_total_count++;
         }
     }
+    //free(line_buffer);
 
     // 3 edges per face, and 3 half edges per face
     half_edge_count = face_count * 3;
 
     // 3 floats per edge
-    indexing_count = vertex_count * 3;
+    //indexing_count = face_count * 3;
 
     // Allocate memmory
-    vertices_index = (uint16_t*) malloc(indexing_count * sizeof(uint16_t));
-    vertices = (sRawVertex*) malloc(vertex_count * sizeof(sRawVertex));
+    vertices_index = (uint16_t*) malloc(face_count * 3 * sizeof(uint16_t));
+    vertices = (sRawVertex*) malloc(face_count * 3 * sizeof(sRawVertex));
     half_edges = (sHalfEdge*) malloc(half_edge_count * sizeof(sHalfEdge));
     face_normals = (sVector3*) malloc(face_count * sizeof(sVector3));
 
@@ -68,7 +69,11 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
     sKVStorage half_edge_map;
     half_edge_map.init();
 
+    sKVStorage vertex_map;
+    vertex_map.init();
+
     char tmp[5];
+    char tmp_edge_id[12];
 
     while((read_chars = getline(&line_buffer, &len, mesh_file)) != -1) {
         if (line_buffer[0] == 'v' && line_buffer[1] == ' ') {
@@ -115,6 +120,42 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             normal2 -=1;
             normal3 -=1;
 
+            // Vertex 1
+            get_key_of_vertex(index1, normal1, uv1, tmp_edge_id);
+            int vertex_id = vertex_map.get_int(tmp_edge_id, 12);
+            if (vertex_id == -1) {
+                vertices[index1].normal = temp_normals[normal1];
+                vertices[index1].u = tmp_uvs[uv1].u;
+                vertices[index1].v = tmp_uvs[uv1].v;
+                vertex_id = index1;
+                vertex_map.add(tmp_edge_id, 12, index1);
+            }
+            vertices_index[indexing_count++] = vertex_id;
+
+            // Vertex 2
+            get_key_of_vertex(index2, normal2, uv2, tmp_edge_id);
+            vertex_id = vertex_map.get_int(tmp_edge_id, 12);
+            if (vertex_id == -1) {
+                vertices[index2].normal = temp_normals[normal2];
+                vertices[index2].u = tmp_uvs[uv2].u;
+                vertices[index2].v = tmp_uvs[uv2].v;
+                vertex_id = index2;
+                vertex_map.add(tmp_edge_id, 12, index2);
+            }
+            vertices_index[indexing_count++] = vertex_id;
+
+            // Vertex 3
+            get_key_of_vertex(index3, normal3, uv3, tmp_edge_id);
+            vertex_id = vertex_map.get_int(tmp_edge_id, 12);
+            if (vertex_id == -1) {
+                vertices[index3].normal = temp_normals[normal3];
+                vertices[index3].u = tmp_uvs[uv3].u;
+                vertices[index3].v = tmp_uvs[uv3].v;
+                vertex_id = index3;
+                vertex_map.add(tmp_edge_id, 12, index3);
+            }
+            vertices_index[indexing_count++] = vertex_id;
+
             // Compute the face normal
             face_normals[face_index].x = (temp_normals[normal1].x + temp_normals[normal2].x + temp_normals[normal3].x) / 3.0f;
             face_normals[face_index].y = (temp_normals[normal1].y + temp_normals[normal2].y + temp_normals[normal3].y) / 3.0f;
@@ -126,7 +167,7 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             half_edges[half_edge_index].next = half_edge_index+1;
             half_edges[half_edge_index].face = face_count;
 
-            get_key_of_vertex(index1, index2, tmp);
+            get_key_of_edge(index1, index2, tmp);
             int edge_id = half_edge_map.get_int(tmp, 5);
             // If tehre is no record, create one
             // if there is, the link both edges
@@ -144,7 +185,7 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             half_edges[half_edge_index].next = half_edge_index+1;
             half_edges[half_edge_index].face = face_count;
 
-            get_key_of_vertex(index2, index3, tmp);
+            get_key_of_edge(index2, index3, tmp);
             edge_id = half_edge_map.get_int(tmp, 5);
             // If tehre is no record, create one
             // if there is, the link both edges
@@ -162,7 +203,7 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             half_edges[half_edge_index].next = half_edge_index-2;
             half_edges[half_edge_index].face = face_count;
 
-            get_key_of_vertex(index3, index1, tmp);
+            get_key_of_edge(index3, index1, tmp);
             edge_id = half_edge_map.get_int(tmp, 5);
             // If tehre is no record, create one
             // if there is, the link both edges
@@ -174,22 +215,17 @@ void sHalfEdgeMesh::load_OBJ_mesh(const char *mesh_dir) {
             }
 
             half_edge_index++;
-
-
-
-            // If there is an already stored vertex, create teh association
-            // Edge 1 Half Edge
-            
-            
             face_count++;
         }
     }
 
+    free(line_buffer);
     free(tmp_uvs);
     free(temp_normals);
 
     fclose(mesh_file);
     half_edge_map.clean();
+    vertex_map.clean();
     // TODO: cleanup for the KVs
 }
 

@@ -22,10 +22,10 @@ struct sHalfEdge {
     uint16_t  face = 0;
 };
 
-inline void get_key_of_vertex(const uint16_t v1,
-                              const uint16_t v2,
-                              char result[5]) {
-    // Using an union to map the vertex ids to a string
+inline void get_key_of_edge(const uint16_t v1,
+                            const uint16_t v2,
+                                  char result[5]) {
+    // Using an union to map the edge ids to a string
     union{ struct{ uint16_t x; uint16_t y;};
            char tmp[5];
     } key;
@@ -43,6 +43,18 @@ inline void get_key_of_vertex(const uint16_t v1,
     memcpy(result, key.tmp, sizeof(char[5]));
 }
 
+inline void get_key_of_vertex(const uint16_t vertex,
+                              const uint16_t normal,
+                              const uint16_t uv,
+                                    char result[12]) {
+    // Union to get a key of the vertex
+    union {struct {uint16_t v;  uint16_t n; uint16_t _uv;};
+           char key[12];
+    } union_key{vertex, normal, uv};
+
+    memcpy(result, union_key.key, sizeof(char[12]));
+}
+
 struct sRawVertex {
     union {
         sVector3 vertex = {0.0f, 0.0f, 0.0f};
@@ -55,7 +67,7 @@ struct sRawVertex {
     float u = 0.0f;
     float v = 0.0f;
 
-    // TODO: per vertex normal..?
+    sVector3 normal = {0.0f, 0.0f, 0.0f};
 };
 
 struct sHalfEdgeMesh {

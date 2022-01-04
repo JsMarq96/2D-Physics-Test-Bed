@@ -5,9 +5,11 @@
 
 #include "geometry/half_edge.h"
 #include "glcorearb.h"
+#include "math/vector.h"
 #include "shader.h"
 #include "input_layer.h"
 #include "render_cubes.h"
+#include "mesh_renderer.h"
 #include "camera.h"
 #include "types.h"
 
@@ -109,14 +111,80 @@ sVector3 rotate_arround(const sVector3 pos,
 
 #include "kv_storage.h"
 void test_draw_loop(GLFWwindow *window) {
-  //glfwMakeContextCurrent(window);
+  glfwMakeContextCurrent(window);
 
    sHalfEdgeMesh cube;
 
   cube.load_OBJ_mesh("resources/cube.obj");
-  cube.clean();
-  return;
+
+  std::cout << cube.indexing_count << std::endl;
+  for(int i = 0; i < cube.indexing_count; i++) {
+    int p = cube.vertices_index[i];
+    std::cout << cube.vertices[p].x << std::endl;
+  }
+
+  sCamera camera = {};
+  float camera_rot = 0.0f;
+
+  camera.position = {5.0f, 3.5f, 5.0f};
+
+  sMeshRenderer renderer= {};
+
+  renderer.create_from_half_edge(&cube);
+
+  sMat44 model = {};
+
+  sMat44 viewproj = {};
+
+  model.set_identity();
+
+   while(!glfwWindowShouldClose(window)) {
+    // Draw loop
+    int width, heigth;
+    double temp_mouse_x, temp_mouse_y;
+
+    glfwPollEvents();
+    glfwGetFramebufferSize(window, &width, &heigth);
+    // Set to OpenGL viewport size anc coordinates
+    glViewport(0,0, width, heigth);
+
+    sMat44 proj_mat = {};
+
+    // OpenGL stuff
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+
+    camera_rot = 1.10f;
+    camera.position = rotate_arround(camera.position,
+                                     sVector3{0.0f, 0.0f, 0.0f},
+                                     to_radians(camera_rot));
+
+    camera.look_at(sVector3{0.0f, 0.0f, 0.0f});
+    camera.get_perspective_viewprojection_matrix(90.0f,
+                                                1000.0f,
+                                                0.001f,
+                                                (float)width / (float)heigth,
+                                                &proj_mat);
+
+    double curr_frame_time = glfwGetTime();
+
+
+    renderer.render(model, proj_mat, sVector4{1.0, 1.0, 1.0, 1.0});
+
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    glfwSwapBuffers(window);
+  }
 }
+
 
 void draw_loop(GLFWwindow *window) {
 	glfwMakeContextCurrent(window);
@@ -293,8 +361,6 @@ void draw_loop(GLFWwindow *window) {
 }
 
 int main() {
-  test_draw_loop(NULL);
-  return 0;
 	if (!glfwInit()) {
 		return EXIT_FAILURE;
 	}
@@ -326,8 +392,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_draw_loop(window);
+      //draw_loop(window);
+      test_draw_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
