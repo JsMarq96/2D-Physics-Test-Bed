@@ -3,7 +3,7 @@
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
 
-#include "geometry/half_edge.h"
+#include "mesh.h"
 #include "glcorearb.h"
 #include "math/vector.h"
 #include "shader.h"
@@ -111,26 +111,24 @@ sVector3 rotate_arround(const sVector3 pos,
 
 #include "kv_storage.h"
 void test_draw_loop(GLFWwindow *window) {
+
+  sMesh cube;
+
+  sMeshRenderer renderer;
+
+  cube.load_OBJ_mesh("resources/sphere.obj");
+
+
   glfwMakeContextCurrent(window);
-
-   sHalfEdgeMesh cube;
-
-  cube.load_OBJ_mesh("resources/cube.obj");
-
-  std::cout << cube.indexing_count << std::endl;
-  for(int i = 0; i < cube.indexing_count; i++) {
-    int p = cube.vertices_index[i];
-    std::cout << cube.vertices[p].x << std::endl;
-  }
 
   sCamera camera = {};
   float camera_rot = 0.0f;
 
   camera.position = {5.0f, 3.5f, 5.0f};
 
-  sMeshRenderer renderer= {};
+  //sMeshRenderer renderer= {};
 
-  renderer.create_from_half_edge(&cube);
+  renderer.create_from_mesh(&cube);
 
   sMat44 model = {};
 
@@ -183,6 +181,9 @@ void test_draw_loop(GLFWwindow *window) {
 
     glfwSwapBuffers(window);
   }
+
+  renderer.clean();
+  cube.clean();
 }
 
 
@@ -198,9 +199,9 @@ void draw_loop(GLFWwindow *window) {
   sTransform   transforms[6] = {};
 
 
-  sHalfEdgeMesh cube;
+  //sHalfEdgeMesh cube;
 
-  cube.load_OBJ_mesh("resources/cube.obj");
+  //cube.load_OBJ_mesh("resources/cube.obj");
 
   sPhysWorld phys_instance;
 
@@ -253,9 +254,9 @@ void draw_loop(GLFWwindow *window) {
   colors[2] = {0.0f, 1.0f, 0.0f, 0.50f};
   colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
 
-  sCubeRenderer renderer;
+  //sCubeRenderer renderer;
 
-  cube_renderer_init(&renderer);
+  //cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
   float camera_rot = 0.0f;
@@ -340,7 +341,7 @@ void draw_loop(GLFWwindow *window) {
       //ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
     }
 
-    cube_renderer_render(&renderer, models, colors, 3, &proj_mat);
+    //cube_renderer_render(&renderer, models, colors, 3, &proj_mat);
 
     sVector4 col_color[4] = {};
     for(int i = 0; i < phys_instance.curr_frame_col_count; i++) {
@@ -350,7 +351,7 @@ void draw_loop(GLFWwindow *window) {
     }
 
     glDisable(GL_DEPTH_TEST);
-    cube_renderer_render(&renderer, models, col_color, phys_instance.curr_frame_col_count, &proj_mat);
+    //cube_renderer_render(&renderer, models, col_color, phys_instance.curr_frame_col_count, &proj_mat);
     glEnable(GL_DEPTH_TEST);
 
     ImGui::Render();

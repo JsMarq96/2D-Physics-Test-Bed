@@ -50,14 +50,19 @@ struct sRadNode {
     uKVStorage result;
     bool       has_result     = false;
 
-    sRadNode *children[256];
+    sRadNode *children[256] = { NULL };
     bool is_full[256]         = { false };
 };
 
 inline void RN_init(sRadNode *node) {
+    memset(node->key, '\0', sizeof(sRadNode::key));
     memset(node->is_full, false, sizeof(sRadNode::is_full));
     node->key_len        = 0;
     node->has_result     = false;
+
+    for(int i = 0; i < 256; i++) {
+        node->children[i] = NULL;
+    }
 }
 
 inline void RN_clean(sRadNode *node) {
@@ -78,6 +83,10 @@ inline bool Rad_Node_get(sRadNode *node,
                         const int key_len,
                         uKVStorage *to_retrieve) {
     int index = (int) *key;
+
+    if (node == NULL) {
+        return false;
+    }
 
     // Early stop
     if (!node->is_full[index]) {
@@ -119,12 +128,11 @@ inline void Rad_Node_add(sRadNode *node,
                          const int key_len,
                          const uKVStorage *to_store) {
     sRadNode *new_node = (sRadNode*) malloc(sizeof(sRadNode));
-    //RN_init(new_node);
-    memset(new_node->is_full, false, sizeof(sRadNode::is_full));
+    RN_init(new_node);
     memcpy(&new_node->result, to_store, sizeof(uKVStorage));
     new_node->has_result = true;
 
-    int node_key = key[0];
+    int node_key = (unsigned char) key[0];
     if (!node->is_full[node_key]) {
         // Early out
         new_node->key_len = key_len;
@@ -146,7 +154,7 @@ inline void Rad_Node_add(sRadNode *node,
                                                     it_key,
                                                     it_key_len);
 
-        int crop_it_key_index =  it_key[similarity];
+        int crop_it_key_index =  (unsigned char) it_key[similarity];
 
         // Split the node by the similarity, generating a new child, with the old values
         if (similarity < it_node->key_len) {
@@ -159,8 +167,8 @@ inline void Rad_Node_add(sRadNode *node,
             it_node->key_len = similarity;
             //memcpy(it_node->key, it_node->key, it_node->key_len);
             it_node->has_result = false;
-            it_node->is_full[old_root->key[0]] = true;
-            it_node->children[old_root->key[0]] = old_root;
+            it_node->is_full[(unsigned char) old_root->key[0]] = true;
+            it_node->children[(unsigned char) old_root->key[0]] = old_root;
         }
 
 

@@ -1,22 +1,22 @@
 #ifndef MESH_RENDERER_H_
 #define MESH_RENDERER_H_
 
-#include "geometry/half_edge.h"
 #include "gl3w.h"
 #include "glcorearb.h"
 #include "shader.h"
 #include "raw_shaders.h"
+#include "mesh.h"
 
 struct sMeshRenderer {
-    unsigned int  VAO;
-    unsigned int  VBO;
-    unsigned int  EBO;
+    unsigned int  VAO = 0;
+    unsigned int  VBO = 0;
+    unsigned int  EBO = 0;
 
-    uint16_t indices_count;
+    uint16_t indices_count = 0;
 
     sShader  shader;
 
-    void create_from_half_edge(const sHalfEdgeMesh *mesh) {
+    void create_from_mesh(const sMesh *mesh) {
         indices_count = mesh->indexing_count;
 
         glGenVertexArrays(1, &VAO);
@@ -27,7 +27,7 @@ struct sMeshRenderer {
 
         // Load vertices
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, mesh->vertex_count * sizeof(sRawVertex), mesh->raw_vertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, mesh->vertex_count * sizeof(sRawVertex), mesh->vertices, GL_STATIC_DRAW);
 
         // Vertex position
         glEnableVertexAttribArray(0);
@@ -62,7 +62,6 @@ struct sMeshRenderer {
         shader.set_uniform_matrix4("u_model_mat", &model);
         shader.set_uniform_matrix4("u_view_proj", &view_proj);
         shader.set_uniform_vector("u_color", color);
-        std::cout << indices_count << std::endl;
 
         glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_SHORT, 0);
 
