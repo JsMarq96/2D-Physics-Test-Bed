@@ -79,7 +79,7 @@ struct sTransform {
     scale_mat.set_identity();
     scale_mat.set_scale(scale);
     // For centering arround 0
-    scale_mat.add_position(scale.mult(-0.5f));
+    //scale_mat.add_position(scale.mult(-0.5f));
 
     rot_mat.convert_quaternion_to_matrix(rotation);
 

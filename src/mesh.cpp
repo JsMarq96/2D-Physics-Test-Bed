@@ -1,5 +1,4 @@
 #include "mesh.h"
-#include "math/vector.h"
 #include "types.h"
 #include <cstdint>
 

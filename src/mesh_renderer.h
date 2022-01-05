@@ -7,6 +7,8 @@
 #include "raw_shaders.h"
 #include "mesh.h"
 
+#include <iostream>
+
 struct sMeshRenderer {
     unsigned int  VAO = 0;
     unsigned int  VBO = 0;
@@ -53,17 +55,27 @@ struct sMeshRenderer {
         shader = sShader(borring_vertex_shader, borring_frag_shader);
     }
 
-    void render(const sMat44 &model,
+    void render(const sMat44 *models,
+                const sVector4 *colors,
+                const int count,
                 const sMat44 &view_proj,
-                const sVector4 &color) const {
+                const bool show_wireframe) const {
+        std::cout << count << std::endl;
+
         glBindVertexArray(VAO);
+
+        if (show_wireframe) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
         shader.activate();
 
-        shader.set_uniform_matrix4("u_model_mat", &model);
-        shader.set_uniform_matrix4("u_view_proj", &view_proj);
-        shader.set_uniform_vector("u_color", color);
+        for(int i = 0; i < count; i++) {
+            shader.set_uniform_matrix4("u_model_mat", &models[i]);
+            shader.set_uniform_matrix4("u_view_proj", &view_proj);
+            shader.set_uniform_vector("u_color", colors[i]);
 
-        glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_SHORT, 0);
+            glDrawElements(GL_TRIANGLES, indices_count, GL_UNSIGNED_SHORT, 0);
+        }
 
         shader.deactivate();
         glBindVertexArray(0);

@@ -13,6 +13,8 @@
 #include "camera.h"
 #include "types.h"
 
+#include "collision_detection.h"
+
 #include "physics.h"
 
 // Dear IMGUI
@@ -116,7 +118,7 @@ void test_draw_loop(GLFWwindow *window) {
 
   sMeshRenderer renderer;
 
-  cube.load_OBJ_mesh("resources/sphere.obj");
+  cube.load_OBJ_mesh("resources/sphere1.obj");
 
 
   glfwMakeContextCurrent(window);
@@ -130,11 +132,21 @@ void test_draw_loop(GLFWwindow *window) {
 
   renderer.create_from_mesh(&cube);
 
-  sMat44 model = {};
+  sVector4 color[3] = {{0.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}};
+  sMat44 model[3] = {};
+
+
+  model[2].set_identity();
+
+  model[2].set_scale({0.05f, 0.05f, 0.05f});
+
+  sTransform transf[2] = {};
+  transf[0].position = {0.0f, 2.0f, 0.0f};
+  transf[0].scale = {1.0f, 1.0f, 1.0f};
+  transf[1].position = {0.0f, 0.0f, 0.0f};
+  transf[1].scale = {1.0f, 1.0f, 1.0f};
 
   sMat44 viewproj = {};
-
-  model.set_identity();
 
    while(!glfwWindowShouldClose(window)) {
     // Draw loop
@@ -172,9 +184,13 @@ void test_draw_loop(GLFWwindow *window) {
 
     double curr_frame_time = glfwGetTime();
 
+    ImGui::SliderFloat3("Position ball 1", transf[0].position.raw_values, 0.0f, 3.0f);
 
-    renderer.render(model, proj_mat, sVector4{1.0, 1.0, 1.0, 1.0});
+    transf[0].get_model(&model[0]);
+    transf[1].get_model(&model[1]);
 
+
+    renderer.render(model, color,  3, proj_mat, true);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -199,9 +215,9 @@ void draw_loop(GLFWwindow *window) {
   sTransform   transforms[6] = {};
 
 
-  //sHalfEdgeMesh cube;
+  sMesh cube;
 
-  //cube.load_OBJ_mesh("resources/cube.obj");
+  cube.load_OBJ_mesh("resources/sphere.obj");
 
   sPhysWorld phys_instance;
 
@@ -255,7 +271,9 @@ void draw_loop(GLFWwindow *window) {
   colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
 
   //sCubeRenderer renderer;
+  sMeshRenderer renderer;
 
+  renderer.create_from_mesh(&cube);
   //cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
@@ -342,6 +360,7 @@ void draw_loop(GLFWwindow *window) {
     }
 
     //cube_renderer_render(&renderer, models, colors, 3, &proj_mat);
+    renderer.render(models, colors, 3, proj_mat, true);
 
     sVector4 col_color[4] = {};
     for(int i = 0; i < phys_instance.curr_frame_col_count; i++) {
@@ -351,7 +370,7 @@ void draw_loop(GLFWwindow *window) {
     }
 
     glDisable(GL_DEPTH_TEST);
-    //cube_renderer_render(&renderer, models, col_color, phys_instance.curr_frame_col_count, &proj_mat);
+    renderer.render(models, col_color, phys_instance.curr_frame_col_count, proj_mat, false);
     glEnable(GL_DEPTH_TEST);
 
     ImGui::Render();
@@ -393,8 +412,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_draw_loop(window);
+      draw_loop(window);
+      //test_draw_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
