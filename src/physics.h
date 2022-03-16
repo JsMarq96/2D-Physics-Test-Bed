@@ -4,7 +4,7 @@
 #include "imgui/imgui.h"
 #include "math.h"
 #include "collision_detection.h"
-#include "math/vector.h"
+#include "math.h"
 #include "phys_parameters.h"
 #include "types.h"
 
@@ -287,7 +287,7 @@ struct sPhysWorld {
 
             // Calculate the tangent wrenches
             sVector3 tangents[2] = {};
-            plane_space(manifold.normal, &tangents[0], &tangents[1]);
+            plane_space(manifold.normal, tangents[0], tangents[1]);
 
             for(int tang = 0; tang < 2; tang++) {
                 sVector3 r1_cross_t = cross_prod(r1, tangents[tang]);

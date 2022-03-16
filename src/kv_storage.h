@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <cassert>
 
+#define MIN(x, y) ((x > y) ? y : x)
+
 //**
 // A simple key value storage utility using a Radix tree
 // by Juan S. Marquerie

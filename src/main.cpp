@@ -5,7 +5,7 @@
 
 #include "mesh.h"
 #include "glcorearb.h"
-#include "math/vector.h"
+#include "math.h"
 #include "shader.h"
 #include "input_layer.h"
 #include "render_cubes.h"
