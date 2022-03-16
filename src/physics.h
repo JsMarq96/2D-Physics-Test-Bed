@@ -35,7 +35,7 @@ struct sPhysWorld {
 
 
     inline float get_radius_of_collider(const int id) const {
-        return MAX(transforms[id].scale.x, MAX(transforms[id].scale.y, transforms[id].scale.z)) / 2.0f;
+        return MAX(transforms[id].scale.x, MAX(transforms[id].scale.y, transforms[id].scale.z));
     };
 
     void set_default_values() {
@@ -159,7 +159,6 @@ struct sPhysWorld {
             for(int i = 0; i < _manifold_count; i++) {
                 impulse_response(_manifolds[i], elapsed_time);
             }
-
         }
 
         // 5 - Integrate solutions

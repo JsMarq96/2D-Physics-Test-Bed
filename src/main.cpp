@@ -38,65 +38,6 @@ void key_callback(GLFWwindow *wind, int key, int scancode, int action, int mods)
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(wind, GL_TRUE);
 	}
-
-	eKeyMaps pressed_key;
-	switch(key) {
-		case GLFW_KEY_W:
-			pressed_key = W_KEY;
-			break;
-		case GLFW_KEY_A:
-			pressed_key = A_KEY;
-			break;
-		case GLFW_KEY_S:
-			pressed_key = S_KEY;
-			break;
-		case GLFW_KEY_D:
-			pressed_key = D_KEY;
-			break;
-		case GLFW_KEY_UP:
-			pressed_key = UP_KEY;
-			break;
-		case GLFW_KEY_DOWN:
-			pressed_key = DOWN_KEY;
-			break;
-		case GLFW_KEY_RIGHT:
-			pressed_key = RIGHT_KEY;
-			break;
-		case GLFW_KEY_LEFT:
-			pressed_key = LEFT_KEY;
-			break;
-
-		sInputLayer *input = get_game_input_instance();
-		input->keyboard[pressed_key] = (action == GLFW_PRESS) ? KEY_PRESSED : KEY_RELEASED;
-	};
-
-
-}
-
-void mouse_button_callback(GLFWwindow *wind, int button, int action, int mods) {
-	char index;
-
-	switch (button) {
-	case GLFW_MOUSE_BUTTON_LEFT:
-		index = LEFT_CLICK;
-		break;
-
-	case GLFW_MOUSE_BUTTON_RIGHT:
-		index = RIGHT_CLICK;
-		break;
-
-	case GLFW_MOUSE_BUTTON_MIDDLE:
-		index = MIDDLE_CLICK;
-		break;
-	}
-
-	sInputLayer *input = get_game_input_instance();
-	input->mouse_clicks[index] = (action == GLFW_PRESS) ? KEY_PRESSED : KEY_RELEASED;
-}
-
-void cursor_enter_callback(GLFWwindow *window, int entered) {
-	sInputLayer *input = get_game_input_instance();
-	input->is_mouse_on_screen = entered;
 }
 
 sVector3 rotate_arround(const sVector3 pos, 
@@ -111,97 +52,6 @@ sVector3 rotate_arround(const sVector3 pos,
   return sVector3{nx + center.x, pos.y, nz + center.z};
 }
 
-#include "kv_storage.h"
-void test_draw_loop(GLFWwindow *window) {
-
-  sMesh cube;
-
-  sMeshRenderer renderer;
-
-  cube.load_OBJ_mesh("resources/sphere1.obj");
-
-
-  glfwMakeContextCurrent(window);
-
-  sCamera camera = {};
-  float camera_rot = 0.0f;
-
-  camera.position = {5.0f, 3.5f, 5.0f};
-
-  //sMeshRenderer renderer= {};
-
-  renderer.create_from_mesh(&cube);
-
-  sVector4 color[3] = {{0.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}};
-  sMat44 model[3] = {};
-
-
-  model[2].set_identity();
-
-  model[2].set_scale({0.05f, 0.05f, 0.05f});
-
-  sTransform transf[2] = {};
-  transf[0].position = {0.0f, 2.0f, 0.0f};
-  transf[0].scale = {1.0f, 1.0f, 1.0f};
-  transf[1].position = {0.0f, 0.0f, 0.0f};
-  transf[1].scale = {1.0f, 1.0f, 1.0f};
-
-  sMat44 viewproj = {};
-
-   while(!glfwWindowShouldClose(window)) {
-    // Draw loop
-    int width, heigth;
-    double temp_mouse_x, temp_mouse_y;
-
-    glfwPollEvents();
-    glfwGetFramebufferSize(window, &width, &heigth);
-    // Set to OpenGL viewport size anc coordinates
-    glViewport(0,0, width, heigth);
-
-    sMat44 proj_mat = {};
-
-    // OpenGL stuff
-    glEnable(GL_DEPTH_TEST);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-
-
-    camera_rot = 1.10f;
-    camera.position = rotate_arround(camera.position,
-                                     sVector3{0.0f, 0.0f, 0.0f},
-                                     to_radians(camera_rot));
-
-    camera.look_at(sVector3{0.0f, 0.0f, 0.0f});
-    camera.get_perspective_viewprojection_matrix(90.0f,
-                                                1000.0f,
-                                                0.001f,
-                                                (float)width / (float)heigth,
-                                                &proj_mat);
-
-    double curr_frame_time = glfwGetTime();
-
-    ImGui::SliderFloat3("Position ball 1", transf[0].position.raw_values, 0.0f, 3.0f);
-
-    transf[0].get_model(&model[0]);
-    transf[1].get_model(&model[1]);
-
-
-    renderer.render(model, color,  3, proj_mat, true);
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    glfwSwapBuffers(window);
-  }
-
-  renderer.clean();
-  cube.clean();
-}
-
 
 void draw_loop(GLFWwindow *window) {
 	glfwMakeContextCurrent(window);
@@ -211,13 +61,15 @@ void draw_loop(GLFWwindow *window) {
     "GREN",
     "BLU"
   };
-  sRawGeometry cubes[6] = {};
   sTransform   transforms[6] = {};
 
+  sMesh sphere, cube;
+  sphere.load_OBJ_mesh("resources/sphere.obj");
+  cube.load_OBJ_mesh("resources/cube.obj");
 
-  sMesh cube;
-
-  cube.load_OBJ_mesh("resources/sphere.obj");
+  sMeshRenderer sphere_renderer, cube_renderer;
+  sphere_renderer.create_from_mesh(&sphere);
+  cube_renderer.create_from_mesh(&cube);
 
   sPhysWorld phys_instance;
 
@@ -261,7 +113,6 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.is_static[2] = true;
   phys_instance.enabled[2] = true;
 
-
   phys_instance.init(transforms);
 
   sVector4 colors[4] = {};
@@ -270,11 +121,6 @@ void draw_loop(GLFWwindow *window) {
   colors[2] = {0.0f, 1.0f, 0.0f, 0.50f};
   colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
 
-  //sCubeRenderer renderer;
-  sMeshRenderer renderer;
-
-  renderer.create_from_mesh(&cube);
-  //cube_renderer_init(&renderer);
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
   float camera_rot = 0.0f;
@@ -286,7 +132,6 @@ void draw_loop(GLFWwindow *window) {
   double start_time, fps;
   double delta_time = 0.01;
   double accumulator = 0.0;
-
 
   // Diagnostics
   float physics_ticks_per_frame[6] = {0.0f, 0.0f, 0.0f, 0.0f,};
@@ -351,26 +196,25 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Text("Num of steps: %d", num_of_physics_steps);
     ImGui::End();
 
-    sMat44 models[4] = {};
+    sMat44 cube_models[15] = {}, sphere_models[15] = {};
 
     // Rendering ====
     for(int i = 0; i < 3; i++) {
-      transforms[i].get_model(&models[i]);
+      transforms[i].get_model(&cube_models[i]);
       //ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
     }
 
-    //cube_renderer_render(&renderer, models, colors, 3, &proj_mat);
-    renderer.render(models, colors, 3, proj_mat, true);
+    sphere_renderer.render(cube_models, colors, 3, proj_mat, true);
 
-    sVector4 col_color[4] = {};
+    sVector4 col_color[15] = {};
     for(int i = 0; i < phys_instance.curr_frame_col_count; i++) {
-      models[i].set_position(phys_instance._manifolds[i].contact_points[0]);
-      models[i].set_scale({0.05f, 0.05f, 0.05f});
+      cube_models[i].set_position(phys_instance._manifolds[i].contact_points[0]);
+      cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
       col_color[i] = {1.0f, 0.0f, 0.0f, 0.90f};
     }
 
     glDisable(GL_DEPTH_TEST);
-    renderer.render(models, col_color, phys_instance.curr_frame_col_count, proj_mat, false);
+    sphere_renderer.render(cube_models, col_color, phys_instance.curr_frame_col_count, proj_mat, false);
     glEnable(GL_DEPTH_TEST);
 
     ImGui::Render();
@@ -395,9 +239,6 @@ int main() {
 	GLFWwindow* window = glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, WIN_NAME, NULL, NULL);
 
 	glfwSetKeyCallback(window, key_callback);
-	glfwSetMouseButtonCallback(window, mouse_button_callback);
-	glfwSetCursorEnterCallback(window, cursor_enter_callback);
-
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 

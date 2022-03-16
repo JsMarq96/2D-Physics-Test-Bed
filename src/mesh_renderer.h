@@ -60,8 +60,6 @@ struct sMeshRenderer {
                 const int count,
                 const sMat44 &view_proj,
                 const bool show_wireframe) const {
-        std::cout << count << std::endl;
-
         glBindVertexArray(VAO);
 
         if (show_wireframe) {
