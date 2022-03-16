@@ -10,7 +10,6 @@
 struct sTransform {
   sQuaternion4 rotation = {1.0f, 0.0f, 0.0f, 0.0f};
   sVector3 position = sVector3{};
- 
   sVector3 scale = sVector3{1.0f, 1.0f, 1.0f};
 
 

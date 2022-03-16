@@ -3,6 +3,8 @@
 
 #include "math.h"
 #include "geometry.h"
+#include "types.h"
+#include "vector.h"
 #include <cstdint>
 
 #define MAX_COL_POINTS 2
@@ -30,6 +32,36 @@ struct sCollisionManifold {
 // ===========================
 // COLLISION METHODS
 // ===========================
+
+inline bool test_cube_cube_collision(const sTransform &cube1_trasform,
+                                     const sRawGeometry &cube1_geometry,
+                                     const sTransform &cube2_trasform,
+                                     const sRawGeometry &cube2_geometry,
+                                     sCollisionManifold *manifold);
+
+inline bool test_cube_sphere_collision(const sTransform &cube_transform,
+                                       const sRawGeometry &cube_geometry,
+                                       const sVector3 &sphere_center,
+                                       const float radius,
+                                       sCollisionManifold *manifold) {
+    sVector3 sphere_direction = sphere_center.subs(cube_transform.position).normalize();
+    sVector3 cube_support = cube_geometry.get_support_point(sphere_direction);
+    sVector3 sphere_to_cube = cube_support.subs(sphere_center);
+
+    float distance = sphere_to_cube.magnitude();
+
+    if (distance < radius) {
+        manifold->normal = sphere_to_cube.normalize().mult(-1.0f);
+
+        manifold->contact_points[0] = sphere_center.sum(manifold->normal.mult(radius));
+        manifold->contact_depth[0] = distance - radius;
+
+        manifold->contanct_points_count = 1;
+        return true;
+    }
+    return false;
+}
+
 
 inline bool test_sphere_sphere_collision(const sVector3  &center1,
                                          const float radius1,
