@@ -7,6 +7,7 @@
 #include "math.h"
 #include "phys_parameters.h"
 #include "types.h"
+#include "vector.h"
 
 #define PHYS_INSTANCE_COUNT 100
 
@@ -65,6 +66,11 @@ struct sPhysWorld {
                 inertia_tensor.mat_values[0][0] = 2.0f/5.0f * mass[i] * radius * radius;
                 inertia_tensor.mat_values[1][1] = 2.0f/5.0f * mass[i] * radius * radius;
                 inertia_tensor.mat_values[2][2] = 2.0f/5.0f * mass[i] * radius * radius;
+            } else if (shape[i] == CUBE_COLLIDER) {
+                sVector3 &cube_size = transforms[i].scale;
+                inertia_tensor.mat_values[0][0] = 1.0f/12.0f * mass[i] * (cube_size.z * cube_size.z + cube_size.y * cube_size.y);
+                inertia_tensor.mat_values[1][1] = 1.0f/12.0f * mass[i] * (cube_size.z * cube_size.z + cube_size.x * cube_size.x);
+                inertia_tensor.mat_values[2][2] = 1.0f/12.0f * mass[i] * (cube_size.x * cube_size.x + cube_size.y * cube_size.y);
             }
 
             inertia_tensor.invert(&inv_inertia_tensors[i]);

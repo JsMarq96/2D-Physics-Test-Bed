@@ -52,6 +52,7 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
     float distance = sphere_to_cube.magnitude();
 
     if (distance < radius) {
+        std::cout << distance << " " << radius << std::endl;
         manifold->normal = sphere_to_cube.normalize().mult(-1.0f);
 
         manifold->contact_points[0] = sphere_center.sum(manifold->normal.mult(radius));
