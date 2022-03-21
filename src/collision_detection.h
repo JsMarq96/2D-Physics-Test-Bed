@@ -13,6 +13,7 @@
 enum eColiderTypes : uint8_t {
     SPHERE_COLLIDER = 0,
     PLANE_COLLIDER,
+    CUBE_COLLIDER,
     COLLIDER_COUNT
 };
 

@@ -29,7 +29,7 @@ struct sPhysWorld {
 
     sMat33             inv_inertia_tensors [PHYS_INSTANCE_COUNT] = {};
 
-    sCollisionManifold _manifolds          [PHYS_INSTANCE_COUNT] = {};
+    sCollisionManifold _manifolds          [PHYS_INSTANCE_COUNT * 2] = {};
     int                _manifold_count                           = 0;
     int                curr_frame_col_count                      = 0;
 
@@ -148,7 +148,32 @@ struct sPhysWorld {
                         _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
                     }
+                } else if (shape[i] == SPHERE_COLLIDER && shape[j] == CUBE_COLLIDER) {
+                    sRawGeometry raw_cube = {};
+                    raw_cube.init_cuboid(transforms[j]);
 
+                    if (test_cube_sphere_collision(transforms[j],
+                                                   raw_cube,
+                                                   transforms[i].position,
+                                                   get_radius_of_collider(i),
+                                                   &_manifolds[_manifold_count])) {
+                        _manifolds[_manifold_count].obj1 = i;
+                        _manifolds[_manifold_count].obj2 = j;
+                        _manifold_count++;
+                    }
+                } else if (shape[i] == CUBE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
+                    sRawGeometry raw_cube = {};
+                    raw_cube.init_cuboid(transforms[i]);
+
+                    if (test_cube_sphere_collision(transforms[i],
+                                                   raw_cube,
+                                                   transforms[j].position,
+                                                   get_radius_of_collider(j),
+                                                   &_manifolds[_manifold_count])) {
+                        _manifolds[_manifold_count].obj1 = i;
+                        _manifolds[_manifold_count].obj2 = j;
+                        _manifold_count++;
+                    }
                 }
 
             }
