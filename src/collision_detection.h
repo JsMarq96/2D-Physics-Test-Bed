@@ -34,37 +34,6 @@ struct sCollisionManifold {
 // COLLISION METHODS
 // ===========================
 
-inline bool test_cube_cube_collision(const sTransform &cube1_trasform,
-                                     const sRawGeometry &cube1_geometry,
-                                     const sTransform &cube2_trasform,
-                                     const sRawGeometry &cube2_geometry,
-                                     sCollisionManifold *manifold);
-
-inline bool test_cube_sphere_collision(const sTransform &cube_transform,
-                                       const sRawGeometry &cube_geometry,
-                                       const sVector3 &sphere_center,
-                                       const float radius,
-                                       sCollisionManifold *manifold) {
-    sVector3 sphere_direction = sphere_center.subs(cube_transform.position).normalize();
-    sVector3 cube_support = cube_geometry.get_support_point(sphere_direction);
-    sVector3 sphere_to_cube = cube_support.subs(sphere_center);
-
-    float distance = sphere_to_cube.magnitude();
-
-    if (distance < radius) {
-        std::cout << distance << " " << radius << std::endl;
-        manifold->normal = sphere_to_cube.normalize().mult(-1.0f);
-
-        manifold->contact_points[0] = sphere_center.sum(manifold->normal.mult(radius));
-        manifold->contact_depth[0] = distance - radius;
-
-        manifold->contanct_points_count = 1;
-        return true;
-    }
-    return false;
-}
-
-
 inline bool test_sphere_sphere_collision(const sVector3  &center1,
                                          const float radius1,
                                          const sVector3 &center2,
@@ -116,6 +85,45 @@ inline bool test_plane_sphere_collision(const sVector3 &sphere_center,
 
     return false;
 }
+
+
+inline bool test_cube_cube_collision(const sTransform &cube1_trasform,
+                                     const sRawGeometry &cube1_geometry,
+                                     const sTransform &cube2_trasform,
+                                     const sRawGeometry &cube2_geometry,
+                                     sCollisionManifold *manifold);
+
+// NOTE: this works for avery convex shape
+inline bool test_cube_sphere_collision(const sTransform &cube_transform,
+                                       const sRawGeometry &cube_geometry,
+                                       const sVector3 &sphere_center,
+                                       const float radius,
+                                       sCollisionManifold *manifold) {
+    int plane = -1;
+    float facing = -1000;
+
+    // Select the most facing plane of all of them
+    for(int i = 0; i < cube_geometry.planes_size; i++) {
+        // the most facing point to the plane
+        sVector3 sphere_to_plane_origin = sphere_center.subs(cube_geometry.planes[i].origin_point);
+
+        float curr_facing = dot_prod(sphere_to_plane_origin,
+                                     cube_geometry.planes[i].normal);
+
+        // Since it is a cube,
+        if (curr_facing > facing) {
+            plane = i;
+            facing = curr_facing;
+        }
+    }
+
+    return test_plane_sphere_collision(sphere_center,
+                                       radius,
+                                       cube_geometry.planes[plane].origin_point,
+                                       cube_geometry.planes[plane].normal,
+                                       manifold);
+}
+
 
 // TODO: sphere plane function
 

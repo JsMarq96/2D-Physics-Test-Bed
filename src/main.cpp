@@ -21,6 +21,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_opengl3.h"
 #include "imgui/imgui_impl_glfw.h"
+#include "vector.h"
 
 #define WIN_WIDTH	740
 #define WIN_HEIGHT	680
@@ -75,18 +76,18 @@ void draw_loop(GLFWwindow *window) {
 
   phys_instance.set_default_values();
 
-  // Object 1: Static sphere
-  transforms[0].position = {0.0f, 1.0f, 0.0f};
-  transforms[0].scale = {2.0f, 2.0f, 2.0f};
+  // Object 1: Static cube
+  transforms[0].position = {0.0f, 0.0f, 0.0f};
+  transforms[0].scale = {2.0f, 0.50f, 2.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.mass[0] = 0.0f;
   phys_instance.restitution[0] = 0.25f;
-  phys_instance.shape[0] = SPHERE_COLLIDER;
+  phys_instance.shape[0] = CUBE_COLLIDER;
   phys_instance.is_static[0] = true;
   phys_instance.enabled[0] = true;
 
   // Object 2: Dynamic sphere
-  transforms[1].position = {0.07f, 4.0f, 0.0f};
+  transforms[1].position = {0.07f, 7.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
   transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.restitution[1] = 0.6f;
@@ -197,14 +198,22 @@ void draw_loop(GLFWwindow *window) {
     ImGui::End();
 
     sMat44 cube_models[15] = {}, sphere_models[15] = {};
+    sVector4 cube_colors[15] = {}, sphere_colors[15] = {};
+    int cube_size = 0, sphere_size = 0;
 
     // Rendering ====
     for(int i = 0; i < 3; i++) {
-      transforms[i].get_model(&cube_models[i]);
-      //ImGui::Text("Obj %d  %f %f %f", i,  transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
+      if (phys_instance.shape[i] == SPHERE_COLLIDER) {
+        sphere_colors[sphere_size] = colors[i];
+        transforms[i].get_model(&sphere_models[sphere_size++]);
+      } else if (phys_instance.shape[i] == CUBE_COLLIDER) {
+        cube_colors[cube_size] = colors[i];
+        transforms[i].get_model(&cube_models[cube_size++]);
+      }
     }
 
-    sphere_renderer.render(cube_models, colors, 3, proj_mat, true);
+    cube_renderer.render(cube_models, cube_colors, cube_size, proj_mat, true);
+    sphere_renderer.render(sphere_models, sphere_colors, sphere_size, proj_mat, true);
 
     sVector4 col_color[15] = {};
     for(int i = 0; i < phys_instance.curr_frame_col_count; i++) {

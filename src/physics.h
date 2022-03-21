@@ -167,6 +167,7 @@ struct sPhysWorld {
                         _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
                     }
+                    raw_cube.clean();
                 } else if (shape[i] == CUBE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
                     sRawGeometry raw_cube = {};
                     raw_cube.init_cuboid(transforms[i]);
@@ -180,6 +181,8 @@ struct sPhysWorld {
                         _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
                     }
+
+                    raw_cube.clean();
                 }
 
             }
