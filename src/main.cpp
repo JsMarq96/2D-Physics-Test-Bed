@@ -205,8 +205,8 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.set_default_values();
 
   // Object 1: Static cube
-  transforms[0].position = {0.0f, 0.0f, 0.0f};
-  transforms[0].scale = {2.0f, 0.50f, 2.0f};
+  transforms[0].position = {-0.50f, 0.0f, 0.0f};
+  transforms[0].scale = {2.5f, 1.0f, 2.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.mass[0] = 0.0f;
   phys_instance.restitution[0] = 0.25f;
@@ -354,16 +354,10 @@ void draw_loop(GLFWwindow *window) {
       col_color[i] = {1.0f, 0.0f, 0.0f, 0.90f};
     }
 
-    sRawGeometry cube_geom;
-    //i++;
-    cube_geom.init_cuboid(transforms[0]);
-    cube_models[i].set_position(cube_geom.raw_points[0]);
+    cube_models[i].set_identity();
+    cube_models[i].set_position(transforms[1].position);
     cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
     col_color[i] = {1.0f, 0.0f, 0.0f, 1.0f};
-    i++;
-    cube_models[i].set_position(cube_geom.raw_points[7]);
-    cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
-    col_color[i] = {0.0f, 0.0f, 1.0f, 1.0f};
     i++;
 
 

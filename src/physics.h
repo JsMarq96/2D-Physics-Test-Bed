@@ -5,6 +5,7 @@
 #include "math.h"
 #include "collision_detection.h"
 #include "math.h"
+#include "collider_mesh.h"
 #include "mesh_renderer.h"
 #include "phys_parameters.h"
 #include "types.h"
@@ -136,7 +137,7 @@ struct sPhysWorld {
                         _manifold_count++;
                     }
                 } else if (shape[i] == SPHERE_COLLIDER && shape[j] == CUBE_COLLIDER) {
-                    sRawGeometry raw_cube = {};
+                    sColliderMesh raw_cube = {};
                     raw_cube.init_cuboid(transforms[j]);
 
                     if (test_cube_sphere_collision(transforms[j],
@@ -150,7 +151,7 @@ struct sPhysWorld {
                     }
                     raw_cube.clean();
                 } else if (shape[i] == CUBE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
-                    sRawGeometry raw_cube = {};
+                    sColliderMesh raw_cube = {};
                     raw_cube.init_cuboid(transforms[i]);
 
                     if (test_cube_sphere_collision(transforms[i],

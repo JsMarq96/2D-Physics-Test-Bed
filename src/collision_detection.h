@@ -5,6 +5,7 @@
 #include "geometry.h"
 #include "transform.h"
 #include "raw_geometry.h"
+#include "collider_mesh.h"
 #include "vector.h"
 #include <cstdint>
 
@@ -84,7 +85,6 @@ inline bool test_plane_sphere_collision(const sVector3 &sphere_center,
     return false;
 }
 
-
 inline bool test_cube_cube_collision(const sTransform &cube1_trasform,
                                      const sRawGeometry &cube1_geometry,
                                      const sTransform &cube2_trasform,
@@ -103,10 +103,11 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
     // Select the most facing plane of all of them
     for(int i = 0; i < cube_geometry.planes_size; i++) {
         // the most facing point to the plane
-        sVector3 sphere_to_plane_origin = sphere_center.subs(cube_geometry.planes[i].origin_point);
+        sVector3 sphere_to_plane_origin = sphere_center.subs(cube_geometry.planes[i].origin_point).normalize();
+        sphere_to_plane_origin = sphere_center.sum(sphere_to_plane_origin.mult(radius));
 
-        float curr_facing = dot_prod(sphere_to_plane_origin.normalize(),
-                                     cube_geometry.planes[i].normal);
+        float curr_facing = dot_prod(sphere_to_plane_origin,
+                                     cube_geometry.planes[i].origin_point.sum(cube_geometry.planes[i].normal.mult(radius)));
 
         // Since it is a cube,
         if (curr_facing > facing) {
@@ -120,6 +121,48 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
                                        cube_geometry.planes[plane].origin_point,
                                        cube_geometry.planes[plane].normal,
                                        manifold);
+}
+
+// NOTE: this works for avery convex shape
+inline bool test_cube_sphere_collision(const sTransform &cube_transform,
+                                       const sColliderMesh &cube_geometry,
+                                       const sVector3 &sphere_center,
+                                       const float radius,
+                                       sCollisionManifold *manifold) {
+    int plane = -1;
+    float facing = -1000;
+
+    // Select the most facing plane of all of them
+    for(int i = 0; i < cube_geometry.face_count; i++) {
+        // the most facing point to the plane
+        sVector3 sphere_to_plane_origin = sphere_center.subs(cube_geometry.plane_origin[i]).normalize();
+        sphere_to_plane_origin = sphere_center.sum(sphere_to_plane_origin.mult(radius));
+
+        float curr_facing = dot_prod(sphere_to_plane_origin,
+                                     cube_geometry.plane_origin[i].sum(cube_geometry.normals[i].mult(radius)));
+
+        // Since it is a cube,
+        if (curr_facing > facing) {
+            plane = i;
+            facing = curr_facing;
+        }
+    }
+
+    if (cube_geometry.test_face_sphere_collision(plane,
+                                                 sphere_center,
+                                                 radius)) {
+        //
+        const sPlane face_plane = cube_geometry.get_plane_of_face(plane);
+        manifold->normal = face_plane.normal.normalize();
+        manifold->contact_depth[0] = face_plane.distance(sphere_center) - radius;
+        manifold->contact_points[0] = face_plane.project_point(sphere_center).sum(face_plane.origin_point.mult(manifold->contact_depth[0]));
+
+        manifold->contanct_points_count = 1;
+
+        return true;
+    }
+
+    return false;
 }
 
 
