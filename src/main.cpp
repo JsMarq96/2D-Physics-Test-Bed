@@ -53,6 +53,134 @@ sVector3 rotate_arround(const sVector3 pos,
   return sVector3{nx + center.x, pos.y, nz + center.z};
 }
 
+void test_loop(GLFWwindow *window) {
+	glfwMakeContextCurrent(window);
+  char names[4][5] = {
+    "WHIT",
+    "BLAK",
+    "GREN",
+    "BLU"
+  };
+  sTransform   transforms[6] = {};
+
+  sMesh sphere, cube;
+  sphere.load_OBJ_mesh("resources/sphere.obj");
+  cube.load_OBJ_mesh("resources/cube.obj");
+
+  sPhysWorld phys_instance;
+
+  phys_instance.set_default_values();
+
+  // Object 1: Static cube
+  transforms[0].position = {0.0f, 0.0f, 0.0f};
+  transforms[0].scale = {1.0f, .5f, 1.0f};
+  transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+
+   sRawGeometry cube_geom;
+   cube_geom.init_cuboid(transforms[0]);
+
+   sMeshRenderer sphere_renderer, cube_renderer;
+  sphere_renderer.create_from_mesh(&sphere);
+  //cube_renderer.create_from_raw_geometry(cube_geom);
+  cube_renderer.create_from_mesh(&cube);
+
+  sVector4 colors[4] = {};
+  colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
+  colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
+  colors[2] = {0.0f, 1.0f, 0.0f, 0.50f};
+  colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
+
+  float prev_frame_time = glfwGetTime();
+  sCamera camera = {};
+  float camera_rot = 0.0f;
+
+  //camera.position = {-5.0f, 1.5f, 5.0f};
+  camera.position = {5.0f, 3.5f, 5.0f};
+
+  // Frame counter
+  int frames = 0;
+  double start_time, fps;
+  double delta_time = 0.01;
+  double accumulator = 0.0;
+
+  // Diagnostics
+  float physics_ticks_per_frame[6] = {0.0f, 0.0f, 0.0f, 0.0f,};
+
+  start_time = glfwGetTime();
+
+  while(!glfwWindowShouldClose(window)) {
+    // Draw loop
+    int width, heigth;
+    double temp_mouse_x, temp_mouse_y;
+
+    glfwPollEvents();
+    glfwGetFramebufferSize(window, &width, &heigth);
+    // Set to OpenGL viewport size anc coordinates
+    glViewport(0,0, width, heigth);
+
+    sMat44 proj_mat = {};
+
+    // OpenGL stuff
+    glEnable(GL_DEPTH_TEST);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+
+    camera_rot = 1.10f;
+    camera.position = rotate_arround(camera.position,
+                                     sVector3{0.0f, 0.0f, 0.0f},
+                                     to_radians(camera_rot));
+
+    camera.look_at(sVector3{0.0f, 0.0f, 0.0f});
+    camera.get_perspective_viewprojection_matrix(90.0f,
+                                                1000.0f,
+                                                0.001f,
+                                                (float)width / (float)heigth,
+                                                &proj_mat);
+
+    double curr_frame_time = glfwGetTime();
+    double elapsed_time = curr_frame_time - prev_frame_time;
+    prev_frame_time = curr_frame_time;
+
+    // Simulation Update ====
+
+
+    sMat44 cube_models[15] = {}, sphere_models[15] = {};
+    sVector4 cube_colors[15] = {}, sphere_colors[15] = {};
+    int cube_size = 0, sphere_size = 0;
+
+    // Rendering ====
+    cube_models[0].set_identity();
+    transforms[0].get_model(&cube_models[0]);
+
+    cube_models[1].set_identity();
+    cube_models[1].set_position(cube_geom.raw_points[0]);
+    cube_models[1].set_scale({0.05f, 0.05f, 0.05f});
+    cube_colors[1] = {0.0f, 0.0f, 1.0f, 1.0f};
+    cube_models[2].set_identity();
+    cube_models[2].set_position(cube_geom.raw_points[7]);
+    cube_models[2].set_scale({0.05f, 0.05f, 0.05f});
+    cube_colors[2] = {1.0f, 0.0f, 0.0f, 1.0f};
+
+
+    cube_renderer.render(cube_models, cube_colors, 3, proj_mat, true);
+    //sphere_renderer.render(sphere_models, sphere_colors, sphere_size, proj_mat, true);
+
+    std::cout << cube_geom.raw_points[7].x << " " <<  cube_geom.raw_points[7].y << " " <<  cube_geom.raw_points[7].z << std::endl;
+    std::cout << cube_geom.raw_points[0].x << " " <<  cube_geom.raw_points[0].y << " " <<  cube_geom.raw_points[0].z << std::endl;
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    glfwSwapBuffers(window);
+  }
+}
+
+
 
 void draw_loop(GLFWwindow *window) {
 	glfwMakeContextCurrent(window);
@@ -96,13 +224,13 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.enabled[1] = true;
 
   // Object 3: static plane
-  transforms[3].position = {0.0f, -3.0f, 0.0f};
+  transforms[3].position = {0.0f, 3.0f, 0.0f};
   transforms[3].scale = {1.0f, 1.0f, 1.0f};
   transforms[3].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
   phys_instance.restitution[3] = 0.15f;
   phys_instance.shape[3] = PLANE_COLLIDER;
   phys_instance.is_static[3] = true;
-  phys_instance.enabled[3] = true;
+  phys_instance.enabled[3] = false;
 
   // Object 4: Static sphere 2
   transforms[2].position = {1.9f, 0.1f, 0.1f};
@@ -126,6 +254,7 @@ void draw_loop(GLFWwindow *window) {
   sCamera camera = {};
   float camera_rot = 0.0f;
 
+  //camera.position = {-5.0f, 1.5f, 5.0f};
   camera.position = {5.0f, 3.5f, 5.0f};
 
   // Frame counter
@@ -202,6 +331,7 @@ void draw_loop(GLFWwindow *window) {
     int cube_size = 0, sphere_size = 0;
 
     // Rendering ====
+    // Render shapes
     for(int i = 0; i < 3; i++) {
       if (phys_instance.shape[i] == SPHERE_COLLIDER) {
         sphere_colors[sphere_size] = colors[i];
@@ -215,15 +345,30 @@ void draw_loop(GLFWwindow *window) {
     cube_renderer.render(cube_models, cube_colors, cube_size, proj_mat, true);
     sphere_renderer.render(sphere_models, sphere_colors, sphere_size, proj_mat, true);
 
+    // Render contact points
     sVector4 col_color[15] = {};
-    for(int i = 0; i < phys_instance.curr_frame_col_count; i++) {
+    int i = 0;
+    for(; i < phys_instance.curr_frame_col_count; i++) {
       cube_models[i].set_position(phys_instance._manifolds[i].contact_points[0]);
       cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
       col_color[i] = {1.0f, 0.0f, 0.0f, 0.90f};
     }
 
+    sRawGeometry cube_geom;
+    //i++;
+    cube_geom.init_cuboid(transforms[0]);
+    cube_models[i].set_position(cube_geom.raw_points[0]);
+    cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
+    col_color[i] = {1.0f, 0.0f, 0.0f, 1.0f};
+    i++;
+    cube_models[i].set_position(cube_geom.raw_points[7]);
+    cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
+    col_color[i] = {0.0f, 0.0f, 1.0f, 1.0f};
+    i++;
+
+
     glDisable(GL_DEPTH_TEST);
-    sphere_renderer.render(cube_models, col_color, phys_instance.curr_frame_col_count, proj_mat, false);
+    sphere_renderer.render(cube_models, col_color, i, proj_mat, false);
     glEnable(GL_DEPTH_TEST);
 
     ImGui::Render();
@@ -263,7 +408,7 @@ int main() {
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
       draw_loop(window);
-      //test_draw_loop(window);
+      //test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

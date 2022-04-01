@@ -5,6 +5,7 @@
 #include "math.h"
 #include "collision_detection.h"
 #include "math.h"
+#include "mesh_renderer.h"
 #include "phys_parameters.h"
 #include "types.h"
 #include "vector.h"
@@ -34,6 +35,13 @@ struct sPhysWorld {
     int                _manifold_count                           = 0;
     int                curr_frame_col_count                      = 0;
 
+    // Collider's Custom information
+    // PLANE
+    sVector3           plane_collider_normal [PHYS_INSTANCE_COUNT] = {};
+    //
+
+    // DEBUG ==============
+    sMeshRenderer      debug_capsules_renderers[COLLIDER_COUNT] = {};
 
     inline float get_radius_of_collider(const int id) const {
         return MAX(transforms[id].scale.x, MAX(transforms[id].scale.y, transforms[id].scale.z));
@@ -44,6 +52,8 @@ struct sPhysWorld {
         memset(enabled, false, sizeof(enabled));
         memset(is_static, false, sizeof(is_static));
         memset(obj_speeds, 0.0f, sizeof(obj_speeds));
+
+        memset(plane_collider_normal, 0.0f, sizeof(plane_collider_normal));
 
         _manifold_count = 0;
     }
@@ -80,6 +90,9 @@ struct sPhysWorld {
             inv_mass[i] = (is_static[i]) ? 0.0 : 1.0f/mass[i];
         }
 
+        // TODO: ad ifndef DEBUG
+        debug_capsules_renderers[SPHERE_COLLIDER].init("resources/sphere.obj");
+        debug_capsules_renderers[CUBE_COLLIDER].init("resources/cube.obj");
     }
 
     // Apply collisions & speeds, check for collisions, and resolve them
@@ -118,38 +131,6 @@ struct sPhysWorld {
                                                      transforms[j].position,
                                                      get_radius_of_collider(j),
                                                      &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = i;
-                        _manifolds[_manifold_count].obj2 = j;
-                        _manifold_count++;
-                    }
-                } else if (shape[i] == PLANE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
-                    sVector3 origin = {0.0f, 0.0f, 0.0f};
-                    sVector3 normal = {0.0f, 1.0f, 0.0f};
-
-                    origin = transforms[i].apply(origin);
-                    normal = transforms[i].apply_rotation(normal);
-
-                    if (test_plane_sphere_collision(transforms[j].position,
-                                                    get_radius_of_collider(j),
-                                                    origin,
-                                                    normal,
-                                                    &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = j;
-                        _manifolds[_manifold_count].obj2 = i;
-                        _manifold_count++;
-                    }
-                } else if (shape[i] == SPHERE_COLLIDER && shape[j] == PLANE_COLLIDER) {
-                    sVector3 origin = {0.0f, 0.0f, 0.0f};
-                    sVector3 normal = {0.0f, 1.0f, 0.0f};
-
-                    origin = transforms[j].apply(origin);
-                    normal = transforms[j].apply_rotation(normal);
-
-                    if (test_plane_sphere_collision(transforms[i].position,
-                                                    get_radius_of_collider(i),
-                                                    origin,
-                                                    normal,
-                                                    &_manifolds[_manifold_count])) {
                         _manifolds[_manifold_count].obj1 = i;
                         _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
@@ -223,6 +204,25 @@ struct sPhysWorld {
         }
         ImGui::Text("Collision num: %i", _manifold_count);
     }
+
+    void render_colliders() const {
+        sMat44 collider_mat[COLLIDER_COUNT][10] = {};
+        sVector4 colors[10] = {};
+
+        int indexes[COLLIDER_COUNT] = {0,0,0};
+
+        for(int i = 0; i <  PHYS_INSTANCE_COUNT; i++) {
+            if (!enabled[i]) {
+                continue;
+            }
+            int collider_shape = shape[i];
+
+            sMat44 *mat = &collider_mat[collider_shape][indexes[collider_shape]];
+            mat->set_identity();
+
+            // Add
+        }
+    };
 
     // Apply the speeds to the position
     void integrate(const double elapsed_time) {

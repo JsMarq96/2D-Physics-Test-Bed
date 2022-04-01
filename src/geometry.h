@@ -25,7 +25,6 @@ struct sPlane {
                                 sVector3  *clipped_p2) const {
       float dist_p1 = distance(p1);
       float dist_p2 = distance(p2); 
-      std::cout << "BRUH" << std::endl;
 
       // Fast exit, there is no internsection
       if (dist_p1 > 0.0f && dist_p2 > 0.0f) {

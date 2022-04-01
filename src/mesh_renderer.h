@@ -5,8 +5,11 @@
 #include "glcorearb.h"
 #include "shader.h"
 #include "raw_shaders.h"
+#include "raw_geometry.h"
 #include "mesh.h"
+#include "vector.h"
 
+#include <cstdint>
 #include <iostream>
 
 struct sMeshRenderer {
@@ -17,6 +20,55 @@ struct sMeshRenderer {
     uint16_t indices_count = 0;
 
     sShader  shader;
+
+    void init(const char* mesh_dir) {
+        sMesh new_mes;
+
+        new_mes.load_OBJ_mesh(mesh_dir);
+
+        create_from_mesh(&new_mes);
+    }
+
+    void create_from_raw_geometry(const sRawGeometry &raw_geom) {
+        indices_count = raw_geom.planes_size * raw_geom.points_per_plane;
+
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+
+        glBindVertexArray(VAO);
+
+        // Load vertices
+        glBindBuffer(GL_ARRAY_BUFFER,
+                     VBO);
+        glBufferData(GL_ARRAY_BUFFER,
+                     raw_geom.vertices_size * sizeof(sVector3),
+                     raw_geom.raw_points,
+                     GL_STATIC_DRAW);
+
+        // Vertex position
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0,
+                              3,
+                              GL_FLOAT,
+                              GL_FALSE,
+                              3 * sizeof(float),
+                              (void*) 0);
+
+         // Load vertex indexing
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,
+                     EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     indices_count * sizeof(uint32_t),
+                     raw_geom.face_indexes,
+                     GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        glBindVertexArray(0);
+
+        shader = sShader(borring_v_vertex_shader, borring_frag_shader);
+    }
 
     void create_from_mesh(const sMesh *mesh) {
         indices_count = mesh->indexing_count;
@@ -45,7 +97,10 @@ struct sMeshRenderer {
 
         // Load vertex indexing
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mesh->indexing_count * sizeof(uint16_t), mesh->vertices_index, GL_STATIC_DRAW);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     mesh->indexing_count * sizeof(uint16_t),
+                     mesh->vertices_index,
+                     GL_STATIC_DRAW);
 
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);

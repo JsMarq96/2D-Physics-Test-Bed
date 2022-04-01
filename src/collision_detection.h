@@ -3,12 +3,12 @@
 
 #include "math.h"
 #include "geometry.h"
-#include "types.h"
+#include "transform.h"
+#include "raw_geometry.h"
 #include "vector.h"
 #include <cstdint>
 
 #define MAX_COL_POINTS 2
-
 
 enum eColiderTypes : uint8_t {
     SPHERE_COLLIDER = 0,
@@ -71,12 +71,10 @@ inline bool test_plane_sphere_collision(const sVector3 &sphere_center,
     float distance = plane.distance(sphere_center) - radius;
 
     if (distance < 0.0f) {
-        manifold->normal = plane_normal.mult(-1.0f).normalize();
+        manifold->normal = plane_normal.normalize();
         manifold->contact_depth[0] = distance;
         manifold->contact_points[0] = plane.project_point(sphere_center).sum(plane_origin.mult(distance));
 
-        //std::cout << manifold->contact_depth[0] << std::endl;
-        //std::cout << manifold->contact_points[0].x << " " << manifold->contact_points[0].y << " " << manifold->contact_points[0].z << std::endl;
         manifold->contanct_points_count = 1;
 
         //std::cout << "====================" << std::endl;
@@ -107,7 +105,7 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
         // the most facing point to the plane
         sVector3 sphere_to_plane_origin = sphere_center.subs(cube_geometry.planes[i].origin_point);
 
-        float curr_facing = dot_prod(sphere_to_plane_origin,
+        float curr_facing = dot_prod(sphere_to_plane_origin.normalize(),
                                      cube_geometry.planes[i].normal);
 
         // Since it is a cube,
