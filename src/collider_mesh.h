@@ -83,6 +83,33 @@ struct sColliderMesh {
         free(plane_origin);
     }
 
+    void apply_transform(const sTransform &transf) {
+        for(int i = 0; i < vertices_count; i++) {
+            vertices[i] = transf.apply(vertices[i]);
+        }
+
+        for(int i = 0; i < face_count; i++) {
+            normals[i] = transf.apply_rotation(normals[i]);
+            plane_origin[i] = transf.apply(plane_origin[i]);
+        }
+    }
+
+    inline sVector3 get_support(const sVector3 &direction) const {
+        float best_projection = -1000.0f;
+        uint32_t support_index = 0;
+
+        for(int i = 0; i < vertices_count; i++) {
+            float projection = dot_prod(vertices[i], direction);
+
+            if (projection > best_projection) {
+                support_index = i;
+                best_projection = projection;
+            }
+        }
+
+        return vertices[support_index];
+    }
+
 
     inline sVector3* get_face(const uint32_t face_index) const {
         return &vertices[face_index * face_stride];
@@ -91,6 +118,8 @@ struct sColliderMesh {
     inline sPlane get_plane_of_face(const uint32_t face_index) const {
         return sPlane{plane_origin[face_index], normals[face_index]};
     }
+
+
 
     inline bool test_face_sphere_collision(const uint32_t face_index,
                                            const sVector3 &sphere_origin,
