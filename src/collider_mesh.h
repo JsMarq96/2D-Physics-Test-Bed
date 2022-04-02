@@ -12,14 +12,26 @@ enum eFaceSize : uint32_t {
     FACE_QUAD = 4
 };
 
+struct sEdgeTuple {
+    uint32_t x;
+    uint32_t y;
+
+    inline bool is_equal(const sEdgeTuple &edge) const {
+        return (x == edge.x && y == edge.y) || (x == edge.y && y == edge.x);
+    }
+};
+
+// TODO: Parse an obj or a mesh object into a colliderMesh
 
 struct sColliderMesh {
     sVector3   *vertices = NULL;
     sVector3   *normals = NULL;
     sVector3   *plane_origin = NULL;
+    sEdgeTuple *edges = NULL;
 
     uint32_t   vertices_count = 0;
     uint32_t   face_count = 0;
+    uint32_t   edge_cout = 0;
 
     eFaceSize  face_stride = FACE_QUAD;
 
@@ -75,12 +87,51 @@ struct sColliderMesh {
         normals[5] = transform.apply_rotation(sVector3{-1.0f, 0.0f, 0.0f});
 
         face_stride = FACE_QUAD;
+
+        // Edge extraction
+        edges = (sEdgeTuple*) malloc(sizeof(sEdgeTuple) * face_count * 2);
+        edge_cout = 0;
+        // TODO: this is not very efficient... Better way?
+        // Iterate throught every face, and thrugh every vertex
+        // If there has not beel included, then add them to the list
+        // Maybe a use of a map or a set to speedup..?
+        // Maybe a hald-edfe can do a bit better... TODO
+        for(uint32_t i = 0; i < face_count; i++) {
+            uint32_t curr_face_index = i * face_stride;
+
+            for(uint32_t v1 = 0; v1 < face_stride; v1++) {
+                uint32_t v2 = (v1 + 1) % face_stride;
+
+                sEdgeTuple curr_edge = {curr_face_index + v1, curr_face_index + v2};
+                bool is_inside = false;
+                sVector3 vec1 = vertices[curr_edge.x];
+                sVector3 vec2 = vertices[curr_edge.y];
+
+                // iterate thrugh to all the edges, to test if its inside
+                for(uint32_t ed = 0; ed < edge_cout; ed++) {
+                    sEdgeTuple &edge_to_test = edges[ed];
+
+                    bool is_equal = vertices[edge_to_test.x].is_equal(vec1) && vertices[edge_to_test.y].is_equal(vec2);
+                    is_equal = is_equal || (vertices[edge_to_test.x].is_equal(vec2) && vertices[edge_to_test.y].is_equal(vec1));
+
+                    if (is_equal) {
+                        is_inside = true;
+                        break;
+                    }
+                }
+
+                if (!is_inside) {
+                    edges[edge_cout++] = curr_edge;
+                }
+            }
+        }
     }
 
     void clean() {
         free(vertices);
         free(normals);
         free(plane_origin);
+        free(edges);
     }
 
     void apply_transform(const sTransform &transf) {
