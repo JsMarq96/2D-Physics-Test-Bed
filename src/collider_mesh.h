@@ -170,6 +170,10 @@ struct sColliderMesh {
         return sPlane{plane_origin[face_index], normals[face_index]};
     }
 
+    inline sVector3 get_edge(const uint32_t edge_id) const {
+        sEdgeTuple edge_indices = edges[edge_id];
+        return vertices[edge_indices.x].subs(vertices[edge_indices.y]);
+    }
 
 
     inline bool test_face_sphere_collision(const uint32_t face_index,

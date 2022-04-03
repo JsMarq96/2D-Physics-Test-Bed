@@ -3,6 +3,7 @@
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
 
+#include "collider_mesh.h"
 #include "mesh.h"
 #include "glcorearb.h"
 #include "math.h"
@@ -53,6 +54,7 @@ sVector3 rotate_arround(const sVector3 pos,
   return sVector3{nx + center.x, pos.y, nz + center.z};
 }
 
+#include "sat.h"
 void test_loop(GLFWwindow *window) {
 	glfwMakeContextCurrent(window);
   char names[4][5] = {
@@ -67,21 +69,20 @@ void test_loop(GLFWwindow *window) {
   sphere.load_OBJ_mesh("resources/sphere.obj");
   cube.load_OBJ_mesh("resources/cube.obj");
 
-  sPhysWorld phys_instance;
-
-  phys_instance.set_default_values();
 
   // Object 1: Static cube
   transforms[0].position = {0.0f, 0.0f, 0.0f};
   transforms[0].scale = {1.0f, .5f, 1.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
-   sRawGeometry cube_geom;
-   cube_geom.init_cuboid(transforms[0]);
+  transforms[1].position = {0.0f, 5.0f, 0.0f};
+  transforms[1].scale = {1.0f, .5f, 1.0f};
+  transforms[1].set_rotation({0.9250f, 0.70f, 0.380f, 0.0f});
 
-   sMeshRenderer sphere_renderer, cube_renderer;
-  sphere_renderer.create_from_mesh(&sphere);
-  //cube_renderer.create_from_raw_geometry(cube_geom);
+  sRawGeometry cube_geom;
+  cube_geom.init_cuboid(transforms[0]);
+
+  sMeshRenderer sphere_renderer, cube_renderer;
   cube_renderer.create_from_mesh(&cube);
 
   sVector4 colors[4] = {};
@@ -156,22 +157,28 @@ void test_loop(GLFWwindow *window) {
     // Rendering ====
     cube_models[0].set_identity();
     transforms[0].get_model(&cube_models[0]);
-
     cube_models[1].set_identity();
-    cube_models[1].set_position(cube_geom.raw_points[0]);
-    cube_models[1].set_scale({0.05f, 0.05f, 0.05f});
-    cube_colors[1] = {0.0f, 0.0f, 1.0f, 1.0f};
-    cube_models[2].set_identity();
-    cube_models[2].set_position(cube_geom.raw_points[7]);
-    cube_models[2].set_scale({0.05f, 0.05f, 0.05f});
-    cube_colors[2] = {1.0f, 0.0f, 0.0f, 1.0f};
+    transforms[1].get_model(&cube_models[1]);
+
+    ImGui::Begin("Test");
+    ImGui::SliderFloat3("Cube2 pos", transforms[1].position.raw_values, -10.0f, 10.0f);
+
+    sColliderMesh col_cube1 = {}, col_cube2 = {};
+
+    col_cube1.init_cuboid(transforms[0]);
+    col_cube2.init_cuboid(transforms[1]);
+
+    if (SAT_collision_test(col_cube2,
+                           col_cube1)) {
+      ImGui::Text("Collision");
+    } else {
+      ImGui::Text("No collision");
+    }
+
+    ImGui::End();
 
 
-    cube_renderer.render(cube_models, cube_colors, 3, proj_mat, true);
-    //sphere_renderer.render(sphere_models, sphere_colors, sphere_size, proj_mat, true);
-
-    std::cout << cube_geom.raw_points[7].x << " " <<  cube_geom.raw_points[7].y << " " <<  cube_geom.raw_points[7].z << std::endl;
-    std::cout << cube_geom.raw_points[0].x << " " <<  cube_geom.raw_points[0].y << " " <<  cube_geom.raw_points[0].z << std::endl;
+    cube_renderer.render(cube_models, cube_colors, 2, proj_mat, true);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -401,8 +408,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_loop(window);
+      //draw_loop(window);
+      test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
