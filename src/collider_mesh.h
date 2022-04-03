@@ -47,18 +47,20 @@ struct sColliderMesh {
 
         // Vertices
         sVector3 raw_points[8] = {};
-        raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f});
-        raw_points[1] = transform.apply(sVector3{1.0f, 0.0f, 0.0f});
-        raw_points[2] = transform.apply(sVector3{0.0f, 1.0f, 0.0f});
-        raw_points[3] = transform.apply(sVector3{1.0f, 1.0f, 0.0f});
-        raw_points[4] = transform.apply(sVector3{0.0f, 0.0f, 1.0f});
-        raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f});
-        raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f});
-        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f});
+        raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[1] = transform.apply(sVector3{1.0f, 0.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[2] = transform.apply(sVector3{0.0f, 1.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[3] = transform.apply(sVector3{1.0f, 1.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[4] = transform.apply(sVector3{0.0f, 0.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
 
         for(uint32_t i = 0; i < 6*4; i++) {
             vertices[i] = raw_points[box_LUT_vertices[i]];
         }
+
+        sVector3 cuboid_center = transform.apply({0.5f, 0.5f, 0.5f});
 
         // Face origin
         for(int i = 0; i < 6; i++) {
@@ -76,15 +78,19 @@ struct sColliderMesh {
             center.z /= 4.0f;
 
             plane_origin[i] = center;//transform.apply_without_scale(center);
+
+            // The plane normal goes from the center  of the cuboid to the
+            // origin of the plane
+            normals[i] = center.subs(cuboid_center).normalize();
         }
 
         // Face normals
-        normals[0] = transform.apply_rotation(sVector3{0.0f, 0.0f, 1.0f});
+        /*normals[0] = transform.apply_rotation(sVector3{0.0f, 0.0f, 1.0f});
         normals[1] = transform.apply_rotation(sVector3{0.0f, 1.0f, 0.0f});
         normals[2] = transform.apply_rotation(sVector3{1.0f, 0.0f, 0.0f});
         normals[3] = transform.apply_rotation(sVector3{0.0f, 0.0f, -1.0f});
         normals[4] = transform.apply_rotation(sVector3{0.0f, -1.0f, 0.0f});
-        normals[5] = transform.apply_rotation(sVector3{-1.0f, 0.0f, 0.0f});
+        normals[5] = transform.apply_rotation(sVector3{-1.0f, 0.0f, 0.0f});*/
 
         face_stride = FACE_QUAD;
 
@@ -146,7 +152,7 @@ struct sColliderMesh {
     }
 
     inline sVector3 get_support(const sVector3 &direction) const {
-        float best_projection = -1000.0f;
+        float best_projection = -FLT_MAX;
         uint32_t support_index = 0;
 
         for(int i = 0; i < vertices_count; i++) {

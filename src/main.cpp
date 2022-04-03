@@ -85,18 +85,20 @@ void test_loop(GLFWwindow *window) {
   sMeshRenderer sphere_renderer, cube_renderer;
   cube_renderer.create_from_mesh(&cube);
 
-  sVector4 colors[4] = {};
+  sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
-  colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
+  colors[1] = {1.0f, 0.0f, 0.0f, 0.50f};
   colors[2] = {0.0f, 1.0f, 0.0f, 0.50f};
   colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
+  colors[4] = {0.0f, 1.0f, 1.0f, 0.50f};
+
 
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
   float camera_rot = 0.0f;
 
   //camera.position = {-5.0f, 1.5f, 5.0f};
-  camera.position = {5.0f, 3.5f, 5.0f};
+  camera.position = {5.0f, 1.5f, 5.0f};
 
   // Frame counter
   int frames = 0;
@@ -150,27 +152,58 @@ void test_loop(GLFWwindow *window) {
     // Simulation Update ====
 
 
-    sMat44 cube_models[15] = {}, sphere_models[15] = {};
-    sVector4 cube_colors[15] = {}, sphere_colors[15] = {};
+    sMat44 cube_models[35] = {}, sphere_models[15] = {};
+    sVector4 cube_colors[35] = {}, sphere_colors[15] = {};
     int cube_size = 0, sphere_size = 0;
 
     // Rendering ====
     cube_models[0].set_identity();
     transforms[0].get_model(&cube_models[0]);
     cube_models[1].set_identity();
+    transforms[1].rotation = transforms[1].rotation.normalize();
     transforms[1].get_model(&cube_models[1]);
 
     ImGui::Begin("Test");
     ImGui::SliderFloat3("Cube2 pos", transforms[1].position.raw_values, -10.0f, 10.0f);
+    ImGui::SliderFloat4("Cube2 rot", transforms[1].rotation.raw_values, -10.0f, 10.0f);
+
 
     sColliderMesh col_cube1 = {}, col_cube2 = {};
 
     col_cube1.init_cuboid(transforms[0]);
     col_cube2.init_cuboid(transforms[1]);
 
-    if (SAT_collision_test(col_cube2,
-                           col_cube1)) {
+    sCollisionManifold manifold = {};
+
+    uint32_t cube_num = 2;
+
+    for(int j = 0 ; j < col_cube2.face_count; j++){
+      cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
+      cube_models[cube_num].set_identity();
+      cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
+      cube_models[cube_num++].add_position(col_cube2.plane_origin[j]);
+    }
+
+     for(int j = 0 ; j < col_cube2.face_count; j++){
+      cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
+      cube_models[cube_num].set_identity();
+      cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
+      cube_models[cube_num++].add_position(col_cube1.plane_origin[j]);
+    }
+
+
+    if (SAT::SAT_collision_test(col_cube2,
+                                col_cube1,
+                                &manifold)) {
       ImGui::Text("Collision");
+      cube_models[cube_num].set_identity();
+      cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
+      cube_models[cube_num++].add_position(manifold.contact_points[0]);
+
+      cube_models[cube_num].set_identity();
+      cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
+      cube_models[cube_num++].add_position(manifold.contact_points[1]);
+
     } else {
       ImGui::Text("No collision");
     }
@@ -178,7 +211,9 @@ void test_loop(GLFWwindow *window) {
     ImGui::End();
 
 
-    cube_renderer.render(cube_models, cube_colors, 2, proj_mat, true);
+    col_cube1.clean();
+    col_cube2.clean();
+    cube_renderer.render(cube_models, cube_colors, cube_num, proj_mat, true);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

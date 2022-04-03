@@ -56,7 +56,7 @@ struct sTransform {
 
     // Order of transforms: Position <- Rotation <- Scale
     mat->set_identity();
-    mat->set_position(position.subs(scale));
+    mat->set_position(position);
 
     scale_mat.set_identity();
     scale_mat.set_scale(scale);
@@ -66,7 +66,7 @@ struct sTransform {
     rot_mat.multiply(&scale_mat);
 
     mat->multiply(&rot_mat);
-    mat->add_position(scale);
+    mat->add_position(scale.mult(-0.5f));
   }
 };
 
