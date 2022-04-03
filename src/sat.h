@@ -56,7 +56,8 @@ inline void get_bounds_of_mesh_on_axis(const sColliderMesh &mesh,
 inline bool test_edge_edge_collision(const sColliderMesh &mesh1,
                                      const sColliderMesh &mesh2,
                                      uint32_t *collision_edge1,
-                                     uint32_t *collision_edge2) {
+                                     uint32_t *collision_edge2,
+                                     float *distance) {
     for(uint32_t i_edge1 = 0; mesh1.edge_cout > i_edge1; i_edge1++) {
         sVector3 edge1 = mesh1.get_edge(i_edge1).normalize();
 
@@ -84,6 +85,7 @@ inline bool test_edge_edge_collision(const sColliderMesh &mesh1,
             if ((shape1_len + shape2_len) > total_shape_len) {
                 *collision_edge1 = i_edge1;
                 *collision_edge2 = i_edge2;
+                *distance = (shape1_len + shape2_len) - total_shape_len;
                 return true;
             }
         }
@@ -93,7 +95,8 @@ inline bool test_edge_edge_collision(const sColliderMesh &mesh1,
 }
 
 
-inline bool SAT_collision_test(const sColliderMesh &mesh1, const sColliderMesh &mesh2) {
+inline bool SAT_collision_test(const sColliderMesh &mesh1,
+                               const sColliderMesh &mesh2) {
 
     uint32_t collision_face_mesh1 = 0;
     float collision_distance_mesh1 = 0.0f;
@@ -118,12 +121,21 @@ inline bool SAT_collision_test(const sColliderMesh &mesh1, const sColliderMesh &
 
     // Test cross product of the edges
     uint32_t mesh1_collidion_edge = 0, mesh2_collision_edge = 0;
+    float edge_edge_distance = 0.0f;
     if (!test_edge_edge_collision(mesh1,
                                   mesh2,
                                   &mesh1_collidion_edge,
-                                  &mesh2_collision_edge)) {
+                                  &mesh2_collision_edge,
+                                  &edge_edge_distance)) {
         return false;
     }
+
+    // TODO: Manifold and contact point extraction
+
+    // Collision cases:
+    //  Edge v Edge
+    //  Face v (edge or Face)
+    //  http://vodacek.zvb.cz/archiv/293.html
 
     return true;
 }
