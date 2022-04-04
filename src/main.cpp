@@ -79,11 +79,12 @@ void test_loop(GLFWwindow *window) {
   transforms[1].scale = {1.0f, .5f, 1.0f};
   transforms[1].set_rotation({0.9250f, 0.70f, 0.380f, 0.0f});
 
-  sRawGeometry cube_geom;
-  cube_geom.init_cuboid(transforms[0]);
 
   sMeshRenderer sphere_renderer, cube_renderer;
   cube_renderer.create_from_mesh(&cube);
+
+  cube.clean();
+  sphere.clean();
 
   sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
@@ -196,15 +197,13 @@ void test_loop(GLFWwindow *window) {
                                 col_cube1,
                                 &manifold)) {
       ImGui::Text("Collision");
-      cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
-      cube_models[cube_num].set_identity();
-      cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
-      cube_models[cube_num++].add_position(manifold.contact_points[0]);
+      for(uint32_t i = 0; i < manifold.contanct_points_count; i++) {
+        cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
+        cube_models[cube_num].set_identity();
+        cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
+        cube_models[cube_num++].add_position(manifold.contact_points[i]);
 
-      cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
-      cube_models[cube_num].set_identity();
-      cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
-      cube_models[cube_num++].add_position(manifold.contact_points[1]);
+      }
 
     } else {
       ImGui::Text("No collision");

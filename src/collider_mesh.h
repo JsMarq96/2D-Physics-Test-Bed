@@ -12,11 +12,11 @@ enum eFaceSize : uint32_t {
     FACE_QUAD = 4
 };
 
-struct sEdgeTuple {
+struct sEdgeIndexTuple {
     uint32_t x;
     uint32_t y;
 
-    inline bool is_equal(const sEdgeTuple &edge) const {
+    inline bool is_equal(const sEdgeIndexTuple &edge) const {
         return (x == edge.x && y == edge.y) || (x == edge.y && y == edge.x);
     }
 };
@@ -27,7 +27,7 @@ struct sColliderMesh {
     sVector3   *vertices = NULL;
     sVector3   *normals = NULL;
     sVector3   *plane_origin = NULL;
-    sEdgeTuple *edges = NULL;
+    sEdgeIndexTuple *edges = NULL;
 
     uint32_t   vertices_count = 0;
     uint32_t   face_count = 0;
@@ -95,7 +95,7 @@ struct sColliderMesh {
         face_stride = FACE_QUAD;
 
         // Edge extraction
-        edges = (sEdgeTuple*) malloc(sizeof(sEdgeTuple) * face_count * 2);
+        edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 2);
         edge_cout = 0;
         // TODO: this is not very efficient... Better way?
         // Iterate throught every face, and thrugh every vertex
@@ -108,14 +108,14 @@ struct sColliderMesh {
             for(uint32_t v1 = 0; v1 < face_stride; v1++) {
                 uint32_t v2 = (v1 + 1) % face_stride;
 
-                sEdgeTuple curr_edge = {curr_face_index + v1, curr_face_index + v2};
+                sEdgeIndexTuple curr_edge = {curr_face_index + v1, curr_face_index + v2};
                 bool is_inside = false;
                 sVector3 vec1 = vertices[curr_edge.x];
                 sVector3 vec2 = vertices[curr_edge.y];
 
                 // iterate thrugh to all the edges, to test if its inside
                 for(uint32_t ed = 0; ed < edge_cout; ed++) {
-                    sEdgeTuple &edge_to_test = edges[ed];
+                    sEdgeIndexTuple &edge_to_test = edges[ed];
 
                     bool is_equal = vertices[edge_to_test.x].is_equal(vec1) && vertices[edge_to_test.y].is_equal(vec2);
                     is_equal = is_equal || (vertices[edge_to_test.x].is_equal(vec2) && vertices[edge_to_test.y].is_equal(vec1));
@@ -177,10 +177,9 @@ struct sColliderMesh {
     }
 
     inline sVector3 get_edge(const uint32_t edge_id) const {
-        sEdgeTuple edge_indices = edges[edge_id];
+        sEdgeIndexTuple edge_indices = edges[edge_id];
         return vertices[edge_indices.x].subs(vertices[edge_indices.y]);
     }
-
 
     inline bool test_face_sphere_collision(const uint32_t face_index,
                                            const sVector3 &sphere_origin,

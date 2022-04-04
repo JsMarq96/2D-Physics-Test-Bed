@@ -9,7 +9,7 @@
 #include "vector.h"
 #include <cstdint>
 
-#define MAX_COL_POINTS 2
+#define MAX_COL_POINTS 10
 
 enum eColiderTypes : uint8_t {
     SPHERE_COLLIDER = 0,

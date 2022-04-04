@@ -3,6 +3,7 @@
 
 #include "collider_mesh.h"
 #include "collision_detection.h"
+#include "face_clipping.h"
 #include "math.h"
 #include "vector.h"
 #include <cfloat>
@@ -140,9 +141,11 @@ namespace SAT {
         //  Face v (edge or Face)
         //  http://vodacek.zvb.cz/archiv/293.html
 
-        manifold->contact_points[0] = mesh1.plane_origin[collision_face_mesh1];
-        manifold->contact_points[1] = mesh2.plane_origin[collision_face_mesh2];
-
+        manifold->contanct_points_count = clipping::face_face_clipping(mesh1,
+                                                                       collision_face_mesh1,
+                                                                       mesh2,
+                                                                       collision_face_mesh2,
+                                                                       manifold->contact_points);
         return true;
     }
 };

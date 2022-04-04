@@ -2,7 +2,7 @@
 #define _SWAPABLE_STACK_H_
 
 #include <cstring>
-#include "../math.h"
+#include "math.h"
 
 #define STACKS_NUM 2
 
