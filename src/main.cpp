@@ -177,14 +177,14 @@ void test_loop(GLFWwindow *window) {
 
     uint32_t cube_num = 2;
 
-    for(int j = 0 ; j < col_cube2.face_count; j++){
+    for(int j = 30 ; j < col_cube2.face_count; j++){
       cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
       cube_models[cube_num++].add_position(col_cube2.plane_origin[j]);
     }
 
-     for(int j = 0 ; j < col_cube2.face_count; j++){
+     for(int j = 30 ; j < col_cube2.face_count; j++){
       cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
@@ -196,10 +196,12 @@ void test_loop(GLFWwindow *window) {
                                 col_cube1,
                                 &manifold)) {
       ImGui::Text("Collision");
+      cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
       cube_models[cube_num++].add_position(manifold.contact_points[0]);
 
+      cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
       cube_models[cube_num++].add_position(manifold.contact_points[1]);
