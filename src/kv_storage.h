@@ -103,10 +103,7 @@ inline bool Rad_Node_get(sRadNode *node,
     // Traverse the tree until a leaf is found
     char *res_key = (char*) key;
     int res_key_len = key_len;
-    std::cout << "===i" << std::endl;
-    int i = 0;
     while(true) {
-        i++;
         int similarity = string_similarity(it_node->key, it_node->key_len, res_key, res_key_len);
         // Found the node, exiting the loop
         if (similarity == res_key_len && similarity == it_node->key_len) {
@@ -122,7 +119,6 @@ inline bool Rad_Node_get(sRadNode *node,
         }
 
         it_node = it_node->children[*res_key];
-        std::cout << "it" << std::endl;
     }
     if (!it_node->has_result) {
         return false;
