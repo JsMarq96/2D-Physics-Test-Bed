@@ -137,6 +137,7 @@ struct sColliderMesh {
 
                 if (!is_inside) {
                     edges[edge_cout++] = curr_edge;
+                    //std::cout << edge_cout << '/' << face_count * 2 <<   std::endl;
                 }
             }
         }
@@ -192,17 +193,29 @@ struct sColliderMesh {
 
     inline bool test_face_sphere_collision(const uint32_t face_index,
                                            const sVector3 &sphere_origin,
-                                           const float sphere_radius) const {
+                                           const float sphere_radius,
+                                           float *distance) const {
         sVector3 *face_vertices = get_face(face_index);
 
         sPlane curr_plane = sPlane{plane_origin[face_index], normals[face_index]};
 
-        float angle_sum = 0.0f;
-        if (curr_plane.distance(sphere_origin) <= sphere_radius) {
+        float plane_distance = curr_plane.distance(sphere_origin);
+
+        if (plane_distance <= sphere_radius) {
             sVector3 origin_on_plane = curr_plane.project_point(sphere_origin);
 
-            //TODO: Tiny SAT en 2 ejes tangentes a la normal..? Puede ser bastante caro
-            // O mirar si los angulos son 360, del punto a los vertices
+            // iF the total angle is arround 360 de grees or 6.28 rads, is inside
+            float angle_sum = 0.00;
+            for(uint32_t i = 0; i <= face_stride; i++) {
+                uint32_t j = (i+1) % face_stride;
+                sVector3 v1 = curr_plane.project_point(face_vertices[i]).subs(origin_on_plane);
+                sVector3 v2 = curr_plane.project_point(face_vertices[j]).subs(origin_on_plane);
+
+                 angle_sum += acos(dot_prod(v1,v2) / (v1.magnitude() * v2.magnitude()));
+            }
+            *distance =plane_distance - sphere_radius;
+            std::cout << plane_distance - sphere_radius  << " ini " << angle_sum<< std::endl;
+            return angle_sum >= 6.2f;
         }
 
         return false;

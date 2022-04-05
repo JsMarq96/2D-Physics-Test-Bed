@@ -51,7 +51,7 @@ inline bool test_sphere_sphere_collision(const sVector3  &center1,
 
         manifold->contact_points[0] = center1.sum(manifold->normal.mult(radius1));
         manifold->contact_depth[0] = center_distance - total_radius;
-
+        
         manifold->contanct_points_count = 1;
 
         return true;
@@ -131,7 +131,6 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
                                        sCollisionManifold *manifold) {
     uint32_t plane = 0;
     float facing = -FLT_MAX;
-
     // Select the most facing plane of all of them
     for(int i = 0; i < cube_geometry.face_count; i++) {
         // the most facing point to the plane
@@ -141,21 +140,22 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
         float curr_facing = dot_prod(sphere_to_plane_origin,
                                      cube_geometry.plane_origin[i].sum(cube_geometry.normals[i].mult(radius)));
 
-        // Since it is a cube,
         if (curr_facing > facing) {
             plane = i;
             facing = curr_facing;
         }
     }
 
+    float distance = 0.0f;
     if (cube_geometry.test_face_sphere_collision(plane,
                                                  sphere_center,
-                                                 radius)) {
+                                                 radius, &distance)) {
         //
         const sPlane face_plane = cube_geometry.get_plane_of_face(plane);
         manifold->normal = face_plane.normal.normalize();
-        manifold->contact_depth[0] = face_plane.distance(sphere_center) - radius;
-        manifold->contact_points[0] = face_plane.project_point(sphere_center).sum(face_plane.origin_point.mult(manifold->contact_depth[0]));
+        manifold->contact_points[0] = face_plane.project_point(sphere_center);//sphere_center.sum(face_plane.normal.mult(-radius));
+        manifold->contact_depth[0] = distance;
+        std::cout << distance << std::endl;
 
         manifold->contanct_points_count = 1;
 

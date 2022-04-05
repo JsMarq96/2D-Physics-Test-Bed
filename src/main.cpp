@@ -308,7 +308,7 @@ void draw_loop(GLFWwindow *window) {
 
 
   start_time = glfwGetTime();
-
+  camera_rot = 72.10f;
   while(!glfwWindowShouldClose(window)) {
     // Draw loop
     int width, heigth;
@@ -330,9 +330,7 @@ void draw_loop(GLFWwindow *window) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-
-    camera_rot = 1.10f; 
-    camera.position = rotate_arround(camera.position, 
+    camera.position = rotate_arround({5.0f, 3.5f, 5.0f},
                                      sVector3{0.0f, 0.0f, 0.0f}, 
                                      to_radians(camera_rot));
   
@@ -365,6 +363,7 @@ void draw_loop(GLFWwindow *window) {
 
     ImGui::Begin("Overall");
     ImGui::Text("Num of steps: %d", num_of_physics_steps);
+    ImGui::SliderFloat("Camera rotation", &camera_rot, 0.0f, 360.0f);
     ImGui::End();
 
     sMat44 cube_models[15] = {}, sphere_models[15] = {};
@@ -391,12 +390,11 @@ void draw_loop(GLFWwindow *window) {
     int i = 0;
     for(; i < phys_instance.curr_frame_col_count; i++) {
       cube_models[i].set_position(phys_instance._manifolds[i].contact_points[0]);
-      cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
-      col_color[i] = {0.0f, 1.0f, 0.0f, 0.90f};
+      cube_models[i].set_scale({0.15f, 0.05f, 0.05f});
+      col_color[i] = {0.0f, 0.0f, 1.0f, 0.90f};
     }
 
     sColliderMesh col_cube1 = {};
-
     col_cube1.init_cuboid(transforms[0]);
 
     for(int j=0; j < col_cube1.face_count; j++){
