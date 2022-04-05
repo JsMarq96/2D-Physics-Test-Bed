@@ -51,6 +51,7 @@ struct sRadNode {
     int        key_len          = 0;
     uKVStorage result;
     bool       has_result     = false;
+    bool       is_used        = false;
 
     sRadNode *children[256] = { NULL };
     bool is_full[256]         = { false };
@@ -61,6 +62,7 @@ inline void RN_init(sRadNode *node) {
     memset(node->is_full, false, sizeof(sRadNode::is_full));
     node->key_len        = 0;
     node->has_result     = false;
+    node->is_used        = false;
 
     for(int i = 0; i < 256; i++) {
         node->children[i] = NULL;
@@ -86,12 +88,12 @@ inline bool Rad_Node_get(sRadNode *node,
                         uKVStorage *to_retrieve) {
     int index = (int) *key;
 
-    if (node == NULL) {
+    if (node == NULL || node->is_used == false) {
         return false;
     }
 
     // Early stop
-    if (!node->is_full[index]) {
+    if (!node->is_full[index] || !node->is_used) {
         return false;
     }
 
@@ -133,6 +135,7 @@ inline void Rad_Node_add(sRadNode *node,
     RN_init(new_node);
     memcpy(&new_node->result, to_store, sizeof(uKVStorage));
     new_node->has_result = true;
+    new_node->is_used = true;
 
     int node_key = (unsigned char) key[0];
     if (!node->is_full[node_key]) {
@@ -141,6 +144,7 @@ inline void Rad_Node_add(sRadNode *node,
         memcpy(new_node->key, key, key_len);
         node->is_full[node_key] = true;
         node->children[node_key] = new_node;
+        node->is_used = true;
         return;
     }
 
@@ -171,6 +175,7 @@ inline void Rad_Node_add(sRadNode *node,
             it_node->has_result = false;
             it_node->is_full[(unsigned char) old_root->key[0]] = true;
             it_node->children[(unsigned char) old_root->key[0]] = old_root;
+            it_node->is_used = true;
         }
 
 
@@ -179,6 +184,7 @@ inline void Rad_Node_add(sRadNode *node,
         if (similarity == it_key_len && it_node->key_len == similarity) {
             memcpy(&it_node->result, to_store, sizeof(uKVStorage));
             it_node->has_result = true;
+            it_node->is_used = true;
             free(new_node);
             return;
         }
@@ -194,6 +200,7 @@ inline void Rad_Node_add(sRadNode *node,
             memcpy(new_node->key, it_key, it_key_len * sizeof(char));
             it_node->is_full[crop_it_key_index] = true;
             it_node->children[crop_it_key_index] = new_node;
+            it_node->is_used = true;
             return;
         }
 

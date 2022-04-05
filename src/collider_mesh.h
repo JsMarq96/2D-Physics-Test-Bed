@@ -47,20 +47,29 @@ struct sColliderMesh {
 
         // Vertices
         sVector3 raw_points[8] = {};
-        raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        /*raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[1] = transform.apply(sVector3{1.0f, 0.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[2] = transform.apply(sVector3{0.0f, 1.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[3] = transform.apply(sVector3{1.0f, 1.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[4] = transform.apply(sVector3{0.0f, 0.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
-        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));*/
+        raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f});
+        raw_points[1] = transform.apply(sVector3{1.0f, 0.0f, 0.0f});
+        raw_points[2] = transform.apply(sVector3{0.0f, 1.0f, 0.0f});
+        raw_points[3] = transform.apply(sVector3{1.0f, 1.0f, 0.0f});
+        raw_points[4] = transform.apply(sVector3{0.0f, 0.0f, 1.0f});
+        raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f});
+        raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f});
+        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f});
+
 
         for(uint32_t i = 0; i < 6*4; i++) {
             vertices[i] = raw_points[box_LUT_vertices[i]];
         }
 
-        sVector3 cuboid_center = transform.apply({0.5f, 0.5f, 0.5f});
+        sVector3 cuboid_center = transform.apply({0.0f, 0.0f, 0.0f});
 
         // Face origin
         for(int i = 0; i < 6; i++) {
@@ -190,13 +199,10 @@ struct sColliderMesh {
 
         float angle_sum = 0.0f;
         if (curr_plane.distance(sphere_origin) <= sphere_radius) {
-            for(int i = 0; i < face_stride; i++) {
-                int j = j % face_stride;
+            sVector3 origin_on_plane = curr_plane.project_point(sphere_origin);
 
-                angle_sum += dot_prod(face_vertices[i], face_vertices[j]);
-            }
-
-            return angle_sum <= 0.0f;
+            //TODO: Tiny SAT en 2 ejes tangentes a la normal..? Puede ser bastante caro
+            // O mirar si los angulos son 360, del punto a los vertices
         }
 
         return false;

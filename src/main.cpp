@@ -306,8 +306,6 @@ void draw_loop(GLFWwindow *window) {
   double delta_time = 0.01;
   double accumulator = 0.0;
 
-  // Diagnostics
-  float physics_ticks_per_frame[6] = {0.0f, 0.0f, 0.0f, 0.0f,};
 
   start_time = glfwGetTime();
 
@@ -394,8 +392,21 @@ void draw_loop(GLFWwindow *window) {
     for(; i < phys_instance.curr_frame_col_count; i++) {
       cube_models[i].set_position(phys_instance._manifolds[i].contact_points[0]);
       cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
-      col_color[i] = {1.0f, 0.0f, 0.0f, 0.90f};
+      col_color[i] = {0.0f, 1.0f, 0.0f, 0.90f};
     }
+
+    sColliderMesh col_cube1 = {};
+
+    col_cube1.init_cuboid(transforms[0]);
+
+    for(int j=0; j < col_cube1.face_count; j++){
+      cube_colors[i] = {1.0f, 0.f, 0.0f, 0.0f};
+      cube_models[i].set_identity();
+      cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
+      cube_models[i++].add_position(col_cube1.plane_origin[j]);
+    }
+
+    col_cube1.clean();
 
     cube_models[i].set_identity();
     cube_models[i].set_position(transforms[1].position);
@@ -444,8 +455,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_loop(window);
+      draw_loop(window);
+      //test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

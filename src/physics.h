@@ -8,6 +8,7 @@
 #include "collider_mesh.h"
 #include "mesh_renderer.h"
 #include "phys_parameters.h"
+#include "sat.h"
 #include "types.h"
 #include "vector.h"
 
@@ -165,6 +166,21 @@ struct sPhysWorld {
                     }
 
                     raw_cube.clean();
+                } else if (shape[i] == CUBE_COLLIDER && shape[j] == CUBE_COLLIDER) {
+                    sColliderMesh cube_mesh1 = {}, cube_mesh2 = {};
+                    cube_mesh1.init_cuboid(transforms[i]);
+                    cube_mesh2.init_cuboid(transforms[j]);
+
+                    if (SAT::SAT_collision_test(cube_mesh1,
+                                                cube_mesh2,
+                                                &_manifolds[_manifold_count])) {
+                        _manifolds[_manifold_count].obj1 = i;
+                        _manifolds[_manifold_count].obj2 = j;
+                        _manifold_count++;
+                    }
+
+                    cube_mesh1.clean();
+                    cube_mesh2.clean();
                 }
 
             }

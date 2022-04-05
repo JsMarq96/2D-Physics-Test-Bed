@@ -66,7 +66,7 @@ struct sTransform {
     rot_mat.multiply(&scale_mat);
 
     mat->multiply(&rot_mat);
-    mat->add_position(scale.mult(-0.5f));
+    mat->add_position(scale.mult(0.0f));
   }
 };
 

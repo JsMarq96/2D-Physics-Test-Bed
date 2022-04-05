@@ -129,8 +129,8 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
                                        const sVector3 &sphere_center,
                                        const float radius,
                                        sCollisionManifold *manifold) {
-    int plane = -1;
-    float facing = -1000;
+    uint32_t plane = 0;
+    float facing = -FLT_MAX;
 
     // Select the most facing plane of all of them
     for(int i = 0; i < cube_geometry.face_count; i++) {
