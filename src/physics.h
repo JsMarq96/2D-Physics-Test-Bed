@@ -172,8 +172,8 @@ struct sPhysWorld {
                     if (SAT::SAT_collision_test(cube_mesh1,
                                                 cube_mesh2,
                                                 &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = i;
-                        _manifolds[_manifold_count].obj2 = j;
+                        _manifolds[_manifold_count].obj1 = j;
+                        _manifolds[_manifold_count].obj2 = i;
                         _manifold_count++;
                     }
 

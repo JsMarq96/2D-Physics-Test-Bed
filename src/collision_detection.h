@@ -155,7 +155,6 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
         manifold->normal = face_plane.normal.normalize();
         manifold->contact_points[0] = face_plane.project_point(sphere_center);//sphere_center.sum(face_plane.normal.mult(-radius));
         manifold->contact_depth[0] = distance;
-        std::cout << distance << std::endl;
 
         manifold->contanct_points_count = 1;
 
