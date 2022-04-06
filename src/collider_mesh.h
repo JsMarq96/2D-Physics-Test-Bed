@@ -214,7 +214,7 @@ struct sColliderMesh {
                  angle_sum += acos(dot_prod(v1,v2) / (v1.magnitude() * v2.magnitude()));
             }
             *distance =plane_distance - sphere_radius;
-            std::cout << plane_distance - sphere_radius  << " ini " << angle_sum<< std::endl;
+            //std::cout << plane_distance - sphere_radius  << " ini " << angle_sum<< std::endl;
             return angle_sum >= 6.2f;
         }
 

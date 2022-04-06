@@ -9,6 +9,7 @@
 #include <exception>
 
 namespace clipping {
+    // Crop Mesh2's face to mesh1's face
     inline uint32_t face_face_clipping(const sColliderMesh &mesh1,
                                        const uint32_t face_1,
                                        const sColliderMesh &mesh2,
@@ -23,10 +24,14 @@ namespace clipping {
             // from face plane's origin to the half-point.
             sVector3 *to_clip = mesh2.get_face(face_2);
 
+            sPlane reference_face = mesh1.get_plane_of_face(face_1);
+
             sSwapableVector3Stacks swapable_stack = {};
             swapable_stack.init(mesh2.face_stride * 2);
             for(uint32_t i = 0; i < mesh2.face_stride; i++) {
+                if (reference_face.distance(to_clip[i]) < 0.0005f) {
                     swapable_stack.add_element_to_current_stack(to_clip[i]);
+                }
             }
 
             sVector3 *cropping_plane_vertices = mesh1.get_face(face_1);
@@ -73,6 +78,7 @@ namespace clipping {
             for(num_of_clipped_points = 0; num_of_clipped_points <  swapable_stack.get_current_stacks_size(); num_of_clipped_points++) {
                 clip_points[num_of_clipped_points] = swapable_stack.get_element_from_current_stack(num_of_clipped_points);
             }
+            //std::cout << num_of_clipped_points << " " << mesh2.face_stride * 2 << std::endl;
 
             swapable_stack.clean_current_stack();
             swapable_stack.clean();

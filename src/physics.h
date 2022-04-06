@@ -177,6 +177,11 @@ struct sPhysWorld {
                         _manifold_count++;
                     }
 
+                    sCollisionManifold man = _manifolds[_manifold_count-1];
+                    for(int p = 0; p < man.contanct_points_count; p++) {
+                        std::cout << man.contact_points[p].x << " " << man.contact_points[p].y << " " << man.contact_points[p].z << std::endl;
+                    }
+
                     cube_mesh1.clean();
                     cube_mesh2.clean();
                 }

@@ -178,15 +178,15 @@ void test_loop(GLFWwindow *window) {
 
     uint32_t cube_num = 2;
 
-    for(int j = 30 ; j < col_cube2.face_count; j++){
-      cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
+    for(int j = 0 ; j < col_cube2.face_count; j++){
+      cube_colors[cube_num] = {0.0f, 1.f, 0.0f, 0.0f};
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
       cube_models[cube_num++].add_position(col_cube2.plane_origin[j]);
     }
 
-     for(int j = 30 ; j < col_cube2.face_count; j++){
-      cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
+     for(int j = 0 ; j < col_cube2.face_count; j++){
+      cube_colors[cube_num] = {0.0f, 0.f, 1.0f, 0.0f};
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
       cube_models[cube_num++].add_position(col_cube1.plane_origin[j]);
@@ -298,7 +298,7 @@ void draw_loop(GLFWwindow *window) {
 
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
-  float camera_rot = 0.0f;
+  float camera_rot = 0.0f, camera_height = 0.0f;
 
   //camera.position = {-5.0f, 1.5f, 5.0f};
   camera.position = {5.0f, 3.5f, 5.0f};
@@ -333,7 +333,7 @@ void draw_loop(GLFWwindow *window) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    camera.position = rotate_arround({5.0f, 3.5f, 5.0f},
+    camera.position = rotate_arround({5.0f, camera_height, 5.0f},
                                      sVector3{0.0f, 0.0f, 0.0f}, 
                                      to_radians(camera_rot));
   
@@ -367,6 +367,7 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Begin("Overall");
     ImGui::Text("Num of steps: %d", num_of_physics_steps);
     ImGui::SliderFloat("Camera rotation", &camera_rot, 0.0f, 360.0f);
+    ImGui::SliderFloat("Camera height", &camera_height, -1.0f, 10.0f);
     ImGui::End();
 
     sMat44 cube_models[15] = {}, sphere_models[15] = {};
@@ -408,6 +409,18 @@ void draw_loop(GLFWwindow *window) {
     }
 
     col_cube1.clean();
+
+    col_cube1.init_cuboid(transforms[1]);
+
+    for(int j=0; j < col_cube1.face_count; j++){
+      cube_colors[i] = {1.0f, 0.f, 0.0f, 0.0f};
+      cube_models[i].set_identity();
+      cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
+      cube_models[i++].add_position(col_cube1.plane_origin[j]);
+    }
+
+    col_cube1.clean();
+
 
     cube_models[i].set_identity();
     cube_models[i].set_position(transforms[1].position);
@@ -456,8 +469,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_loop(window);
+      //draw_loop(window);
+      test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
