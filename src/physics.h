@@ -93,8 +93,6 @@ struct sPhysWorld {
         }
 
         // TODO: ad ifndef DEBUG
-        debug_capsules_renderers[SPHERE_COLLIDER].init("resources/sphere.obj");
-        debug_capsules_renderers[CUBE_COLLIDER].init("resources/cube.obj");
     }
 
     // Apply collisions & speeds, check for collisions, and resolve them

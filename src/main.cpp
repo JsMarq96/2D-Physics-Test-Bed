@@ -243,6 +243,9 @@ void draw_loop(GLFWwindow *window) {
   sphere_renderer.create_from_mesh(&sphere);
   cube_renderer.create_from_mesh(&cube);
 
+  sphere.clean();
+  cube.clean();
+
   sPhysWorld phys_instance;
 
   phys_instance.set_default_values();
@@ -263,7 +266,7 @@ void draw_loop(GLFWwindow *window) {
   transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.restitution[1] = 0.6f;
   phys_instance.mass[1] = 15.0f;
-  phys_instance.shape[1] = SPHERE_COLLIDER;
+  phys_instance.shape[1] = CUBE_COLLIDER;
   phys_instance.enabled[1] = true;
 
   // Object 3: static plane
