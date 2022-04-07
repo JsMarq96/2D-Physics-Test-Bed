@@ -233,7 +233,7 @@ void draw_loop(GLFWwindow *window) {
     "GREN",
     "BLU"
   };
-  sTransform   transforms[6] = {};
+  sTransform   transforms[10] = {};
 
   sMesh sphere, cube;
   sphere.load_OBJ_mesh("resources/sphere.obj");
@@ -252,7 +252,7 @@ void draw_loop(GLFWwindow *window) {
 
   // Object 1: Static cube
   transforms[0].position = {-0.50f, 0.0f, 0.0f};
-  transforms[0].scale = {10.5f, 1.0f, 10.0f};
+  transforms[0].scale = {30.5f, 1.0f, 30.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.mass[0] = 0.0f;
   phys_instance.restitution[0] = 0.05f;
@@ -263,11 +263,21 @@ void draw_loop(GLFWwindow *window) {
   // Object 2: Dynamic cube
   transforms[1].position = {0.07f, 7.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
-  transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  transforms[1].set_rotation({0.9260f, 0.0f, 0.377f, 0.0f});
   phys_instance.restitution[1] = 0.6f;
   phys_instance.mass[1] = 15.0f;
   phys_instance.shape[1] = CUBE_COLLIDER;
   phys_instance.enabled[1] = true;
+
+  // Object 2: Dynamic cube
+  transforms[4].position = {1.5f, 9.0f, 0.0f};
+  transforms[4].scale = {1.0f, 1.0f, 1.0f};
+  transforms[4].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  phys_instance.restitution[4] = 0.6f;
+  phys_instance.mass[4] = 10.0f;
+  phys_instance.shape[4] = CUBE_COLLIDER;
+  phys_instance.enabled[4] = true;
+
 
   // Object 3: static plane
   transforms[3].position = {0.0f, 3.0f, 0.0f};
@@ -290,11 +300,12 @@ void draw_loop(GLFWwindow *window) {
 
   phys_instance.init(transforms);
 
-  sVector4 colors[4] = {};
+  sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
   colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
   colors[2] = {0.0f, 1.0f, 0.0f, 0.50f};
   colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
+  colors[4] = {0.0f, 0.0f, 1.0f, 1.00f};
 
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
@@ -376,7 +387,7 @@ void draw_loop(GLFWwindow *window) {
 
     // Rendering ====
     // Render shapes
-    for(int i = 0; i < 3; i++) {
+    for(int i = 0; i < 5; i++) {
       if (phys_instance.shape[i] == SPHERE_COLLIDER) {
         sphere_colors[sphere_size] = colors[i];
         transforms[i].get_model(&sphere_models[sphere_size++]);
@@ -397,36 +408,6 @@ void draw_loop(GLFWwindow *window) {
       cube_models[i].set_scale({0.15f, 0.05f, 0.05f});
       col_color[i] = {0.0f, 0.0f, 1.0f, 0.90f};
     }
-
-    sColliderMesh col_cube1 = {};
-    col_cube1.init_cuboid(transforms[0]);
-
-    for(int j=0; j < col_cube1.face_count; j++){
-      cube_colors[i] = {1.0f, 0.f, 0.0f, 0.0f};
-      cube_models[i].set_identity();
-      cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
-      cube_models[i++].add_position(col_cube1.plane_origin[j]);
-    }
-
-    col_cube1.clean();
-
-    col_cube1.init_cuboid(transforms[1]);
-
-    for(int j=0; j < col_cube1.face_count; j++){
-      cube_colors[i] = {1.0f, 0.f, 0.0f, 0.0f};
-      cube_models[i].set_identity();
-      cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
-      cube_models[i++].add_position(col_cube1.plane_origin[j]);
-    }
-
-    col_cube1.clean();
-
-
-    cube_models[i].set_identity();
-    cube_models[i].set_position(transforms[1].position);
-    cube_models[i].set_scale({0.05f, 0.05f, 0.05f});
-    col_color[i] = {1.0f, 0.0f, 0.0f, 1.0f};
-    i++;
 
 
     glDisable(GL_DEPTH_TEST);

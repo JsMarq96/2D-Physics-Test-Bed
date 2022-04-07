@@ -7,6 +7,6 @@
 
 #define BAUMGARTE_TERM 0.2f
 
-#define PENETRATION_SLOP 0.001f
+#define PENETRATION_SLOP 0.0001f
 
 #endif // PHYS_PARAMETERS_H_

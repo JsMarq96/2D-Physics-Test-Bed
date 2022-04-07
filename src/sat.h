@@ -144,8 +144,8 @@ namespace SAT {
         //
         sPlane crop_plane = {};
 
-        std::cout << collision_distance_mesh1 << " " << collision_distance_mesh2 << " " << edge_edge_distance << std::endl;
-        if (collision_distance_mesh1 < collision_distance_mesh2) {
+        //std::cout << collision_distance_mesh1 << " " << collision_distance_mesh2 << " " << edge_edge_distance << std::endl;
+        if (collision_distance_mesh1 > collision_distance_mesh2) {
             manifold->normal = mesh1.normals[collision_face_mesh1];
             crop_plane = mesh1.get_plane_of_face(collision_face_mesh1);
 
@@ -164,6 +164,8 @@ namespace SAT {
                                                                            collision_face_mesh1,
                                                                            manifold->contact_points);
         }
+
+        manifold->normal = manifold->normal.invert();
 
 
         for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
