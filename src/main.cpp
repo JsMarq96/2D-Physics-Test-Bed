@@ -72,7 +72,7 @@ void test_loop(GLFWwindow *window) {
 
   // Object 1: Static cube
   transforms[0].position = {0.0f, 0.0f, 0.0f};
-  transforms[0].scale = {1.0f, .5f, 1.0f};
+  transforms[0].scale = {10.0f, .5f, 10.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
   transforms[1].position = {0.0f, 5.0f, 0.0f};
@@ -252,18 +252,18 @@ void draw_loop(GLFWwindow *window) {
 
   // Object 1: Static cube
   transforms[0].position = {-0.50f, 0.0f, 0.0f};
-  transforms[0].scale = {2.5f, 1.0f, 2.0f};
+  transforms[0].scale = {10.5f, 1.0f, 10.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.mass[0] = 0.0f;
-  phys_instance.restitution[0] = 0.25f;
+  phys_instance.restitution[0] = 0.05f;
   phys_instance.shape[0] = CUBE_COLLIDER;
   phys_instance.is_static[0] = true;
   phys_instance.enabled[0] = true;
 
-  // Object 2: Dynamic sphere
+  // Object 2: Dynamic cube
   transforms[1].position = {0.07f, 7.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
-  transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  transforms[1].set_rotation({0.9250f, 0.70f, 0.380f, 0.0f});
   phys_instance.restitution[1] = 0.6f;
   phys_instance.mass[1] = 15.0f;
   phys_instance.shape[1] = CUBE_COLLIDER;
@@ -279,13 +279,13 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.enabled[3] = false;
 
   // Object 4: Static sphere 2
-  transforms[2].position = {1.9f, 0.1f, 0.1f};
-  transforms[2].scale = {2.0f, 2.0f, 2.0f};
+  transforms[2].position = {3.0f, 6.1f, 0.1f};
+  transforms[2].scale = {1.0f, 1.0f, 1.0f};
   transforms[2].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.restitution[2] = 0.1f;
-  phys_instance.mass[2] = 0.0f;
+  phys_instance.mass[2] = 50.0f;
   phys_instance.shape[2] = SPHERE_COLLIDER;
-  phys_instance.is_static[2] = true;
+  phys_instance.is_static[2] = false;
   phys_instance.enabled[2] = true;
 
   phys_instance.init(transforms);
@@ -298,7 +298,7 @@ void draw_loop(GLFWwindow *window) {
 
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
-  float camera_rot = 0.0f, camera_height = 0.0f;
+  float camera_rot = 0.0f, camera_height = 3.0f;
 
   //camera.position = {-5.0f, 1.5f, 5.0f};
   camera.position = {5.0f, 3.5f, 5.0f};
@@ -469,8 +469,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_loop(window);
+      draw_loop(window);
+      //test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

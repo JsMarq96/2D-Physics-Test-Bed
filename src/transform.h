@@ -47,7 +47,7 @@ struct sTransform {
     sQuaternion4 q_vect = scalled.get_pure_quaternion();
 
     // Using a' = Q * a * Q^-1
-    return rotation.inverse().multiply(q_vect).multiply(rotation).get_vector().sum(position).subs(scale.mult(0.50f));
+    return rotation.inverse().multiply(q_vect).multiply(rotation).get_vector().sum(position);
   }
 
   // Generate model matrix
@@ -66,7 +66,7 @@ struct sTransform {
     rot_mat.multiply(&scale_mat);
 
     mat->multiply(&rot_mat);
-    mat->add_position(scale.mult(0.0f));
+    //mat->add_position(scale.mult(0.0f));
   }
 };
 

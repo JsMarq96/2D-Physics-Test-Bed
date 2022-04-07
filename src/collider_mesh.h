@@ -47,22 +47,22 @@ struct sColliderMesh {
 
         // Vertices
         sVector3 raw_points[8] = {};
-        /*raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[1] = transform.apply(sVector3{1.0f, 0.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[2] = transform.apply(sVector3{0.0f, 1.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[3] = transform.apply(sVector3{1.0f, 1.0f, 0.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[4] = transform.apply(sVector3{0.0f, 0.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
-        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));*/
-        raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f});
+        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
+        /*raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f});
         raw_points[1] = transform.apply(sVector3{1.0f, 0.0f, 0.0f});
         raw_points[2] = transform.apply(sVector3{0.0f, 1.0f, 0.0f});
         raw_points[3] = transform.apply(sVector3{1.0f, 1.0f, 0.0f});
         raw_points[4] = transform.apply(sVector3{0.0f, 0.0f, 1.0f});
         raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f});
         raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f});
-        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f});
+        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f});*/
 
 
         for(uint32_t i = 0; i < 6*4; i++) {
