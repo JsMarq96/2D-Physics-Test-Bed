@@ -97,6 +97,8 @@ struct sPhysWorld {
 
     // Apply collisions & speeds, check for collisions, and resolve them
     void step(const double elapsed_time) {
+        // 0 - Clean manifolds
+        memset(_manifolds, 0, sizeof(_manifolds));
         // 1 - Rotate inertia tensors
         for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
             sMat33 r_mat = {}, r_mat_t = {}, inv_inertia = {};
@@ -177,11 +179,11 @@ struct sPhysWorld {
                         _manifold_count++;
                     }
 
-                    sCollisionManifold man = _manifolds[_manifold_count-1];
-                    std::cout <<">>> " << man.normal.x << " " << man.normal.y << " " << man.normal.z << std::endl;
-                    for(int p = 0; p < man.contanct_points_count; p++) {
+                    //sCollisionManifold man = _manifolds[_manifold_count-1];
+                    //std::cout <<">>> " << man.normal.x << " " << man.normal.y << " " << man.normal.z << std::endl;
+                    //for(int p = 0; p < man.contanct_points_count; p++) {
                         //std::cout << man.contact_points[p].x << " " << man.contact_points[p].y << " " << man.contact_points[p].z << std::endl;
-                    }
+                    //}
 
                     cube_mesh1.clean();
                     cube_mesh2.clean();

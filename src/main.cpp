@@ -270,7 +270,7 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.enabled[1] = true;
 
   // Object 2: Dynamic cube
-  transforms[4].position = {1.5f, 9.0f, 0.0f};
+  transforms[4].position = {0.5f, 9.0f, 0.0f};
   transforms[4].scale = {1.0f, 1.0f, 1.0f};
   transforms[4].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.restitution[4] = 0.6f;
@@ -402,16 +402,19 @@ void draw_loop(GLFWwindow *window) {
 
     // Render contact points
     sVector4 col_color[15] = {};
-    int i = 0;
-    for(; i < phys_instance.curr_frame_col_count; i++) {
-      cube_models[i].set_position(phys_instance._manifolds[i].contact_points[0]);
-      cube_models[i].set_scale({0.15f, 0.05f, 0.05f});
-      col_color[i] = {0.0f, 0.0f, 1.0f, 0.90f};
+    int col_points = 0;
+    for(int i = 0; i < phys_instance.curr_frame_col_count; i++) {
+      for(int j = 0; j < phys_instance._manifolds[i].contanct_points_count; j++) {
+        cube_models[col_points].set_identity();
+        cube_models[col_points].set_position(phys_instance._manifolds[i].contact_points[j]);
+        cube_models[col_points].set_scale({0.05f, 0.05f, 0.05f});
+        col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
+      }
     }
 
 
     glDisable(GL_DEPTH_TEST);
-    sphere_renderer.render(cube_models, col_color, i, proj_mat, false);
+    sphere_renderer.render(cube_models, col_color, col_points, proj_mat, false);
     glEnable(GL_DEPTH_TEST);
 
     ImGui::Render();
