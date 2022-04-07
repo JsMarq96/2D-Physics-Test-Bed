@@ -178,8 +178,9 @@ struct sPhysWorld {
                     }
 
                     sCollisionManifold man = _manifolds[_manifold_count-1];
+                    std::cout <<">>> " << man.normal.x << " " << man.normal.y << " " << man.normal.z << std::endl;
                     for(int p = 0; p < man.contanct_points_count; p++) {
-                        std::cout << man.contact_points[p].x << " " << man.contact_points[p].y << " " << man.contact_points[p].z << std::endl;
+                        //std::cout << man.contact_points[p].x << " " << man.contact_points[p].y << " " << man.contact_points[p].z << std::endl;
                     }
 
                     cube_mesh1.clean();

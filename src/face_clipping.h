@@ -22,6 +22,8 @@ namespace clipping {
             // Compute clipping planes:
             // Half point of the edge as the origin, and the normal is
             // from face plane's origin to the half-point.
+            // ONLY NEEDS TO CLIP WITH ONE PLANE! THE COLLISION PLAN
+            // https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12562
             sVector3 *to_clip = mesh2.get_face(face_2);
 
             sPlane reference_face = mesh1.get_plane_of_face(face_1);
@@ -29,9 +31,9 @@ namespace clipping {
             sSwapableVector3Stacks swapable_stack = {};
             swapable_stack.init(mesh2.face_stride * 2);
             for(uint32_t i = 0; i < mesh2.face_stride; i++) {
-                if (reference_face.distance(to_clip[i]) < 0.0005f) {
+                //if (reference_face.distance(to_clip[i]) < 0.0005f) {
                     swapable_stack.add_element_to_current_stack(to_clip[i]);
-                }
+                //}
             }
 
             sVector3 *cropping_plane_vertices = mesh1.get_face(face_1);
@@ -41,8 +43,8 @@ namespace clipping {
             for(uint32_t edge_i = 0; edge_i < mesh1.face_stride; edge_i++) {
                     // Compute the croppiong plane
                     uint32_t edge_j = (edge_i + 1) % mesh1.face_stride;
-                    sVector3 middle_edge = cropping_plane_vertices[edge_i].subs(cropping_plane_vertices[edge_j]).mult(0.5f);
-                    middle_edge = cropping_plane_vertices[edge_i].subs(middle_edge);
+                    sVector3 middle_edge = cropping_plane_vertices[edge_j].subs(cropping_plane_vertices[edge_i]).mult(0.5f);
+                    middle_edge = cropping_plane_vertices[edge_i].sum(middle_edge);
 
                     sPlane cropping_plane = {};
                     cropping_plane.normal = middle_edge.subs(face_origin).normalize();

@@ -263,7 +263,7 @@ void draw_loop(GLFWwindow *window) {
   // Object 2: Dynamic cube
   transforms[1].position = {0.07f, 7.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
-  transforms[1].set_rotation({0.9250f, 0.70f, 0.380f, 0.0f});
+  transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.restitution[1] = 0.6f;
   phys_instance.mass[1] = 15.0f;
   phys_instance.shape[1] = CUBE_COLLIDER;
