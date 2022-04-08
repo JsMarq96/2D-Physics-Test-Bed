@@ -2,6 +2,7 @@
 #define COLLIDER_MESH_H_
 
 #include "math.h"
+#include "mesh.h"
 #include "transform.h"
 #include "vector.h"
 #include "geometry.h"
@@ -34,6 +35,77 @@ struct sColliderMesh {
     uint32_t   edge_cout = 0;
 
     eFaceSize  face_stride = FACE_QUAD;
+
+
+    void load_collider_mesh(const sMesh &mesh) {
+        vertices = (sVector3*) malloc(sizeof(sVector3) * mesh.indexing_count);
+        normals = (sVector3*) malloc(sizeof(sVector3) * mesh.face_count);
+        plane_origin = (sVector3*) malloc(sizeof(sVector3) * mesh.face_count);
+
+        vertices_count = mesh.indexing_count;
+        face_count = mesh.face_count;
+        face_stride = FACE_TRI; // Is a triangled mesh
+
+        // Load vertices & calculate center (avg point)
+        sVector3 mesh_center = {0.0f, 0.0f, 0.0f};
+        for(uint32_t i = 0; i < mesh.indexing_count; i++) {
+            vertices[i] = mesh.vertices[mesh.vertices_index[i]].vertex;
+            mesh_center = mesh_center.sum(vertices[i]);
+        }
+
+        mesh_center = mesh_center.mult(1.0f / mesh.indexing_count);
+
+        // Load faces
+        for(uint32_t i = 0; mesh.face_count; i++) {
+            sVector3 face_plane_center = {0.0f, 0.0f, 0.0f};
+            // Compute the middle point of the face
+            for(uint32_t j = 0; j < face_stride; j++) {
+                face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + j]);
+            }
+
+            plane_origin[i] = face_plane_center;
+            normals[i] = mesh_center.subs(face_plane_center).normalize();
+        }
+
+        // Store Edges
+        edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 2);
+        edge_cout = 0;
+        // TODO: this is not very efficient... Better way?
+        // Iterate throught every face, and thrugh every vertex
+        // If there has not beel included, then add them to the list
+        // Maybe a use of a map or a set to speedup..?
+        // Maybe a hald-edfe can do a bit better... TODO
+        for(uint32_t i = 0; i < face_count; i++) {
+            uint32_t curr_face_index = i * face_stride;
+
+            for(uint32_t v1 = 0; v1 < face_stride; v1++) {
+                uint32_t v2 = (v1 + 1) % face_stride;
+
+                sEdgeIndexTuple curr_edge = {curr_face_index + v1, curr_face_index + v2};
+                bool is_inside = false;
+                sVector3 vec1 = vertices[curr_edge.x];
+                sVector3 vec2 = vertices[curr_edge.y];
+
+                // iterate thrugh to all the edges, to test if its inside
+                for(uint32_t ed = 0; ed < edge_cout; ed++) {
+                    sEdgeIndexTuple &edge_to_test = edges[ed];
+
+                    bool is_equal = vertices[edge_to_test.x].is_equal(vec1) && vertices[edge_to_test.y].is_equal(vec2);
+                    is_equal = is_equal || (vertices[edge_to_test.x].is_equal(vec2) && vertices[edge_to_test.y].is_equal(vec1));
+
+                    if (is_equal) {
+                        is_inside = true;
+                        break;
+                    }
+                }
+
+                if (!is_inside) {
+                    edges[edge_cout++] = curr_edge;
+                    //std::cout << edge_cout << '/' << face_count * 2 <<   std::endl;
+                }
+            }
+        }
+    }
 
     void init_cuboid(const sTransform &transform) {
         int box_LUT_vertices[6 * 4] = { 4, 5, 7, 6,   6, 7, 3, 2,   1, 3, 7, 5,   0, 1, 3, 2,   0, 1, 5, 4,   0, 2, 6, 4};
