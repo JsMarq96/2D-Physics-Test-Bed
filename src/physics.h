@@ -20,6 +20,7 @@ struct sSpeed {
     sVector3 angular = {0.0f, 0.0f, 0.0f};
 };
 
+
 struct sPhysWorld {
     bool               enabled             [PHYS_INSTANCE_COUNT] = {};
     bool               is_static           [PHYS_INSTANCE_COUNT] = {};
@@ -293,8 +294,95 @@ struct sPhysWorld {
         }
     }
 
-    void impulse_presolver(const sCollisionManifold &manifold, const float elapsed_time) {
+    // TODO: arbiter & warmstarting
+    void impulse_presolver(sCollisionManifold &manifold, const float elapsed_time) {
+        int id_1 = manifold.obj1;
+        int id_2 = manifold.obj2;
 
+        sTransform *transf_1 = &transforms[id_1];
+        sTransform *transf_2 = &transforms[id_2];
+
+        sSpeed *speed_1 = &obj_speeds[id_1];
+        sSpeed *speed_2 = &obj_speeds[id_2];
+
+        // Calculate impulse response for each contact point
+        for(int i = 0; i < manifold.contanct_points_count; i++) {
+            sContactData *contact_data = &manifold.contact_data[i];
+            // NORMAL IMPULSE ========
+            // Vector from the center to the collision point
+            contact_data->r1 = manifold.contact_points[i].subs(transf_1->position);
+            contact_data->r2 = manifold.contact_points[i].subs(transf_2->position);
+
+            sVector3 r1_cross_n = cross_prod(contact_data->r1, manifold.normal);
+            sVector3 r2_cross_n = cross_prod(contact_data->r2, manifold.normal);
+
+            // Calculate the collision momenton, aka the contact speed
+            float collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), manifold.normal) +
+                                       dot_prod(r1_cross_n, speed_1->angular) -
+                                       dot_prod(r2_cross_n, speed_2->angular);
+
+            contact_data->linear_mass = inv_mass[id_1] + inv_mass[id_2];
+            contact_data->angular_mass = dot_prod(r1_cross_n, inv_inertia_tensors[id_1].multiply(r1_cross_n)) +
+                dot_prod(r2_cross_n, inv_inertia_tensors[id_2].multiply(r2_cross_n));
+
+            // Baumgarte correction for the impulse
+            contact_data->bias = -BAUMGARTE_TERM / elapsed_time * MIN(0.0f, manifold.contact_depth[i] + PENETRATION_SLOP);
+
+            // Restitution constant
+            contact_data->restitution = MIN(restitution[id_1], restitution[id_2]);
+
+            //float impulse_magnitude = (1 + e) * (collision_momentun + bias) / (linear_mass + angular_mass);
+
+            //sVector3 impulse = manifold.normal.mult(impulse_magnitude);
+
+            //if (!is_static[id_2]) {
+            //    speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));
+            //    speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(r2, impulse)));
+            //}
+
+            // Invert the impulse for the other body
+            //impulse = impulse.mult(-1.0f);
+
+            //if (!is_static[id_1]) {
+            //    speed_1->linear = speed_1->linear.sum(impulse.mult(inv_mass[id_1]));
+            //    speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(r1, impulse)));
+            //}
+
+            // FRICTION IMPULSES =====
+
+            // Calculate the tangent wrenches
+            sVector3 tangents[2] = {};
+            plane_space(manifold.normal, tangents[0], tangents[1]);
+
+            for(int tang = 0; tang < 2; tang++) {
+                sVector3 r1_cross_t = cross_prod(contact_data->r1, tangents[tang]);
+                sVector3 r2_cross_t = cross_prod(contact_data->r2, tangents[tang]);
+
+                // Calculate the momentun & impulse, but with the tangent wrench instead of the normal
+                /*collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), tangents[tang]) +
+                                     dot_prod(r1_cross_t, speed_1->angular) -
+                                     dot_prod(r2_cross_t, speed_2->angular);*/
+
+                contact_data->tangental_angular_mass[i] = dot_prod(r1_cross_t, inv_inertia_tensors[id_1].multiply(r1_cross_t)) +
+                               dot_prod(r2_cross_t, inv_inertia_tensors[id_2].multiply(r2_cross_t));
+
+                /*float friction_impulse_magnitude = collision_momentun / (linear_mass + angular_mass);
+                sVector3 friction_impulse = tangents[tang].mult(friction_impulse_magnitude);
+
+                if (!is_static[id_2]) {
+                    speed_2->linear = speed_2->linear.sum(friction_impulse.mult(inv_mass[id_2]));
+                    speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(r2, friction_impulse)));
+                }
+
+                friction_impulse = friction_impulse.mult(-1.0f);
+
+                if (!is_static[id_1]) {
+                    speed_1->linear = speed_1->linear.sum(friction_impulse.mult(inv_mass[id_1]));
+                    speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(r1, friction_impulse)));
+                }*/
+
+            }
+        }
     }
 
     void impulse_response(const sCollisionManifold &manifold, const float elapsed_time) {
@@ -309,36 +397,27 @@ struct sPhysWorld {
 
         // Calculate impulse response for each contact point
         for(int i = 0; i < manifold.contanct_points_count; i++) {
+            const sContactData *contact_data = &manifold.contact_data[i];
             // NORMAL IMPULSE ========
             // Vector from the center to the collision point
-            sVector3 r1 = manifold.contact_points[i].subs(transf_1->position);
-            sVector3 r2 = manifold.contact_points[i].subs(transf_2->position);
 
-            sVector3 r1_cross_n = cross_prod(r1, manifold.normal);
-            sVector3 r2_cross_n = cross_prod(r2, manifold.normal);
+            sVector3 r1_cross_n = cross_prod(contact_data->r1, manifold.normal);
+            sVector3 r2_cross_n = cross_prod(contact_data->r2, manifold.normal);
 
             // Calculate the collision momenton, aka the contact speed
             float collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), manifold.normal) +
                                        dot_prod(r1_cross_n, speed_1->angular) -
                                        dot_prod(r2_cross_n, speed_2->angular);
 
-            float linear_mass = inv_mass[id_1] + inv_mass[id_2];
-            float angular_mass = dot_prod(r1_cross_n, inv_inertia_tensors[id_1].multiply(r1_cross_n)) +
-                                 dot_prod(r2_cross_n, inv_inertia_tensors[id_2].multiply(r2_cross_n));
 
-            // Baumgarte correction for the impulse
-            float bias = -BAUMGARTE_TERM / elapsed_time * MIN(0.0f, manifold.contact_depth[i] + PENETRATION_SLOP);
 
-            // Restitution constant
-            float e = MIN(restitution[id_1], restitution[id_2]);
-
-            float impulse_magnitude = (1 + e) * (collision_momentun + bias) / (linear_mass + angular_mass);
+            float impulse_magnitude = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
 
             sVector3 impulse = manifold.normal.mult(impulse_magnitude);
 
             if (!is_static[id_2]) {
                 speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));
-                speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(r2, impulse)));
+                speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(contact_data->r2, impulse)));
             }
 
             // Invert the impulse for the other body
@@ -346,40 +425,36 @@ struct sPhysWorld {
 
             if (!is_static[id_1]) {
                 speed_1->linear = speed_1->linear.sum(impulse.mult(inv_mass[id_1]));
-                speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(r1, impulse)));
+                speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(contact_data->r1, impulse)));
             }
 
             // FRICTION IMPULSES =====
 
-            // Calculate the tangent wrenches
-            sVector3 tangents[2] = {};
-            plane_space(manifold.normal, tangents[0], tangents[1]);
 
             for(int tang = 0; tang < 2; tang++) {
-                sVector3 r1_cross_t = cross_prod(r1, tangents[tang]);
-                sVector3 r2_cross_t = cross_prod(r2, tangents[tang]);
+                sVector3 r1_cross_t = cross_prod(contact_data->r1, contact_data->tangents[tang]);
+                sVector3 r2_cross_t = cross_prod(contact_data->r2, contact_data->tangents[tang]);
 
                 // Calculate the momentun & impulse, but with the tangent wrench instead of the normal
-                collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), tangents[tang]) +
+                collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), contact_data->tangents[tang]) +
                                      dot_prod(r1_cross_t, speed_1->angular) -
                                      dot_prod(r2_cross_t, speed_2->angular);
 
-                angular_mass = dot_prod(r1_cross_t, inv_inertia_tensors[id_1].multiply(r1_cross_t)) +
-                               dot_prod(r2_cross_t, inv_inertia_tensors[id_2].multiply(r2_cross_t));
 
-                float friction_impulse_magnitude = collision_momentun / (linear_mass + angular_mass);
-                sVector3 friction_impulse = tangents[tang].mult(friction_impulse_magnitude);
+
+                float friction_impulse_magnitude = collision_momentun / (contact_data->linear_mass + contact_data->tangental_angular_mass[tang]);
+                sVector3 friction_impulse = contact_data->tangents[tang].mult(friction_impulse_magnitude);
 
                 if (!is_static[id_2]) {
                     speed_2->linear = speed_2->linear.sum(friction_impulse.mult(inv_mass[id_2]));
-                    speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(r2, friction_impulse)));
+                    speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(contact_data->r2, friction_impulse)));
                 }
 
                 friction_impulse = friction_impulse.mult(-1.0f);
 
                 if (!is_static[id_1]) {
                     speed_1->linear = speed_1->linear.sum(friction_impulse.mult(inv_mass[id_1]));
-                    speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(r1, friction_impulse)));
+                    speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(contact_data->r1, friction_impulse)));
                 }
 
             }

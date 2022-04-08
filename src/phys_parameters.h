@@ -5,7 +5,7 @@
 
 #define PHYS_SOLVER_ITERATIONS 4
 
-#define BAUMGARTE_TERM 0.3f
+#define BAUMGARTE_TERM 0.2f
 
 #define PENETRATION_SLOP 0.01f
 
