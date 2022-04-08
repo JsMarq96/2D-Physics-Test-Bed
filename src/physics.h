@@ -11,6 +11,7 @@
 #include "sat.h"
 #include "types.h"
 #include "vector.h"
+#include <cstdint>
 
 #define PHYS_INSTANCE_COUNT 100
 
@@ -374,6 +375,15 @@ struct sPhysWorld {
 
             }
         }
+    }
+
+    inline void add_collider(const uint32_t transform_id,
+                             const eColiderTypes col_shape,
+                             const float col_mass,
+                             const bool col_is_static) {
+        enabled[transform_id] = true;
+        shape[transform_id] = col_shape;
+
     }
 };
 

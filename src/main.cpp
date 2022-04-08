@@ -278,6 +278,16 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.shape[4] = CUBE_COLLIDER;
   phys_instance.enabled[4] = true;
 
+  // Object 2: Dynamic cube
+  transforms[5].position = {0.5f, 11.0f, 0.20f};
+  transforms[5].scale = {1.0f, 1.0f, 1.0f};
+  transforms[5].set_rotation({0.97f, 0.0f, 0.03f, 0.0f});
+  phys_instance.restitution[5] = 0.6f;
+  phys_instance.mass[5] = 25.0f;
+  phys_instance.shape[5] = CUBE_COLLIDER;
+  phys_instance.enabled[5] = true;
+
+
 
   // Object 3: static plane
   transforms[3].position = {0.0f, 3.0f, 0.0f};
@@ -306,6 +316,7 @@ void draw_loop(GLFWwindow *window) {
   colors[2] = {0.0f, 1.0f, 0.0f, 0.50f};
   colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
   colors[4] = {0.0f, 0.0f, 1.0f, 1.00f};
+  colors[5] = {0.0f, 0.0f, 1.0f, 1.00f};
 
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
@@ -387,7 +398,7 @@ void draw_loop(GLFWwindow *window) {
 
     // Rendering ====
     // Render shapes
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < 6; i++) {
       if (phys_instance.shape[i] == SPHERE_COLLIDER) {
         sphere_colors[sphere_size] = colors[i];
         transforms[i].get_model(&sphere_models[sphere_size++]);
