@@ -194,6 +194,11 @@ struct sPhysWorld {
         }
 
         // 4 - Collision Resolution
+        // 4.1 - Collision presolving
+        for(int i = 0; i < _manifold_count; i++) {
+            impulse_presolver(_manifolds[i], elapsed_time);
+        }
+        // 4.2 = Collision Solving
         for(int iter = 0; iter < PHYS_SOLVER_ITERATIONS; iter++) {
             for(int i = 0; i < _manifold_count; i++) {
                 impulse_response(_manifolds[i], elapsed_time);
@@ -286,6 +291,10 @@ struct sPhysWorld {
 
             obj_speeds[i].linear.y += -0.98f * elapsed_time;
         }
+    }
+
+    void impulse_presolver(const sCollisionManifold &manifold, const float elapsed_time) {
+
     }
 
     void impulse_response(const sCollisionManifold &manifold, const float elapsed_time) {
