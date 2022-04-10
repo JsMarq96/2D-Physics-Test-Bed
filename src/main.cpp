@@ -251,6 +251,7 @@ void draw_loop(GLFWwindow *window) {
   transforms[0].position = {-0.50f, 0.0f, 0.0f};
   transforms[0].scale = {30.5f, 1.0f, 30.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  phys_instance.friction[0] = 0.5f;
   phys_instance.mass[0] = 0.0f;
   phys_instance.restitution[0] = 0.05f;
   phys_instance.shape[0] = CUBE_COLLIDER;
@@ -261,7 +262,8 @@ void draw_loop(GLFWwindow *window) {
   transforms[1].position = {0.07f, 7.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.0f, 1.0f};
   transforms[1].set_rotation({0.9260f, 0.0f, 0.377f, 0.0f});
-  phys_instance.restitution[1] = 0.6f;
+  phys_instance.restitution[1] = 0.2f;
+  phys_instance.friction[1] = 0.5f;
   phys_instance.mass[1] = 15.0f;
   phys_instance.shape[1] = CUBE_COLLIDER;
   phys_instance.enabled[1] = true;
@@ -270,7 +272,8 @@ void draw_loop(GLFWwindow *window) {
   transforms[4].position = {0.5f, 9.0f, 0.0f};
   transforms[4].scale = {1.0f, 1.0f, 1.0f};
   transforms[4].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
-  phys_instance.restitution[4] = 0.6f;
+  phys_instance.restitution[4] = 0.2f;
+  phys_instance.friction[4] = 0.5f;
   phys_instance.mass[4] = 10.0f;
   phys_instance.shape[4] = CUBE_COLLIDER;
   phys_instance.enabled[4] = true;
@@ -279,7 +282,8 @@ void draw_loop(GLFWwindow *window) {
   transforms[5].position = {0.5f, 11.0f, 0.20f};
   transforms[5].scale = {1.0f, 1.0f, 1.0f};
   transforms[5].set_rotation({0.97f, 0.0f, 0.03f, 0.0f});
-  phys_instance.restitution[5] = 0.6f;
+  phys_instance.restitution[5] = 0.1f;
+  phys_instance.friction[5] = 0.5f;
   phys_instance.mass[5] = 25.0f;
   phys_instance.shape[5] = CUBE_COLLIDER;
   phys_instance.enabled[5] = true;
@@ -291,6 +295,7 @@ void draw_loop(GLFWwindow *window) {
   transforms[3].scale = {1.0f, 1.0f, 1.0f};
   transforms[3].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
   phys_instance.restitution[3] = 0.15f;
+  phys_instance.friction[3] = 0.5f;
   phys_instance.shape[3] = PLANE_COLLIDER;
   phys_instance.is_static[3] = true;
   phys_instance.enabled[3] = false;
@@ -300,6 +305,7 @@ void draw_loop(GLFWwindow *window) {
   transforms[2].scale = {1.0f, 1.0f, 1.0f};
   transforms[2].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   phys_instance.restitution[2] = 0.1f;
+  phys_instance.friction[2] = 0.5f;
   phys_instance.mass[2] = 50.0f;
   phys_instance.shape[2] = SPHERE_COLLIDER;
   phys_instance.is_static[2] = false;
@@ -384,6 +390,7 @@ void draw_loop(GLFWwindow *window) {
     ImGui::End();
 
     ImGui::Begin("Overall");
+    ImGui::Text((phys_instance.is_static[0]) ? "Is istatic" : "Is not");
     ImGui::Text("Num of steps: %d", num_of_physics_steps);
     ImGui::SliderFloat("Camera rotation", &camera_rot, 0.0f, 360.0f);
     ImGui::SliderFloat("Camera height", &camera_height, -1.0f, 10.0f);
