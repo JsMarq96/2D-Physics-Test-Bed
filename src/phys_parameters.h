@@ -3,7 +3,7 @@
 
 // Constants for the physics simulation
 
-#define PHYS_SOLVER_ITERATIONS 1
+#define PHYS_SOLVER_ITERATIONS 2
 
 #define BAUMGARTE_TERM 0.2f
 

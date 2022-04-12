@@ -227,6 +227,35 @@ void test_loop(GLFWwindow *window) {
   }
 }
 
+uint32_t add_sphere(const sVector3 &pos, const float radius, const uint32_t last_index, sPhysWorld &phys_world) {
+
+  phys_world.transforms[last_index].position = pos;
+  phys_world.transforms[last_index].scale = {radius, radius, radius};
+  phys_world.transforms[last_index].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  phys_world.restitution[last_index] = 0.1f;
+  phys_world.friction[last_index] = 0.5f;
+  phys_world.mass[last_index] = 50.0f;
+  phys_world.shape[last_index] = SPHERE_COLLIDER;
+  phys_world.is_static[last_index] = false;
+  phys_world.enabled[last_index] = true;
+
+  return last_index+1;
+}
+
+uint32_t add_cube(const sVector3 &pos, const sVector3 &scale, const uint32_t last_index, sPhysWorld &phys_world) {
+
+  phys_world.transforms[last_index].position = pos;
+  phys_world.transforms[last_index].scale = scale;
+  phys_world.transforms[last_index].set_rotation({0.90f, 0.10f, 0.10f, 0.0f});
+  phys_world.restitution[last_index] = 0.2f;
+  phys_world.friction[last_index] = 0.5f;
+  phys_world.mass[last_index] = 20.0f;
+  phys_world.shape[last_index] = CUBE_COLLIDER;
+  phys_world.is_static[last_index] = false;
+  phys_world.enabled[last_index] = true;
+
+  return last_index+1;
+}
 
 
 void draw_loop(GLFWwindow *window) {
@@ -253,6 +282,7 @@ void draw_loop(GLFWwindow *window) {
   sPhysWorld phys_instance;
 
   phys_instance.set_default_values();
+  phys_instance.transforms = transforms;
 
   // Object 1: Static cube
   transforms[0].position = {-0.50f, 0.0f, 0.0f};
@@ -265,59 +295,15 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.is_static[0] = true;
   phys_instance.enabled[0] = true;
 
-  // Object 2: Dynamic cube
-  transforms[1].position = {0.07f, 7.0f, 0.0f};
-  transforms[1].scale = {1.0f, 1.0f, 1.0f};
-  transforms[1].set_rotation({0.9260f, 0.0f, 0.377f, 0.0f});
-  phys_instance.restitution[1] = 0.2f;
-  phys_instance.friction[1] = 0.5f;
-  phys_instance.mass[1] = 15.0f;
-  phys_instance.shape[1] = CUBE_COLLIDER;
-  phys_instance.enabled[1] = true;
-  phys_instance.obj_speeds[1].angular = {2.0f, 2.0f, 0.0f};
+  uint32_t last_index = 1;
+  //last_index = add_sphere({0.5, 2.0f, 0.0f}, 2.0f, last_index, phys_instance);
+  //last_index = add_sphere({0.6, 5.0f, 2.0f}, 2.0f, last_index, phys_instance);
+  //last_index = add_sphere({0.8, 1.0f, 2.0f}, 1.0f, last_index, phys_instance);
+  //last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);
 
-  // Object 2: Dynamic cube
-  transforms[4].position = {0.5f, 9.0f, 0.0f};
-  transforms[4].scale = {1.0f, 1.0f, 1.0f};
-  transforms[4].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
-  phys_instance.restitution[4] = 0.2f;
-  phys_instance.friction[4] = 0.5f;
-  phys_instance.mass[4] = 10.0f;
-  phys_instance.shape[4] = CUBE_COLLIDER;
-  phys_instance.enabled[4] = false;
-
-  // Object 2: Dynamic cube
-  transforms[5].position = {0.5f, 11.0f, 0.20f};
-  transforms[5].scale = {1.0f, 1.0f, 1.0f};
-  transforms[5].set_rotation({0.97f, 0.0f, 0.03f, 0.0f});
-  phys_instance.restitution[5] = 0.1f;
-  phys_instance.friction[5] = 0.5f;
-  phys_instance.mass[5] = 25.0f;
-  phys_instance.shape[5] = CUBE_COLLIDER;
-  phys_instance.enabled[5] = false;
-
-
-
-  // Object 3: static plane
-  transforms[3].position = {0.0f, 3.0f, 0.0f};
-  transforms[3].scale = {1.0f, 1.0f, 1.0f};
-  transforms[3].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.0f};
-  phys_instance.restitution[3] = 0.15f;
-  phys_instance.friction[3] = 0.5f;
-  phys_instance.shape[3] = PLANE_COLLIDER;
-  phys_instance.is_static[3] = true;
-  phys_instance.enabled[3] = false;
-
-  // Object 4: Static sphere 2
-  transforms[2].position = {3.0f, 6.1f, 0.1f};
-  transforms[2].scale = {1.0f, 1.0f, 1.0f};
-  transforms[2].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
-  phys_instance.restitution[2] = 0.1f;
-  phys_instance.friction[2] = 0.5f;
-  phys_instance.mass[2] = 50.0f;
-  phys_instance.shape[2] = SPHERE_COLLIDER;
-  phys_instance.is_static[2] = false;
-  phys_instance.enabled[2] = false;
+  last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
 
   phys_instance.init(transforms);
 
@@ -334,12 +320,12 @@ void draw_loop(GLFWwindow *window) {
   float camera_rot = 0.0f, camera_height = 3.0f;
 
   //camera.position = {-5.0f, 1.5f, 5.0f};
-  camera.position = {5.0f, 3.5f, 5.0f};
+  camera.position = {20.0f, 10.5f, 20.0f};
 
   // Frame counter
   int frames = 0;
   double start_time, fps;
-  double delta_time = 0.01;
+  double delta_time = 0.005;
   double accumulator = 0.0;
 
 
@@ -401,7 +387,7 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Text((phys_instance.is_static[0]) ? "Is istatic" : "Is not");
     ImGui::Text("Num of steps: %d", num_of_physics_steps);
     ImGui::SliderFloat("Camera rotation", &camera_rot, 0.0f, 360.0f);
-    ImGui::SliderFloat("Camera height", &camera_height, -1.0f, 10.0f);
+    ImGui::SliderFloat("Camera height", &camera_height, -10.0f, 20.0f);
     ImGui::End();
 
     sMat44 cube_models[15] = {}, sphere_models[15] = {};
@@ -411,6 +397,9 @@ void draw_loop(GLFWwindow *window) {
     // Rendering ====
     // Render shapes
     for(int i = 0; i < 6; i++) {
+      if (!phys_instance.enabled[i]) {
+        continue;
+      }
       if (phys_instance.shape[i] == SPHERE_COLLIDER) {
         sphere_colors[sphere_size] = colors[i];
         transforms[i].get_model(&sphere_models[sphere_size++]);
