@@ -113,6 +113,7 @@ void test_loop(GLFWwindow *window) {
 
   start_time = glfwGetTime();
 
+
   while(!glfwWindowShouldClose(window)) {
     // Draw loop
     int width, heigth;
@@ -161,22 +162,23 @@ void test_loop(GLFWwindow *window) {
     // Rendering ====
     cube_models[0].set_identity();
     transforms[0].get_model(&cube_models[0]);
-    sphere_models[0].set_identity();
+    cube_models[1].set_identity();
     transforms[1].rotation = transforms[1].rotation.normalize();
-    transforms[1].get_model(&sphere_models[0]);
+    transforms[1].get_model(&cube_models[1]);
 
     ImGui::Begin("Test");
     ImGui::SliderFloat3("Cube2 pos", transforms[1].position.raw_values, -10.0f, 10.0f);
     ImGui::SliderFloat4("Cube2 rot", transforms[1].rotation.raw_values, -10.0f, 10.0f);
 
 
-    sColliderMesh col_cube1 = {};
+    sColliderMesh col_cube1 = {}, col_cube2 = {};
 
     col_cube1.init_cuboid(transforms[0]);
+    col_cube2.init_cuboid(transforms[1]);
 
     sCollisionManifold manifold = {};
 
-    uint32_t cube_num = 1;
+    uint32_t cube_num = 2;
 
     for(int j = 0 ; j < col_cube1.face_count; j++){
       cube_colors[cube_num] = {0.0f, 1.f, 0.0f, 0.0f};
@@ -185,15 +187,20 @@ void test_loop(GLFWwindow *window) {
       cube_models[cube_num++].add_position(col_cube1.plane_origin[j]);
     }
 
+    for(int j = 0 ; j < col_cube2.face_count; j++){
+      cube_colors[cube_num] = {0.0f, 1.f, 0.0f, 0.0f};
+      cube_models[cube_num].set_identity();
+      cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
+      cube_models[cube_num++].add_position(col_cube2.plane_origin[j]);
+    }
 
-    sphere_renderer.render(sphere_models, colors, 1, proj_mat, true);
+
+    sphere_renderer.render(sphere_models, colors, 0, proj_mat, true);
 
 
-    if (test_cube_sphere_collision(transforms[0],
-                                   col_cube1,
-                                   transforms[1].position,
-                                   1.0f,
-                                   &manifold)) {
+    if (SAT::SAT_collision_test(col_cube1,
+                                col_cube2,
+                                &manifold)) {
       ImGui::Text("Collision %i points", manifold.contanct_points_count);
       for(uint32_t i = 0; i < manifold.contanct_points_count; i++) {
         cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
@@ -267,6 +274,7 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.mass[1] = 15.0f;
   phys_instance.shape[1] = CUBE_COLLIDER;
   phys_instance.enabled[1] = true;
+  phys_instance.obj_speeds[1].angular = {2.0f, 2.0f, 0.0f};
 
   // Object 2: Dynamic cube
   transforms[4].position = {0.5f, 9.0f, 0.0f};
@@ -276,7 +284,7 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.friction[4] = 0.5f;
   phys_instance.mass[4] = 10.0f;
   phys_instance.shape[4] = CUBE_COLLIDER;
-  phys_instance.enabled[4] = true;
+  phys_instance.enabled[4] = false;
 
   // Object 2: Dynamic cube
   transforms[5].position = {0.5f, 11.0f, 0.20f};
@@ -286,7 +294,7 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.friction[5] = 0.5f;
   phys_instance.mass[5] = 25.0f;
   phys_instance.shape[5] = CUBE_COLLIDER;
-  phys_instance.enabled[5] = true;
+  phys_instance.enabled[5] = false;
 
 
 
@@ -309,7 +317,7 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.mass[2] = 50.0f;
   phys_instance.shape[2] = SPHERE_COLLIDER;
   phys_instance.is_static[2] = false;
-  phys_instance.enabled[2] = true;
+  phys_instance.enabled[2] = false;
 
   phys_instance.init(transforms);
 

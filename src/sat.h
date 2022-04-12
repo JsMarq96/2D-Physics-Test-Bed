@@ -57,11 +57,55 @@ namespace SAT {
         *max = max_shape;
     }
 
+    inline bool test_face_face_non_support_collision(const sColliderMesh &mesh1,
+                                                     const sColliderMesh &mesh2,
+                                                     uint32_t *collision_face1,
+                                                     float *distance) {
+        float smallest_distance = FLT_MAX;
+        uint32_t col_face1 = 0;
+
+        for(uint32_t i_face1 = 0; i_face1 < mesh1.face_count; i_face1++) {
+            sVector3 axis_to_test = mesh1.normals[i_face1];
+
+            float mesh1_min, mesh1_max;
+            get_bounds_of_mesh_on_axis(mesh1,
+                                       axis_to_test,
+                                       &mesh1_min,
+                                       &mesh1_max);
+
+            float mesh2_min, mesh2_max;
+            get_bounds_of_mesh_on_axis(mesh2,
+                                       axis_to_test,
+                                       &mesh2_min,
+                                       &mesh2_max);
+
+            float total_shape_len = MAX(mesh1_max, mesh2_max) - MIN(mesh1_min, mesh2_min);
+            float shape1_len = mesh1_max - mesh1_min;
+            float shape2_len = mesh2_max - mesh2_min;
+
+            float overlap_distance = (shape1_len + shape2_len) - total_shape_len;
+
+            if (overlap_distance < 0.0f) {
+                return false; // No overlaping
+            } else if (overlap_distance < smallest_distance) {
+                smallest_distance = overlap_distance;
+                col_face1 = i_face1;
+            }
+        }
+
+        *distance = smallest_distance;
+        *collision_face1 = col_face1;
+        return true;
+    }
+
     inline bool test_edge_edge_collision(const sColliderMesh &mesh1,
                                          const sColliderMesh &mesh2,
                                          uint32_t *collision_edge1,
                                          uint32_t *collision_edge2,
                                          float *distance) {
+        float smallest_distance = -FLT_MAX;
+        uint32_t smallest_edge1 = 0;
+        uint32_t smallest_edge2 = 0;
         for(uint32_t i_edge1 = 0; mesh1.edge_cout > i_edge1; i_edge1++) {
             sVector3 edge1 = mesh1.get_edge(i_edge1).normalize();
 
@@ -71,7 +115,7 @@ namespace SAT {
                 sVector3 new_axis = cross_prod(edge1, edge2);
 
                 // Avoid test if the cross product are facing on the same direction
-                if (new_axis.is_equal({0.0f, 0.0f, 0.0f})) {
+                if (new_axis.magnitude() < 0.0001f) {
                     continue;
                 }
 
@@ -86,16 +130,22 @@ namespace SAT {
                 float shape1_len = mesh1_max - mesh1_min;
                 float shape2_len = mesh2_max - mesh2_min;
 
-                if ((shape1_len + shape2_len) > total_shape_len) {
-                    *collision_edge1 = i_edge1;
-                    *collision_edge2 = i_edge2;
-                    *distance = (shape1_len + shape2_len) - total_shape_len;
-                    return true;
+                float overlap_distance = total_shape_len - (shape1_len + shape2_len);
+
+                if (overlap_distance > 0.0f) {
+                    return false; // No overlaping
+                } else if (overlap_distance > smallest_distance) {
+                    smallest_distance = overlap_distance;
+                    smallest_edge1 = i_edge1;
+                    smallest_edge2 = i_edge2;
                 }
             }
         }
 
-        return false;
+        *collision_edge1 = smallest_edge1;
+        *collision_edge2 = smallest_edge2;
+        *distance = smallest_distance;
+        return true;
     }
 
 
@@ -107,6 +157,20 @@ namespace SAT {
         float collision_distance_mesh1 = 0.0f;
         uint32_t collision_face_mesh2 = 0;
         float collision_distance_mesh2 = 0.0f;
+
+        /*if (!test_face_face_non_support_collision(mesh1,
+                                                  mesh2,
+                                                  &collision_face_mesh1,
+                                                  &collision_distance_mesh1)) {
+            return false;
+        }
+
+        if (!test_face_face_non_support_collision(mesh2,
+                                                  mesh1,
+                                                  &collision_face_mesh2,
+                                                  &collision_distance_mesh2)) {
+            return false;
+        }*/
 
         // Test faces of mesh1 collider vs collider 2
         if (!test_face_face_collision(mesh1,
@@ -144,7 +208,10 @@ namespace SAT {
         //
         sPlane crop_plane = {};
 
+        std::cout << edge_edge_distance << " " << collision_distance_mesh1 << " : " << collision_distance_mesh2 << std::endl;
+
         //std::cout << collision_distance_mesh1 << " " << collision_distance_mesh2 << " " << edge_edge_distance << std::endl;
+        //std::cout << (edge_edge_distance > MIN(collision_distance_mesh1, collision_distance_mesh2)) << std::endl;
         if (collision_distance_mesh1 > collision_distance_mesh2) {
             manifold->normal = mesh1.normals[collision_face_mesh1];
             crop_plane = mesh1.get_plane_of_face(collision_face_mesh1);

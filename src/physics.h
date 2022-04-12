@@ -224,6 +224,7 @@ struct sPhysWorld {
                 ImGui::Text("Position: %f %f %f", transforms[i].position.x, transforms[i].position.y, transforms[i].position.z);
                 ImGui::Text("Linear speed: %f %f %f", speed->linear.x, speed->linear.y, speed->linear.z);
                 ImGui::Text("Angular speed: %f %f %f", speed->angular.x, speed->angular.y, speed->angular.z);
+                ImGui::Text("Angular magnitude %f", speed->angular.magnitude());
                 ImGui::TreePop();
             }
 
@@ -392,6 +393,7 @@ struct sPhysWorld {
         sSpeed *speed_1 = &obj_speeds[id_1];
         sSpeed *speed_2 = &obj_speeds[id_2];
 
+        std::cout << "======" << std::endl;
         // Calculate impulse response for each contact point
         for(int i = 0; i < manifold.contanct_points_count; i++) {
             const sContactData *contact_data = &manifold.contact_data[i];
@@ -411,7 +413,7 @@ struct sPhysWorld {
             float impulse_magnitude = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
 
             // The impulse cannot be negative
-            //impulse_magnitude = MAX(impulse_magnitude, 0.0f);
+            impulse_magnitude = MAX(impulse_magnitude, 0.0f);
 
             sVector3 impulse = manifold.normal.mult(impulse_magnitude);
 
@@ -421,13 +423,14 @@ struct sPhysWorld {
             }
 
             // Invert the impulse for the other body
-            impulse = impulse.mult(-1.0f);
+            //impulse = impulse.mult(-1.0f);
 
             if (!is_static[id_1]) {
                 speed_1->linear = speed_1->linear.sum(impulse.mult(inv_mass[id_1]));
                 speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(contact_data->r1, impulse)));
             }
 
+            return;
             // FRICTION IMPULSES =====
 
             float friction_constant = sqrt(friction[id_1] * friction[id_2]);
@@ -447,7 +450,7 @@ struct sPhysWorld {
                 float friction_impulse_magnitude = collision_momentun / (contact_data->linear_mass + contact_data->tangental_angular_mass[tang]);
 
                 // Clamp friction
-                friction_impulse_magnitude = (friction_impulse_magnitude < -max_friction) ? -max_friction : ((friction_impulse_magnitude > max_friction) ? max_friction : friction_impulse_magnitude);
+                //friction_impulse_magnitude = (friction_impulse_magnitude < -max_friction) ? -max_friction : ((friction_impulse_magnitude > max_friction) ? max_friction : friction_impulse_magnitude);
 
                 sVector3 friction_impulse = contact_data->tangents[tang].mult(friction_impulse_magnitude);
 
