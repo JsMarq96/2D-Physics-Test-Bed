@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <cassert>
 
-#define MIN(x, y) ((x > y) ? y : x)
+#define kv_MIN(x, y) (x > y) ? y : x
 
 //**
 // A simple key value storage utility using a Radix tree
@@ -28,7 +28,7 @@ inline int string_similarity(const char* str1,
                              const char* str2,
                              const unsigned int str2_len) {
     int count = 0;
-    unsigned int min_len = MIN(str1_len, str2_len);
+    unsigned int min_len = kv_MIN(str1_len, str2_len);
     for(; min_len > count ; str1++, str2++) {
         if (*str1 == *str2) {
             count++;
@@ -279,6 +279,21 @@ struct sKVStorage {
                                     &result);
 
         return (success) ? result.floating_point : -1;
+    }
+
+    inline bool get_chars(const char* key,
+                         const int key_len,
+                         char* result_string) {
+        uKVStorage result;
+        bool success = Rad_Node_get(root_node,
+                                    key,
+                                    key_len,
+                                    &result);
+
+        if (success) {
+            memcpy(result.str, result_string, sizeof(char) * 30);
+        }
+        return success;
     }
 
 };

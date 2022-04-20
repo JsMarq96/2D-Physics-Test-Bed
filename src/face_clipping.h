@@ -20,24 +20,26 @@ namespace clipping {
 
             // Select one face to do the clipping, and another to do be the clipped
             // Compute clipping planes:
-            // Half point of the edge as the origin, and the normal is
-            // from face plane's origin to the half-point.
-            // ONLY NEEDS TO CLIP WITH ONE PLANE! THE COLLISION PLAN
+            // ONLY NEEDS TO CLIP WITH ONE PLANE! THE COLLISION PLANE
             // https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=12562
             sVector3 *to_clip = mesh2.get_face(face_2);
 
             sPlane reference_face = mesh1.get_plane_of_face(face_1);
 
-            sVector3 face_origin = mesh1.plane_origin[face_1];
             uint32_t num_of_clipped_points = 0;
 
+            //std::cout << face_2 << ":  "<< reference_face.origin_point.x << " " << reference_face.origin_point.y << " " << reference_face.origin_point.z << std::endl;
             // Perform clipping agains the plane
             for(uint32_t i = 0; i < mesh2.face_stride; i++) {
+                std::cout << i << std::endl;
                     sVector3 vert1 = to_clip[i];
                     sVector3 vert2 = to_clip[(i + 1) % mesh2.face_stride];
 
                     float distance_vert1 = reference_face.distance(vert1);
                     float distance_vert2 = reference_face.distance(vert2);
+
+                    //std::cout << vert1.x << " + " << vert1.y << " + " << vert1.z << std::endl;
+                    //std::cout << distance_vert1 << " " << distance_vert2 << std::endl;
 
                     if (distance_vert1 < 0.0f && distance_vert2 < 0.0f) {
                         // Add the vert2
@@ -55,7 +57,6 @@ namespace clipping {
                     // If both are outside, do nothing
             }
 
-            // Iterate all the clipping planes
             //   Iterate all the edges of the clipped
             //      If both vertices are inside,
             //         then we add the second(last) point

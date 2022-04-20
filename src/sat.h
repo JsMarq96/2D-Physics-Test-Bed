@@ -9,6 +9,7 @@
 #include "vector.h"
 #include <cfloat>
 #include <cstdint>
+#include <sys/types.h>
 
 namespace SAT {
 
@@ -103,7 +104,7 @@ namespace SAT {
                                          uint32_t *collision_edge1,
                                          uint32_t *collision_edge2,
                                          float *distance) {
-        float smallest_distance = -FLT_MAX;
+        float largest_distance = -FLT_MAX;
         uint32_t smallest_edge1 = 0;
         uint32_t smallest_edge2 = 0;
         for(uint32_t i_edge1 = 0; mesh1.edge_cout > i_edge1; i_edge1++) {
@@ -119,23 +120,22 @@ namespace SAT {
                     continue;
                 }
 
-                // Test in they overlap on the projection of the axis
-                float mesh1_min = 0.0f, mesh1_max = 0.0f;
-                float mesh2_min = 0.0f, mesh2_max = 0.0f;
+                float mesh1_max, mesh1_min;
+                float mesh2_max, mesh2_min;
 
-                get_bounds_of_mesh_on_axis(mesh1, new_axis, &mesh1_min, &mesh1_max);
-                get_bounds_of_mesh_on_axis(mesh2, new_axis, &mesh2_min, &mesh2_max);
+                get_bounds_of_mesh_on_axis(mesh1,
+                                           new_axis,
+                                           &mesh1_min,
+                                           &mesh1_max);
+                get_bounds_of_mesh_on_axis(mesh2,
+                                           new_axis,
+                                           &mesh2_min,
+                                           &mesh2_max);
+                float total_projection = MAX(mesh1_max, mesh2_max) - MIN(mesh1_min, mesh2_min);
+                float penetration_on_axis = total_projection - ((mesh1_max - mesh1_min) + (mesh2_max - mesh2_min));
 
-                float total_shape_len = MAX(mesh1_max, mesh2_max) - MIN(mesh1_min, mesh2_min);
-                float shape1_len = mesh1_max - mesh1_min;
-                float shape2_len = mesh2_max - mesh2_min;
-
-                float overlap_distance = total_shape_len - (shape1_len + shape2_len);
-
-                if (overlap_distance > 0.0f) {
-                    return false; // No overlaping
-                } else if (overlap_distance > smallest_distance) {
-                    smallest_distance = overlap_distance;
+                if (largest_distance < penetration_on_axis) {
+                    largest_distance = penetration_on_axis;
                     smallest_edge1 = i_edge1;
                     smallest_edge2 = i_edge2;
                 }
@@ -144,9 +144,17 @@ namespace SAT {
 
         *collision_edge1 = smallest_edge1;
         *collision_edge2 = smallest_edge2;
-        *distance = smallest_distance;
-        return true;
+        *distance = largest_distance;
+        return (largest_distance <= 0.0f);
     }
+
+
+    enum eCollisionType : uint8_t {
+       FACE_1_COL = 0,
+       FACE_2_COL,
+       EDGE_EDGE_COL,
+       NONE
+    };
 
 
     inline bool SAT_collision_test(const sColliderMesh &mesh1,
@@ -157,6 +165,10 @@ namespace SAT {
         float collision_distance_mesh1 = 0.0f;
         uint32_t collision_face_mesh2 = 0;
         float collision_distance_mesh2 = 0.0f;
+
+        float min_distance = FLT_MAX;
+
+        eCollisionType collision = NONE;
 
         /*if (!test_face_face_non_support_collision(mesh1,
                                                   mesh2,
@@ -199,6 +211,7 @@ namespace SAT {
             return false;
         }
 
+
         // TODO: Manifold and contact point extraction
 
         // Collision cases:
@@ -208,35 +221,74 @@ namespace SAT {
         //
         sPlane crop_plane = {};
 
-        std::cout << edge_edge_distance << " " << collision_distance_mesh1 << " : " << collision_distance_mesh2 << std::endl;
+        float face_bias = 0.9f;
+        float edge_bias = 0.8f;
+
+        /*if (collision_distance_mesh1 < collision_distance_mesh2) {
+            if (collision_distance_mesh1 < edge_edge_distance) {
+                // Face 1
+                collision = FACE_1_COL;
+            } else {
+                // Edge
+                collision = EDGE_EDGE_COL;
+            }
+        } else {
+            if (collision_distance_mesh2 < edge_edge_distance) {
+                // Face 2
+                collision = FACE_2_COL;
+            } else {
+                //edge
+                collision = EDGE_EDGE_COL;
+            }
+        }*/
+
+        if (collision_distance_mesh1 > collision_distance_mesh2) {
+            collision = FACE_1_COL;
+        } else {
+            collision = FACE_2_COL;
+        }
+
+
+        switch(collision) {
+            case FACE_1_COL:
+                std::cout << "Face1" << std::endl;
+                manifold->normal = mesh1.normals[collision_face_mesh1];
+                crop_plane = mesh1.get_plane_of_face(collision_face_mesh1);
+
+                 manifold->contanct_points_count = clipping::face_face_clipping(mesh1,
+                                                                                collision_face_mesh1,
+                                                                                mesh2,
+                                                                                collision_face_mesh2,
+                                                                                manifold->contact_points);
+
+                break;
+            case FACE_2_COL:
+                std::cout << "Face2" << std::endl;
+                 manifold->normal = mesh2.normals[collision_face_mesh2];
+                crop_plane = mesh2.get_plane_of_face(collision_face_mesh2);
+
+                manifold->contanct_points_count = clipping::face_face_clipping(mesh2,
+                                                                               collision_face_mesh2,
+                                                                               mesh1,
+                                                                               collision_face_mesh1,
+                                                                               manifold->contact_points);
+
+                break;
+            case EDGE_EDGE_COL: std::cout << "Edge" << std::endl; break;
+        };
+
+        //std::cout << edge_edge_distance << " " << collision_distance_mesh1 << " : " << collision_distance_mesh2 << std::endl;
 
         //std::cout << collision_distance_mesh1 << " " << collision_distance_mesh2 << " " << edge_edge_distance << std::endl;
         //std::cout << (edge_edge_distance > MIN(collision_distance_mesh1, collision_distance_mesh2)) << std::endl;
-        if (collision_distance_mesh1 > collision_distance_mesh2) {
-            manifold->normal = mesh1.normals[collision_face_mesh1];
-            crop_plane = mesh1.get_plane_of_face(collision_face_mesh1);
-
-            manifold->contanct_points_count = clipping::face_face_clipping(mesh1,
-                                                                           collision_face_mesh1,
-                                                                           mesh2,
-                                                                           collision_face_mesh2,
-                                                                           manifold->contact_points);
-        } else {
-            manifold->normal = mesh2.normals[collision_face_mesh2];
-            crop_plane = mesh2.get_plane_of_face(collision_face_mesh2);
-
-            manifold->contanct_points_count = clipping::face_face_clipping(mesh2,
-                                                                           collision_face_mesh2,
-                                                                           mesh1,
-                                                                           collision_face_mesh1,
-                                                                           manifold->contact_points);
-        }
 
         manifold->normal = manifold->normal.invert();
+        //crop_plane.normal = manifold->normal.invert();
 
-
+        std::cout << "=====" << std::endl;
         for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
             manifold->contact_depth[i] = crop_plane.distance(manifold->contact_points[i]);
+            //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
             //std::cout << manifold->contact_depth[i] << std::endl;
         }
 

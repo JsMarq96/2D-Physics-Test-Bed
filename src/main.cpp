@@ -75,7 +75,7 @@ void test_loop(GLFWwindow *window) {
   transforms[0].scale = {10.0f, .5f, 10.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
-  transforms[1].position = {0.0f, 5.0f, 0.0f};
+  transforms[1].position = {1.630f, 0.780f, 0.0f};
   transforms[1].scale = {1.0f, 1.f, 1.0f};
   transforms[1].set_rotation({0.9250f, 0.70f, 0.380f, 0.0f});
 
@@ -246,10 +246,10 @@ uint32_t add_cube(const sVector3 &pos, const sVector3 &scale, const uint32_t las
 
   phys_world.transforms[last_index].position = pos;
   phys_world.transforms[last_index].scale = scale;
-  phys_world.transforms[last_index].set_rotation({0.90f, 0.10f, 0.10f, 0.0f});
+  phys_world.transforms[last_index].set_rotation({0.80f, 0.20f, 0.00f, 0.0f});
   phys_world.restitution[last_index] = 0.2f;
   phys_world.friction[last_index] = 0.5f;
-  phys_world.mass[last_index] = 20.0f;
+  phys_world.mass[last_index] = 10.0f;
   phys_world.shape[last_index] = CUBE_COLLIDER;
   phys_world.is_static[last_index] = false;
   phys_world.enabled[last_index] = true;
@@ -287,7 +287,8 @@ void draw_loop(GLFWwindow *window) {
   // Object 1: Static cube
   transforms[0].position = {-0.50f, 0.0f, 0.0f};
   transforms[0].scale = {30.5f, 1.0f, 30.0f};
-  transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  //transforms[0].set_rotation({0.80f, 0.20f, 0.0f, 0.0f});
+  transforms[0].set_rotation({1.0f, 0.00f, 0.0f, 0.0f});
   phys_instance.friction[0] = 0.5f;
   phys_instance.mass[0] = 0.0f;
   phys_instance.restitution[0] = 0.05f;
@@ -296,14 +297,15 @@ void draw_loop(GLFWwindow *window) {
   phys_instance.enabled[0] = true;
 
   uint32_t last_index = 1;
-  //last_index = add_sphere({0.5, 2.0f, 0.0f}, 2.0f, last_index, phys_instance);
-  //last_index = add_sphere({0.6, 5.0f, 2.0f}, 2.0f, last_index, phys_instance);
-  //last_index = add_sphere({0.8, 1.0f, 2.0f}, 1.0f, last_index, phys_instance);
-  //last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);
+  //
+  last_index = add_sphere({2.5, 6.0f, 0.0f}, 1.0f, last_index, phys_instance);
+  last_index = add_sphere({0.6, 5.0f, 2.0f}, 2.0f, last_index, phys_instance);
+  last_index = add_sphere({0.8, 1.0f, 2.0f}, 1.0f, last_index, phys_instance);
+  last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);
 
-  last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  //last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  //last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  //last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
 
   phys_instance.init(transforms);
 
@@ -325,7 +327,7 @@ void draw_loop(GLFWwindow *window) {
   // Frame counter
   int frames = 0;
   double start_time, fps;
-  double delta_time = 0.005;
+  double delta_time = 0.01;
   double accumulator = 0.0;
 
 
@@ -384,10 +386,10 @@ void draw_loop(GLFWwindow *window) {
     ImGui::End();
 
     ImGui::Begin("Overall");
-    ImGui::Text((phys_instance.is_static[0]) ? "Is istatic" : "Is not");
     ImGui::Text("Num of steps: %d", num_of_physics_steps);
     ImGui::SliderFloat("Camera rotation", &camera_rot, 0.0f, 360.0f);
     ImGui::SliderFloat("Camera height", &camera_height, -10.0f, 20.0f);
+    //ImGui::SliderFloat("Simulator delta",(float*) &delta_time, 0.0001, 0.01);
     ImGui::End();
 
     sMat44 cube_models[15] = {}, sphere_models[15] = {};

@@ -1,11 +1,13 @@
 #ifndef COLLIDER_MESH_H_
 #define COLLIDER_MESH_H_
 
+#include "kv_storage.h"
 #include "math.h"
 #include "mesh.h"
 #include "transform.h"
 #include "vector.h"
 #include "geometry.h"
+#include <cstddef>
 #include <cstdint>
 
 enum eFaceSize : uint32_t {
@@ -29,6 +31,7 @@ struct sColliderMesh {
     sVector3   *normals = NULL;
     sVector3   *plane_origin = NULL;
     sEdgeIndexTuple *edges = NULL;
+    uint32_t   *neighboring_planes = NULL;
 
     uint32_t   vertices_count = 0;
     uint32_t   face_count = 0;
@@ -63,7 +66,7 @@ struct sColliderMesh {
                 face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + j]);
             }
 
-            plane_origin[i] = face_plane_center;
+            plane_origin[i] = face_plane_center.mult(1.0f / face_stride);
             normals[i] = mesh_center.subs(face_plane_center).normalize();
         }
 
@@ -175,6 +178,12 @@ struct sColliderMesh {
 
         face_stride = FACE_QUAD;
 
+        /*neighboring_planes = (uint32_t*) malloc(sizeof(uint32_t) * face_count * face_stride);
+
+        uint32_t *edge_face_tmp = (uint32_t*) malloc(sizeof(uint32_t) * face_count * 2);
+        uint8_t *neighboor_cout = (uint8_t*) malloc(sizeof(uint8_t) * face_count);
+        memset(neighboor_cout, 0, sizeof(uint8_t) * face_count);*/
+
         // Edge extraction
         edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 2);
         edge_cout = 0;
@@ -195,8 +204,9 @@ struct sColliderMesh {
                 sVector3 vec2 = vertices[curr_edge.y];
 
                 // iterate thrugh to all the edges, to test if its inside
-                for(uint32_t ed = 0; ed < edge_cout; ed++) {
-                    sEdgeIndexTuple &edge_to_test = edges[ed];
+                uint32_t edge_it;
+                for(edge_it = 0; edge_it < edge_cout; edge_it++) {
+                    sEdgeIndexTuple &edge_to_test = edges[edge_it];
 
                     bool is_equal = vertices[edge_to_test.x].is_equal(vec1) && vertices[edge_to_test.y].is_equal(vec2);
                     is_equal = is_equal || (vertices[edge_to_test.x].is_equal(vec2) && vertices[edge_to_test.y].is_equal(vec1));
@@ -208,8 +218,12 @@ struct sColliderMesh {
                 }
 
                 if (!is_inside) {
+                    //edge_face_tmp[edge_cout] = edge_it;
                     edges[edge_cout++] = curr_edge;
                     //std::cout << edge_cout << '/' << face_count * 2 <<   std::endl;
+                } else {
+                    // If its already inside, then both faces, share the same edge
+
                 }
             }
         }
