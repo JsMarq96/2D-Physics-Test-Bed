@@ -46,6 +46,7 @@ void sMesh::load_OBJ_mesh(const char* mesh_dir) {
 
 
     vertices = (sRawVertex*) malloc(face_count * 3 * sizeof(sRawVertex));
+    face_vertices = (uint32_t*) malloc(face_count * 3 * sizeof(uint32_t));
 
     rewind(mesh_file);
 
@@ -106,6 +107,11 @@ void sMesh::load_OBJ_mesh(const char* mesh_dir) {
             normal1 -=1;
             normal2 -=1;
             normal3 -=1;
+
+            // Store the edges by the face
+            face_vertices[(face_index * 3)] = index1;
+            face_vertices[(face_index * 3) + 1] = index2;
+            face_vertices[(face_index * 3) + 2] = index3;
 
             // Vertex 1
             memset(tmp_edge_id, 0, 12);
@@ -172,6 +178,7 @@ void sMesh::load_OBJ_mesh(const char* mesh_dir) {
 
 
 void sMesh::clean() {
+    free(face_vertices);
     free(vertices_index);
     free(vertices);
     free(face_normals);
