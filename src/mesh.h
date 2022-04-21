@@ -35,6 +35,8 @@ struct sMesh {
     uint16_t    face_count      = 0;
     uint16_t    indexing_count  = 0;
 
+    uint16_t    *face_edges = NULL; // TODO store the vertices of each edge
+
     uint16_t    *vertices_index = NULL;
 
     sRawVertex  *vertices     = NULL;
