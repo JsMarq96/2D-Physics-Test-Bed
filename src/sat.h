@@ -223,7 +223,7 @@ namespace SAT {
         float face_bias = 0.9f;
         float edge_bias = 0.8f;
 
-        /*if (collision_distance_mesh1 < collision_distance_mesh2) {
+        if (collision_distance_mesh1 < collision_distance_mesh2) {
             if (collision_distance_mesh1 < edge_edge_distance) {
                 // Face 1
                 collision = FACE_1_COL;
@@ -239,16 +239,10 @@ namespace SAT {
                 //edge
                 collision = EDGE_EDGE_COL;
             }
-        }*/
-
-        if (collision_distance_mesh1 > collision_distance_mesh2) {
-            collision = FACE_1_COL;
-        } else {
-            collision = FACE_2_COL;
         }
 
 
-        switch(collision) {
+        /*switch(collision) {
             case FACE_1_COL:
                 std::cout << "Face1" << std::endl;
                 manifold->normal = mesh1.normals[collision_face_mesh1];
@@ -274,19 +268,47 @@ namespace SAT {
 
                 break;
             case EDGE_EDGE_COL: std::cout << "Edge" << std::endl; break;
+        };*/
+
+        switch(collision) {
+            case FACE_1_COL:
+                std::cout << "Face1" << std::endl;
+                manifold->normal = mesh1.normals[collision_face_mesh1];
+                crop_plane = mesh1.get_plane_of_face(collision_face_mesh1);
+
+                manifold->contanct_points_count = mesh2.face_stride;
+                memcpy(manifold->contact_points,
+                       mesh2.get_face(collision_face_mesh2),
+                       sizeof(sVector3) * mesh2.face_stride);
+                break;
+            case FACE_2_COL:
+                std::cout << "Face2" << std::endl;
+                 manifold->normal = mesh2.normals[collision_face_mesh2];
+                crop_plane = mesh2.get_plane_of_face(collision_face_mesh2);
+
+                manifold->contanct_points_count = mesh1.face_stride;
+                memcpy(manifold->contact_points,
+                       mesh1.get_face(collision_face_mesh1),
+                       sizeof(sVector3) * mesh1.face_stride);
+
+
+                break;
+            case EDGE_EDGE_COL: std::cout << "Edge" << std::endl; break;
         };
 
-        //std::cout << edge_edge_distance << " " << collision_distance_mesh1 << " : " << collision_distance_mesh2 << std::endl;
+
+        std::cout << edge_edge_distance << " " << collision_distance_mesh1 << " : " << collision_distance_mesh2 << std::endl;
 
         //std::cout << collision_distance_mesh1 << " " << collision_distance_mesh2 << " " << edge_edge_distance << std::endl;
         //std::cout << (edge_edge_distance > MIN(collision_distance_mesh1, collision_distance_mesh2)) << std::endl;
 
-        manifold->normal = manifold->normal.invert();
+        //manifold->normal = manifold->normal.invert();
         //crop_plane.normal = manifold->normal.invert();
 
         std::cout << "=====" << std::endl;
         for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
             manifold->contact_depth[i] = crop_plane.distance(manifold->contact_points[i]);
+            manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
             //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
             //std::cout << manifold->contact_depth[i] << std::endl;
         }

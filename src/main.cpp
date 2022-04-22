@@ -166,6 +166,8 @@ void test_loop(GLFWwindow *window) {
     transforms[1].rotation = transforms[1].rotation.normalize();
     transforms[1].get_model(&cube_models[1]);
 
+    cube_colors[0] = {1,1,1,1};
+
     ImGui::Begin("Test");
     ImGui::SliderFloat3("Cube2 pos", transforms[1].position.raw_values, -10.0f, 10.0f);
     ImGui::SliderFloat4("Cube2 rot", transforms[1].rotation.raw_values, -10.0f, 10.0f);
@@ -219,6 +221,8 @@ void test_loop(GLFWwindow *window) {
 
 
     col_cube1.clean();
+    col_cube2.clean();
+    //cube_renderer.render(cube_models+1, cube_colors+1, cube_num-1, proj_mat, true);
     cube_renderer.render(cube_models, cube_colors, cube_num, proj_mat, true);
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -467,8 +471,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_loop(window);
+      //draw_loop(window);
+      test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

@@ -119,6 +119,8 @@ struct sMeshRenderer {
 
         if (show_wireframe) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        } else {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
         shader.activate();
 
