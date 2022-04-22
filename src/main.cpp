@@ -69,7 +69,6 @@ void test_loop(GLFWwindow *window) {
   sphere.load_OBJ_mesh("resources/sphere.obj");
   cube.load_OBJ_mesh("resources/cube.obj");
 
-
   // Object 1: Static cube
   transforms[0].position = {0.0f, 0.0f, 0.0f};
   transforms[0].scale = {10.0f, .5f, 10.0f};
@@ -182,7 +181,7 @@ void test_loop(GLFWwindow *window) {
 
     uint32_t cube_num = 2;
 
-    for(int j = 0 ; j < col_cube1.face_count; j++){
+    /*for(int j = 0 ; j < col_cube1.face_count; j++){
       cube_colors[cube_num] = {0.0f, 1.f, 0.0f, 0.0f};
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
@@ -194,7 +193,7 @@ void test_loop(GLFWwindow *window) {
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
       cube_models[cube_num++].add_position(col_cube2.plane_origin[j]);
-    }
+    }*/
 
 
     sphere_renderer.render(sphere_models, colors, 0, proj_mat, true);
@@ -302,13 +301,13 @@ void draw_loop(GLFWwindow *window) {
 
   uint32_t last_index = 1;
   //
-  last_index = add_sphere({2.5, 6.0f, 0.0f}, 1.0f, last_index, phys_instance);
+  /*last_index = add_sphere({2.5, 6.0f, 0.0f}, 1.0f, last_index, phys_instance);
   last_index = add_sphere({0.6, 5.0f, 2.0f}, 2.0f, last_index, phys_instance);
   last_index = add_sphere({0.8, 1.0f, 2.0f}, 1.0f, last_index, phys_instance);
-  last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);
+  last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);*/
 
-  //last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  //last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
   //last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
 
   phys_instance.init(transforms);
@@ -430,7 +429,6 @@ void draw_loop(GLFWwindow *window) {
       }
     }
 
-
     glDisable(GL_DEPTH_TEST);
     sphere_renderer.render(cube_models, col_color, col_points, proj_mat, false);
     glEnable(GL_DEPTH_TEST);
@@ -471,8 +469,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_loop(window);
+      draw_loop(window);
+      //test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

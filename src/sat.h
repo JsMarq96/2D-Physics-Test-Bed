@@ -2,6 +2,7 @@
 #define SAT_H_
 
 #include "collider_mesh.h"
+#include "collision_detection.h"
 #include "face_clipping.h"
 #include "math.h"
 #include "mesh.h"
@@ -242,37 +243,63 @@ namespace SAT {
         }
 
 
+        const sColliderMesh *reference_mesh, *incident_mesh;
+        uint32_t reference_face = 0, incident_face = 0;
+
+        if (collision == FACE_1_COL || collision == FACE_2_COL) {
+            switch(collision) {
+                case FACE_1_COL:
+                    std::cout << "Face1" << std::endl;
+                    reference_mesh = &mesh1;
+                    incident_mesh = &mesh2;
+                    reference_face = collision_face_mesh1;
+                    break;
+                case FACE_2_COL:
+                    std::cout << "Face2" << std::endl;
+                    reference_mesh = &mesh2;
+                    incident_mesh = &mesh1;
+
+                    reference_face = collision_face_mesh2;
+                    break;
+            };
+
+            manifold->normal = reference_mesh->normals[reference_face];
+            sPlane reference_plane = reference_mesh->get_plane_of_face(reference_face);
+
+
+            float facing = FLT_MAX;
+            for(uint32_t i = 0; i <  incident_mesh->face_count; i++) {
+                float dot = dot_prod(incident_mesh->normals[i], reference_plane.normal);
+
+                if (facing > dot) {
+                    facing = dot;
+                    incident_face = i;
+                }
+            }
+
+            manifold->contanct_points_count = clipping::face_face_clipping(*incident_mesh,
+                                                                           incident_face,
+                                                                           *reference_mesh,
+                                                                           reference_face,
+                                                                           manifold->contact_points);
+            //manifold->contact_points[0] = incident_mesh->plane_origin[incident_face];
+            //manifold->contanct_points_count = 1;
+            for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
+                manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
+                //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
+                //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
+                std::cout << manifold->contact_depth[i] << std::endl;
+            }
+
+        }
+
+
+        //return true;
+
+
         /*switch(collision) {
             case FACE_1_COL:
-                std::cout << "Face1" << std::endl;
-                manifold->normal = mesh1.normals[collision_face_mesh1];
-                crop_plane = mesh1.get_plane_of_face(collision_face_mesh1);
-
-                 manifold->contanct_points_count = clipping::face_face_clipping(mesh1,
-                                                                                collision_face_mesh1,
-                                                                                mesh2,
-                                                                                collision_face_mesh2,
-                                                                                manifold->contact_points);
-
-                break;
-            case FACE_2_COL:
-                std::cout << "Face2" << std::endl;
-                 manifold->normal = mesh2.normals[collision_face_mesh2];
-                crop_plane = mesh2.get_plane_of_face(collision_face_mesh2);
-
-                manifold->contanct_points_count = clipping::face_face_clipping(mesh2,
-                                                                               collision_face_mesh2,
-                                                                               mesh1,
-                                                                               collision_face_mesh1,
-                                                                               manifold->contact_points);
-
-                break;
-            case EDGE_EDGE_COL: std::cout << "Edge" << std::endl; break;
-        };*/
-
-        switch(collision) {
-            case FACE_1_COL:
-                std::cout << "Face1" << std::endl;
+                //std::cout << "Face1" << std::endl;
                 manifold->normal = mesh1.normals[collision_face_mesh1];
                 crop_plane = mesh1.get_plane_of_face(collision_face_mesh1);
 
@@ -282,7 +309,7 @@ namespace SAT {
                        sizeof(sVector3) * mesh2.face_stride);
                 break;
             case FACE_2_COL:
-                std::cout << "Face2" << std::endl;
+                //std::cout << "Face2" << std::endl;
                  manifold->normal = mesh2.normals[collision_face_mesh2];
                 crop_plane = mesh2.get_plane_of_face(collision_face_mesh2);
 
@@ -294,10 +321,10 @@ namespace SAT {
 
                 break;
             case EDGE_EDGE_COL: std::cout << "Edge" << std::endl; break;
-        };
+        };*/
 
 
-        std::cout << edge_edge_distance << " " << collision_distance_mesh1 << " : " << collision_distance_mesh2 << std::endl;
+        //std::cout << edge_edge_distance << " " << collision_distance_mesh1 << " : " << collision_distance_mesh2 << std::endl;
 
         //std::cout << collision_distance_mesh1 << " " << collision_distance_mesh2 << " " << edge_edge_distance << std::endl;
         //std::cout << (edge_edge_distance > MIN(collision_distance_mesh1, collision_distance_mesh2)) << std::endl;
@@ -305,13 +332,7 @@ namespace SAT {
         //manifold->normal = manifold->normal.invert();
         //crop_plane.normal = manifold->normal.invert();
 
-        std::cout << "=====" << std::endl;
-        for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
-            manifold->contact_depth[i] = crop_plane.distance(manifold->contact_points[i]);
-            manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
-            //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
-            //std::cout << manifold->contact_depth[i] << std::endl;
-        }
+        //std::cout << "=====" << std::endl;
 
         return true;
     }

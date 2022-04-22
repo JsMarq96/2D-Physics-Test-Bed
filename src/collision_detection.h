@@ -7,7 +7,6 @@
 #include "raw_geometry.h"
 #include "collider_mesh.h"
 #include "vector.h"
-#include "sat.h"
 #include <cstdint>
 
 #define MAX_COL_POINTS 10

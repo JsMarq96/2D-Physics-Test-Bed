@@ -31,7 +31,6 @@ struct sColliderMesh {
     sVector3   *normals = NULL;
     sVector3   *plane_origin = NULL;
     sEdgeIndexTuple *edges = NULL;
-    uint32_t   *edge_face_connections = NULL; // shit name
     uint32_t   *face_connections = NULL;
 
     uint32_t   vertices_count = 0;
@@ -60,12 +59,13 @@ struct sColliderMesh {
         mesh_center = mesh_center.mult(1.0f / mesh.indexing_count);
 
         // Load faces
-        for(uint32_t i = 0; mesh.face_count; i++) {
+        for(uint32_t i = 0; i < mesh.face_count; i++) {
             sVector3 face_plane_center = {0.0f, 0.0f, 0.0f};
             // Compute the middle point of the face
-            for(uint32_t j = 0; j < face_stride; j++) {
-                face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + j]);
-            }
+            face_plane_center = face_plane_center.sum(vertices[(i * face_stride)]);
+            face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + 1]);
+            face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + 2]);
+            face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + 3]);
 
             plane_origin[i] = face_plane_center.mult(1.0f / face_stride);
             normals[i] = mesh_center.subs(face_plane_center).normalize();
@@ -76,10 +76,10 @@ struct sColliderMesh {
         edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 2);
         edge_cout = 0;
 
-        edge_face_connections = (uint32_t*) malloc(sizeof(uint32_t) * face_count * 4);
+        uint32_t *edge_face_connections = (uint32_t*) malloc(sizeof(uint32_t) * face_count * 4);
 
-        face_connections = (uint32_t*) malloc(sizeof(uint32_t) * 2 * face_count);
-        uint32_t *face_conn_count = (uint32_t*) malloc(sizeof(uint32_t) * 3 * face_count);
+        face_connections = (uint32_t*) malloc(sizeof(uint32_t) * 3 * face_count);
+        uint32_t *face_conn_count = (uint32_t*) malloc(sizeof(uint32_t) * face_count);
         memset(face_conn_count, 0, sizeof(uint32_t) * face_count);
 
         // TODO: this is not very efficient... Better way?
@@ -120,17 +120,21 @@ struct sColliderMesh {
                 // since this indicates that the current edge, coneccets both
                 // faces
                 if (!is_inside) {
-                    face_connections[(i*3) + face_conn_count[i]] = edge_cout;
-                    face_conn_count[i]++;
-                    edge_face_connections[edge_cout * 2] = i;
+                    edge_face_connections[edge_cout] = i;
                     edges[edge_cout++] = curr_edge;
                     //std::cout << edge_cout << '/' << face_count * 2 <<   std::endl;
                 } else {
-                    edge_face_connections[(edge_cout * 2)+1] = edge_face_connections[ed * 2];
-                    edge_face_connections[(ed * 2)+1] = edge_face_connections[edge_cout * 2];
+                    uint32_t neighboor_face = edge_face_connections[ed];
+                    face_connections[(i*3) + face_conn_count[i]] = neighboor_face;
+                    face_connections[(neighboor_face * 3) + face_conn_count[neighboor_face]] = i;
+
+                    face_conn_count[neighboor_face]++;
+                    face_conn_count[i]++;
                 }
             }
         }
+        free(face_conn_count);
+        free(edge_face_connections);
     }
 
     void init_cuboid(const sTransform &transform) {
@@ -210,6 +214,13 @@ struct sColliderMesh {
         // Edge extraction
         edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 2);
         edge_cout = 0;
+
+        uint32_t *edge_face_connections = (uint32_t*) malloc(sizeof(uint32_t) * face_count * 4);
+
+        face_connections = (uint32_t*) malloc(sizeof(uint32_t) * 4 * face_count);
+        uint32_t *face_conn_count = (uint32_t*) malloc(sizeof(uint32_t) * face_count);
+        memset(face_conn_count, 0, sizeof(uint32_t) * face_count);
+
         // TODO: this is not very efficient... Better way?
         // Iterate throught every face, and thrugh every vertex
         // If there has not beel included, then add them to the list
@@ -227,8 +238,8 @@ struct sColliderMesh {
                 sVector3 vec2 = vertices[curr_edge.y];
 
                 // iterate thrugh to all the edges, to test if its inside
-                uint32_t edge_it;
-                for(edge_it = 0; edge_it < edge_cout; edge_it++) {
+                uint32_t edge_it = 0;
+                for(; edge_it < edge_cout; edge_it++) {
                     sEdgeIndexTuple &edge_to_test = edges[edge_it];
 
                     bool is_equal = vertices[edge_to_test.x].is_equal(vec1) && vertices[edge_to_test.y].is_equal(vec2);
@@ -241,15 +252,22 @@ struct sColliderMesh {
                 }
 
                 if (!is_inside) {
-                    //edge_face_tmp[edge_cout] = edge_it;
+                    edge_face_connections[edge_cout] = i;
                     edges[edge_cout++] = curr_edge;
                     //std::cout << edge_cout << '/' << face_count * 2 <<   std::endl;
-                } else {
-                    // If its already inside, then both faces, share the same edge
+                }  else {
+                    uint32_t neighboor_face = edge_face_connections[edge_it];
+                    face_connections[(i*4) + face_conn_count[i]] = neighboor_face;
+                    face_connections[(neighboor_face * 4) + face_conn_count[neighboor_face]] = i;
 
+                    face_conn_count[neighboor_face]++;
+                    face_conn_count[i]++;
                 }
+
             }
         }
+        free(face_conn_count);
+        free(edge_face_connections);
     }
 
     void clean() {
@@ -257,6 +275,7 @@ struct sColliderMesh {
         free(normals);
         free(plane_origin);
         free(edges);
+        free(face_connections);
     }
 
     void apply_transform(const sTransform &transf) {
@@ -286,6 +305,10 @@ struct sColliderMesh {
         return vertices[support_index];
     }
 
+    inline uint32_t get_neighboor_of_face(const uint32_t face_id,
+                                          const uint32_t neighboor) const {
+        return face_connections[(face_id * face_stride) + neighboor];
+    }
 
     inline sVector3* get_face(const uint32_t face_index) const {
         return &vertices[face_index * face_stride];
