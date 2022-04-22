@@ -2,7 +2,6 @@
 #define SAT_H_
 
 #include "collider_mesh.h"
-#include "collision_detection.h"
 #include "face_clipping.h"
 #include "math.h"
 #include "mesh.h"
