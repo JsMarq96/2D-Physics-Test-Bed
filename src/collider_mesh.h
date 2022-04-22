@@ -31,7 +31,8 @@ struct sColliderMesh {
     sVector3   *normals = NULL;
     sVector3   *plane_origin = NULL;
     sEdgeIndexTuple *edges = NULL;
-    uint32_t   *neighboring_planes = NULL;
+    uint32_t   *edge_face_connections = NULL; // shit name
+    uint32_t   *face_connections = NULL;
 
     uint32_t   vertices_count = 0;
     uint32_t   face_count = 0;
@@ -71,8 +72,16 @@ struct sColliderMesh {
         }
 
         // Store Edges
+        // TODO:  umber of edges?
         edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 2);
         edge_cout = 0;
+
+        edge_face_connections = (uint32_t*) malloc(sizeof(uint32_t) * face_count * 4);
+
+        face_connections = (uint32_t*) malloc(sizeof(uint32_t) * 2 * face_count);
+        uint32_t *face_conn_count = (uint32_t*) malloc(sizeof(uint32_t) * 3 * face_count);
+        memset(face_conn_count, 0, sizeof(uint32_t) * face_count);
+
         // TODO: this is not very efficient... Better way?
         // Iterate throught every face, and thrugh every vertex
         // If there has not beel included, then add them to the list
@@ -81,16 +90,19 @@ struct sColliderMesh {
         for(uint32_t i = 0; i < face_count; i++) {
             uint32_t curr_face_index = i * face_stride;
 
+            const uint32_t *current_face = &mesh.face_vertices[curr_face_index];
+
             for(uint32_t v1 = 0; v1 < face_stride; v1++) {
                 uint32_t v2 = (v1 + 1) % face_stride;
 
-                sEdgeIndexTuple curr_edge = {curr_face_index + v1, curr_face_index + v2};
+                sEdgeIndexTuple curr_edge = {current_face[v1], current_face[v2]};
                 bool is_inside = false;
                 sVector3 vec1 = vertices[curr_edge.x];
                 sVector3 vec2 = vertices[curr_edge.y];
 
                 // iterate thrugh to all the edges, to test if its inside
-                for(uint32_t ed = 0; ed < edge_cout; ed++) {
+                uint32_t ed = 0;
+                for(; ed < edge_cout; ed++) {
                     sEdgeIndexTuple &edge_to_test = edges[ed];
 
                     bool is_equal = vertices[edge_to_test.x].is_equal(vec1) && vertices[edge_to_test.y].is_equal(vec2);
@@ -102,9 +114,20 @@ struct sColliderMesh {
                     }
                 }
 
+                // For the edge face connections, if it inside, then it is
+                // already on the list, and is in the first of the tuple list
+                // so we use it, and set the other part of the tuples,
+                // since this indicates that the current edge, coneccets both
+                // faces
                 if (!is_inside) {
+                    face_connections[(i*3) + face_conn_count[i]] = edge_cout;
+                    face_conn_count[i]++;
+                    edge_face_connections[edge_cout * 2] = i;
                     edges[edge_cout++] = curr_edge;
                     //std::cout << edge_cout << '/' << face_count * 2 <<   std::endl;
+                } else {
+                    edge_face_connections[(edge_cout * 2)+1] = edge_face_connections[ed * 2];
+                    edge_face_connections[(ed * 2)+1] = edge_face_connections[edge_cout * 2];
                 }
             }
         }
