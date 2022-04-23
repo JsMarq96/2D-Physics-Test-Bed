@@ -83,9 +83,9 @@ namespace SAT {
             float shape1_len = mesh1_max - mesh1_min;
             float shape2_len = mesh2_max - mesh2_min;
 
-            float overlap_distance = (shape1_len + shape2_len) - total_shape_len;
+            float overlap_distance = total_shape_len - (shape1_len + shape2_len);
 
-            if (overlap_distance < 0.0f) {
+            if (overlap_distance > 0.0f) {
                 return false; // No overlaping
             } else if (overlap_distance <= smallest_distance) {
                 smallest_distance = overlap_distance;
@@ -208,80 +208,101 @@ namespace SAT {
         float face_bias = 0.9f;
         float edge_bias = 0.8f;
 
+        std::cout << "1:" << collision_distance_mesh1 << " 2:" << collision_distance_mesh2 << " e:" << edge_edge_distance << std::endl;
+
+        sVector3 separating_axis = {};
+
         if (collision_distance_mesh1 < collision_distance_mesh2) {
             if (collision_distance_mesh1 < edge_edge_distance) {
                 // Face 1
-                collision = FACE_1_COL;
+                separating_axis = mesh1.normals[collision_face_mesh1];
             } else {
                 // Edge
-                collision = EDGE_EDGE_COL;
+                separating_axis = cross_prod(mesh1.get_edge(mesh1_collidion_edge),
+                                             mesh2.get_edge(mesh2_collision_edge));
             }
         } else {
             if (collision_distance_mesh2 < edge_edge_distance) {
                 // Face 2
-                collision = FACE_2_COL;
+                separating_axis = mesh2.normals[collision_face_mesh2];
             } else {
                 //edge
-                collision = EDGE_EDGE_COL;
+                separating_axis = cross_prod(mesh1.get_edge(mesh1_collidion_edge),
+                                             mesh2.get_edge(mesh2_collision_edge));
             }
         }
 
+        float mesh1_max_facing = -FLT_MAX;
+        float mesh1_min_facing = FLT_MAX;
+        uint32_t mesh1_max_index = 0;
+        uint32_t mesh1_min_index = 0;
+        for(uint32_t i = 0; i <  mesh1.face_count; i++) {
+            float dot_facing = dot_prod(mesh1.normals[i], separating_axis);
 
-        std::cout << "1:" << collision_distance_mesh1 << " 2:" << collision_distance_mesh2 << " e:" << edge_edge_distance << std::endl;
+            if (mesh1_max_facing < dot_facing) {
+                mesh1_max_facing = dot_facing;
+                mesh1_max_index = i;
+            }
+            if (mesh1_min_facing > dot_facing) {
+                mesh1_min_facing = dot_facing;
+                mesh1_min_index = i;
+            }
+        }
+
+        float mesh2_max_facing = -FLT_MAX;
+        float mesh2_min_facing = FLT_MAX;
+        uint32_t mesh2_max_index = 0;
+        uint32_t mesh2_min_index = 0;
+        for(uint32_t i = 0; i <  mesh2.face_count; i++) {
+            float dot_facing = dot_prod(mesh2.normals[i], separating_axis);
+
+            if (mesh2_max_facing < dot_facing) {
+                mesh2_max_facing = dot_facing;
+                mesh2_max_index = i;
+            }
+            if (mesh2_min_facing > dot_facing) {
+                mesh2_min_facing = dot_facing;
+                mesh2_min_index = i;
+            }
+        }
+
         const sColliderMesh *reference_mesh, *incident_mesh;
         uint32_t reference_face = 0, incident_face = 0;
+        if (mesh2_min_facing < mesh1_min_facing + 0.001f) {
+            // Mesh 2 has the reference face
+            reference_mesh = &mesh2;
+            reference_face = mesh2_min_index;
 
-        if (collision == FACE_1_COL || collision == FACE_2_COL) {
-            // Face collision
-            switch(collision) {
-                case FACE_1_COL:
-                    std::cout << "Face1" << std::endl;
-                    reference_mesh = &mesh1;
-                    incident_mesh = &mesh2;
-                    reference_face = collision_face_mesh1;
-                    break;
-                case FACE_2_COL:
-                    std::cout << "Face2" << std::endl;
-                    reference_mesh = &mesh2;
-                    incident_mesh = &mesh1;
-
-                    reference_face = collision_face_mesh2;
-                    break;
-            };
-
-            manifold->normal = reference_mesh->normals[reference_face].invert();
-            sPlane reference_plane = reference_mesh->get_plane_of_face(reference_face);
-
-            float facing = -FLT_MAX;
-            for(uint32_t i = 0; i <  incident_mesh->face_count; i++) {
-                float dot_facing = dot_prod(incident_mesh->normals[i], reference_plane.normal);
-
-                std::cout << dot_facing <<  " " << i <<std::endl;
-                if (facing <= dot_facing) {
-                    facing = dot_facing;
-                    incident_face = i;
-                }
-            }
-            std::cout << " ===== " << incident_face << std::endl;
-            manifold->contact_points[0] = reference_plane.origin_point;
-            manifold->contact_points[1] = incident_mesh->plane_origin[incident_face].sum(incident_mesh->normals[incident_face]);
-            manifold->contanct_points_count = 2;
-            return true;
-            manifold->contanct_points_count = clipping::face_face_clipping(*incident_mesh,
-                                                                           incident_face,
-                                                                           *reference_mesh,
-                                                                           reference_face,
-                                                                           manifold->contact_points);
-
-            for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
-                manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
-                //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
-                //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
-                //std::cout << manifold->contact_depth[i] << std::endl;
-            }
-
+            incident_mesh = &mesh1;
+            incident_face = mesh1_max_index;
         } else {
-            // Edge Collision
+            // Mesh 1 fas the reference face
+            reference_mesh = &mesh1;
+            reference_face = mesh1_min_index;
+
+            incident_mesh = &mesh2;
+            incident_face = mesh2_max_index;
+        }
+
+
+        manifold->normal = reference_mesh->normals[reference_face];
+        sPlane reference_plane = reference_mesh->get_plane_of_face(reference_face);
+
+        manifold->contact_points[0] = reference_plane.origin_point;
+        manifold->contact_points[1] = incident_mesh->plane_origin[incident_face];
+        manifold->contanct_points_count = 2;
+        //return true;
+        manifold->contanct_points_count = clipping::face_face_clipping(*incident_mesh,
+                                                                       incident_face,
+                                                                       *reference_mesh,
+                                                                       reference_face,
+                                                                       manifold->contact_points);
+
+        for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
+            manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
+            //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
+            //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
+            //std::cout << manifold->contact_depth[i] << std::endl;
         }
 
         return true;

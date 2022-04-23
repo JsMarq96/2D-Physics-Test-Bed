@@ -175,9 +175,9 @@ void test_loop(GLFWwindow *window) {
     sColliderMesh col_cube1 = {}, col_cube2 = {};
 
     col_cube1.init_cuboid(transforms[0]);
-    col_cube2.load_collider_mesh(cube);
-
-    col_cube2.apply_transform(transforms[1]);
+    col_cube2.init_cuboid(transforms[1]);
+    //col_cube2.load_collider_mesh(cube);
+    //col_cube2.apply_transform(transforms[1]);
 
     sCollisionManifold manifold = {};
 
