@@ -159,9 +159,9 @@ void sMesh::load_OBJ_mesh(const char* mesh_dir) {
             vertices_index[indexing_count++] = vertex_id;
 
             // Compute the face normal
-            //face_normals[face_index].x = (temp_normals[normal1].x + temp_normals[normal2].x + temp_normals[normal3].x) / 3.0f;
-            //face_normals[face_index].y = (temp_normals[normal1].y + temp_normals[normal2].y + temp_normals[normal3].y) / 3.0f;
-            //face_normals[face_index].z = (temp_normals[normal1].z + temp_normals[normal2].z + temp_normals[normal3].z) / 3.0f;
+            face_normals[face_index].x = (temp_normals[normal1].x + temp_normals[normal2].x + temp_normals[normal3].x) / 3.0f;
+            face_normals[face_index].y = (temp_normals[normal1].y + temp_normals[normal2].y + temp_normals[normal3].y) / 3.0f;
+            face_normals[face_index].z = (temp_normals[normal1].z + temp_normals[normal2].z + temp_normals[normal3].z) / 3.0f;
 
             face_index++;
         }

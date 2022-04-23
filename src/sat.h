@@ -254,18 +254,19 @@ namespace SAT {
 
             float facing = -FLT_MAX;
             for(uint32_t i = 0; i <  incident_mesh->face_count; i++) {
-                float dot = dot_prod(incident_mesh->normals[i], reference_plane.normal);
+                float dot_facing = dot_prod(incident_mesh->normals[i], reference_plane.normal);
 
-                if (facing < dot) {
-                    facing = dot;
+                std::cout << dot_facing <<  " " << i <<std::endl;
+                if (facing <= dot_facing) {
+                    facing = dot_facing;
                     incident_face = i;
                 }
             }
-
-            manifold->contact_points[0] = reference_plane.origin_point.sum(reference_plane.normal);
-            manifold->contact_points[1] = incident_mesh->plane_origin[incident_face];
-            manifold->contanct_points_count = 1;
-            //return true;
+            std::cout << " ===== " << incident_face << std::endl;
+            manifold->contact_points[0] = reference_plane.origin_point;
+            manifold->contact_points[1] = incident_mesh->plane_origin[incident_face].sum(incident_mesh->normals[incident_face]);
+            manifold->contanct_points_count = 2;
+            return true;
             manifold->contanct_points_count = clipping::face_face_clipping(*incident_mesh,
                                                                            incident_face,
                                                                            *reference_mesh,
