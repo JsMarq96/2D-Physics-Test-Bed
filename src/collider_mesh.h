@@ -61,14 +61,15 @@ struct sColliderMesh {
         // Load faces
         for(uint32_t i = 0; i < mesh.face_count; i++) {
             sVector3 face_plane_center = {0.0f, 0.0f, 0.0f};
+
             // Compute the middle point of the face
             face_plane_center = face_plane_center.sum(vertices[(i * face_stride)]);
             face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + 1]);
             face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + 2]);
-            face_plane_center = face_plane_center.sum(vertices[(i * face_stride) + 3]);
 
             plane_origin[i] = face_plane_center.mult(1.0f / face_stride);
-            normals[i] = mesh_center.subs(face_plane_center).normalize();
+
+            normals[i] = mesh.face_normals[i].normalize();
         }
 
         // Store Edges
@@ -157,15 +158,6 @@ struct sColliderMesh {
         raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
         raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f}.sum({-0.5f, -0.5f, -0.5f}));
-        /*raw_points[0] = transform.apply(sVector3{0.0f, 0.0f, 0.0f});
-        raw_points[1] = transform.apply(sVector3{1.0f, 0.0f, 0.0f});
-        raw_points[2] = transform.apply(sVector3{0.0f, 1.0f, 0.0f});
-        raw_points[3] = transform.apply(sVector3{1.0f, 1.0f, 0.0f});
-        raw_points[4] = transform.apply(sVector3{0.0f, 0.0f, 1.0f});
-        raw_points[5] = transform.apply(sVector3{1.0f, 0.0f, 1.0f});
-        raw_points[6] = transform.apply(sVector3{0.0f, 1.0f, 1.0f});
-        raw_points[7] = transform.apply(sVector3{1.0f, 1.0f, 1.0f});*/
-
 
         for(uint32_t i = 0; i < 6*4; i++) {
             vertices[i] = raw_points[box_LUT_vertices[i]];
@@ -195,21 +187,9 @@ struct sColliderMesh {
             normals[i] = center.subs(cuboid_center).normalize();
         }
 
-        // Face normals
-        /*normals[0] = transform.apply_rotation(sVector3{0.0f, 0.0f, 1.0f});
-        normals[1] = transform.apply_rotation(sVector3{0.0f, 1.0f, 0.0f});
-        normals[2] = transform.apply_rotation(sVector3{1.0f, 0.0f, 0.0f});
-        normals[3] = transform.apply_rotation(sVector3{0.0f, 0.0f, -1.0f});
-        normals[4] = transform.apply_rotation(sVector3{0.0f, -1.0f, 0.0f});
-        normals[5] = transform.apply_rotation(sVector3{-1.0f, 0.0f, 0.0f});*/
 
         face_stride = FACE_QUAD;
 
-        /*neighboring_planes = (uint32_t*) malloc(sizeof(uint32_t) * face_count * face_stride);
-
-        uint32_t *edge_face_tmp = (uint32_t*) malloc(sizeof(uint32_t) * face_count * 2);
-        uint8_t *neighboor_cout = (uint8_t*) malloc(sizeof(uint8_t) * face_count);
-        memset(neighboor_cout, 0, sizeof(uint8_t) * face_count);*/
 
         // Edge extraction
         edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 2);
@@ -287,6 +267,8 @@ struct sColliderMesh {
             normals[i] = transf.apply_rotation(normals[i]);
             plane_origin[i] = transf.apply(plane_origin[i]);
         }
+
+        std::cout << vertices[0].x << " " << std::endl;
     }
 
     inline sVector3 get_support(const sVector3 &direction) const {

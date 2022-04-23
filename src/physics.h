@@ -178,8 +178,8 @@ struct sPhysWorld {
                     if (SAT::SAT_collision_test(cube_mesh1,
                                                 cube_mesh2,
                                                 &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = j;
-                        _manifolds[_manifold_count].obj2 = i;
+                        _manifolds[_manifold_count].obj1 = i;
+                        _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
                     }
 
@@ -323,7 +323,6 @@ struct sPhysWorld {
             contact_data->angular_mass = dot_prod(r1_cross_n, inv_inertia_tensors[id_1].multiply(r1_cross_n)) +
                 dot_prod(r2_cross_n, inv_inertia_tensors[id_2].multiply(r2_cross_n));
 
-            std::cout << manifold.contact_depth[i] << std::endl;
             // Baumgarte correction for the impulse
             contact_data->bias = -BAUMGARTE_TERM / elapsed_time * MIN(0.0f, manifold.contact_depth[i] + PENETRATION_SLOP);
 
@@ -398,18 +397,18 @@ struct sPhysWorld {
 
             //impulse = impulse.mult(-1.0f);
 
-            if (!is_static[id_2]) {
+            //if (!is_static[id_2]) {
                 speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));
                 speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(contact_data->r2, impulse)));
-            }
+            //}
 
             // Invert the impulse for the other body
             impulse = impulse.mult(-1.0f);
 
-            if (!is_static[id_1]) {
+            //if (!is_static[id_1]) {
                 speed_1->linear = speed_1->linear.sum(impulse.mult(inv_mass[id_1]));
                 speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(contact_data->r1, impulse)));
-            }
+            //}
 
             // FRICTION IMPULSES =====
 

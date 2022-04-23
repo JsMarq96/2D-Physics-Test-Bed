@@ -67,7 +67,7 @@ void test_loop(GLFWwindow *window) {
 
   sMesh sphere, cube;
   sphere.load_OBJ_mesh("resources/sphere.obj");
-  cube.load_OBJ_mesh("resources/cube.obj");
+  cube.load_OBJ_mesh("resources/cube_t.obj");
 
   // Object 1: Static cube
   transforms[0].position = {0.0f, 0.0f, 0.0f};
@@ -83,7 +83,7 @@ void test_loop(GLFWwindow *window) {
   cube_renderer.create_from_mesh(&cube);
   sphere_renderer.create_from_mesh(&sphere);
 
-  cube.clean();
+  //cube.clean();
   sphere.clean();
 
   sVector4 colors[6] = {};
@@ -175,7 +175,9 @@ void test_loop(GLFWwindow *window) {
     sColliderMesh col_cube1 = {}, col_cube2 = {};
 
     col_cube1.init_cuboid(transforms[0]);
-    col_cube2.init_cuboid(transforms[1]);
+    col_cube2.load_collider_mesh(cube);
+
+    col_cube2.apply_transform(transforms[1]);
 
     sCollisionManifold manifold = {};
 
@@ -186,14 +188,14 @@ void test_loop(GLFWwindow *window) {
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
       cube_models[cube_num++].add_position(col_cube1.plane_origin[j]);
-    }
+    }*/
 
-    for(int j = 0 ; j < col_cube2.face_count; j++){
+    for(int j = 99 ; j < col_cube2.vertices_count; j++){
       cube_colors[cube_num] = {0.0f, 1.f, 0.0f, 0.0f};
       cube_models[cube_num].set_identity();
       cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
-      cube_models[cube_num++].add_position(col_cube2.plane_origin[j]);
-    }*/
+      cube_models[cube_num++].add_position(col_cube2.vertices[j]);
+    }
 
 
     sphere_renderer.render(sphere_models, colors, 0, proj_mat, true);
@@ -273,7 +275,7 @@ void draw_loop(GLFWwindow *window) {
 
   sMesh sphere, cube;
   sphere.load_OBJ_mesh("resources/sphere.obj");
-  cube.load_OBJ_mesh("resources/cube.obj");
+  cube.load_OBJ_mesh("resources/cube_t.obj");
 
   sMeshRenderer sphere_renderer, cube_renderer;
   sphere_renderer.create_from_mesh(&sphere);
@@ -301,14 +303,14 @@ void draw_loop(GLFWwindow *window) {
 
   uint32_t last_index = 1;
   //
-  /*last_index = add_sphere({2.5, 6.0f, 0.0f}, 1.0f, last_index, phys_instance);
+  /*last_index = add_sphere({0.65, 6.0f, 0.0f}, 1.0f, last_index, phys_instance);
   last_index = add_sphere({0.6, 5.0f, 2.0f}, 2.0f, last_index, phys_instance);
   last_index = add_sphere({0.8, 1.0f, 2.0f}, 1.0f, last_index, phys_instance);
   last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);*/
 
   last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
   last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  //last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
 
   phys_instance.init(transforms);
 
@@ -399,6 +401,7 @@ void draw_loop(GLFWwindow *window) {
     sVector4 cube_colors[15] = {}, sphere_colors[15] = {};
     int cube_size = 0, sphere_size = 0;
 
+    std::cout << transforms[0].scale.x << " " << transforms[0].scale.y  << " <=== " << std::endl;
     // Rendering ====
     // Render shapes
     for(int i = 0; i < 6; i++) {
@@ -469,8 +472,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_loop(window);
+      //draw_loop(window);
+      test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
