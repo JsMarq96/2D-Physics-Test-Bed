@@ -71,12 +71,13 @@ void test_loop(GLFWwindow *window) {
 
   // Object 1: Static cube
   transforms[0].position = {0.0f, 0.0f, 0.0f};
-  transforms[0].scale = {10.0f, .5f, 10.0f};
+  transforms[0].scale = {1.0f, 1.f, 1.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
-  transforms[1].position = {1.630f, 0.780f, 0.0f};
+  transforms[1].position = {1.630f, 0.678f, 0.0f};
   transforms[1].scale = {1.0f, 1.f, 1.0f};
-  transforms[1].set_rotation({0.9250f, 0.70f, 0.380f, 0.0f});
+  transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
+  //transforms[1].set_rotation({0.9250f, 0.70f, 0.380f, 0.0f});
 
 
   sMeshRenderer sphere_renderer, cube_renderer;
@@ -291,7 +292,7 @@ void draw_loop(GLFWwindow *window) {
 
   // Object 1: Static cube
   transforms[0].position = {-0.50f, 0.0f, 0.0f};
-  transforms[0].scale = {30.5f, 1.0f, 30.0f};
+  transforms[0].scale = {13.5f, 1.0f, 13.0f};
   //transforms[0].set_rotation({0.80f, 0.20f, 0.0f, 0.0f});
   transforms[0].set_rotation({1.0f, 0.00f, 0.0f, 0.0f});
   phys_instance.friction[0] = 0.5f;
@@ -310,7 +311,7 @@ void draw_loop(GLFWwindow *window) {
 
   last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
   last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  //last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
 
   phys_instance.init(transforms);
 
@@ -401,7 +402,7 @@ void draw_loop(GLFWwindow *window) {
     sVector4 cube_colors[15] = {}, sphere_colors[15] = {};
     int cube_size = 0, sphere_size = 0;
 
-    std::cout << transforms[0].scale.x << " " << transforms[0].scale.y  << " <=== " << std::endl;
+    //std::cout << transforms[0].scale.x << " " << transforms[0].scale.y  << " <=== " << std::endl;
     // Rendering ====
     // Render shapes
     for(int i = 0; i < 6; i++) {
@@ -472,8 +473,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_loop(window);
+      draw_loop(window);
+      //test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

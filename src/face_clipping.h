@@ -4,6 +4,7 @@
 #include "collider_mesh.h"
 #include "data_structs/swapable_stack.h"
 #include "geometry.h"
+#include "math.h"
 #include "vector.h"
 #include <cstdint>
 #include <cstring>
@@ -24,6 +25,7 @@ namespace clipping {
 
             // Perform clipping agains the neighboring planes
             for(uint32_t clip_plane = 0; clip_plane < mesh1.face_stride; clip_plane++) {
+                std::cout << clip_plane << " " << mesh1.face_stride << std::endl;
                 sPlane reference_face = mesh1.get_plane_of_face(mesh1.get_neighboor_of_face(face_1, clip_plane));
                 uint32_t num_of_clipped_points = 0;
 
@@ -93,6 +95,40 @@ namespace clipping {
             //      Both vertecis are outside,
             //         we dont add any points
             return num_of_points_to_clip;
+    }
+
+    inline uint32_t edge_edge_clipping(const sColliderMesh &mesh1,
+                                       const uint32_t edge_1,
+                                       const sColliderMesh &mesh2,
+                                       const uint32_t edge_2,
+                                       sVector3 *clip_point,
+                                       float *distance) {
+        const sVector3 edge_mesh1 = mesh1.get_edge(edge_1);
+        const sVector3 edge_mesh2 = mesh2.get_edge(edge_2);
+
+        // https://math.stackexchange.com/questions/846054/closest-points-on-two-line-segments
+        const sVector3 p1x = mesh1.vertices[mesh1.edges[edge_1].x], p1y = mesh1.vertices[mesh1.edges[edge_1].y];
+        const sVector3 p2x = mesh2.vertices[mesh2.edges[edge_2].x], p2y = mesh2.vertices[mesh2.edges[edge_2].y];
+
+        const float edge_1_len = edge_mesh1.magnitude();
+        const float edge_2_len = edge_mesh2.magnitude();
+
+        const sVector3 p1_p2 = p1x.subs(p2x);
+        const float d12 = dot_prod(edge_mesh1, edge_mesh2);
+        const float d_edge1_p1 = dot_prod(edge_mesh1, p1_p2);
+        const float d_edge2_p1 = dot_prod(edge_mesh2, p1_p2);
+
+        const float denom = edge_1_len * edge_2_len - d12 * d12;
+        const float f1 = (d12 * d_edge2_p1 - d_edge1_p1 * edge_2_len) / denom;
+        const float f2 = (d12 * f1 + d_edge2_p1) / edge_2_len;
+
+        const sVector3 point_1 = p1x.sum(edge_mesh1.mult(f1));
+        const sVector3 point_2 = p2x.sum(edge_mesh2.mult(f2));
+
+        *clip_point = point_1.sum(point_2).mult(0.5f);
+        *distance = point_1.subs(point_2).magnitude();
+
+        return 1;
     }
 };
 

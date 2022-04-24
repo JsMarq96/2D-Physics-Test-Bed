@@ -39,6 +39,8 @@ struct sColliderMesh {
 
     eFaceSize  face_stride = FACE_QUAD;
 
+    sVector3 mesh_center = {};
+
 
     void load_collider_mesh(const sMesh &mesh) {
         vertices = (sVector3*) malloc(sizeof(sVector3) * mesh.indexing_count);
@@ -50,7 +52,7 @@ struct sColliderMesh {
         face_stride = FACE_TRI; // Is a triangled mesh
 
         // Load vertices & calculate center (avg point)
-        sVector3 mesh_center = {0.0f, 0.0f, 0.0f};
+        mesh_center = {0.0f, 0.0f, 0.0f};
         for(uint32_t i = 0; i < mesh.indexing_count; i++) {
             vertices[i] = mesh.vertices[mesh.vertices_index[i]].vertex;
             mesh_center = mesh_center.sum(vertices[i]);
@@ -163,7 +165,7 @@ struct sColliderMesh {
             vertices[i] = raw_points[box_LUT_vertices[i]];
         }
 
-        sVector3 cuboid_center = transform.apply({0.0f, 0.0f, 0.0f});
+        mesh_center = transform.apply({0.0f, 0.0f, 0.0f});
 
         // Face origin
         for(int i = 0; i < 6; i++) {
@@ -184,7 +186,7 @@ struct sColliderMesh {
 
             // The plane normal goes from the center  of the cuboid to the
             // origin of the plane
-            normals[i] = center.subs(cuboid_center).normalize();
+            normals[i] = center.subs(mesh_center).normalize();
         }
 
 
