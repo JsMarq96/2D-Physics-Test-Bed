@@ -25,7 +25,7 @@ namespace clipping {
 
             // Perform clipping agains the neighboring planes
             for(uint32_t clip_plane = 0; clip_plane < mesh1.face_stride; clip_plane++) {
-                std::cout << clip_plane << " " << mesh1.face_stride << std::endl;
+                //std::cout << clip_plane << " " << mesh1.face_stride << std::endl;
                 sPlane reference_face = mesh1.get_plane_of_face(mesh1.get_neighboor_of_face(face_1, clip_plane));
                 uint32_t num_of_clipped_points = 0;
 
