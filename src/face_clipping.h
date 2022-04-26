@@ -55,34 +55,6 @@ namespace clipping {
                 memcpy(to_clip, clip_points, sizeof(sVector3) * num_of_clipped_points);
             }
 
-            // Clip agains the collision plane
-            sPlane reference_face = mesh1.get_plane_of_face(face_1);
-            uint32_t num_of_clipped_points = 0;
-
-            for(uint32_t i = 0; i < num_of_points_to_clip; i++) {
-                sVector3 vert1 = to_clip[i];
-                sVector3 vert2 = to_clip[(i + 1) % mesh2.face_stride];
-
-                float distance_vert1 = reference_face.distance(vert1);
-                float distance_vert2 = reference_face.distance(vert2);
-
-                if (distance_vert1 < 0.0f && distance_vert2 < 0.0f) {
-                    // Add the vert2
-                    clip_points[num_of_clipped_points++] = vert2;
-                } else if (distance_vert1 >= 0.0f && distance_vert2 < 0.0f) {
-                    // Add intersection point & vert2
-                    clip_points[num_of_clipped_points++] = reference_face.get_intersection_point(vert1,
-                                                                                                 vert2);
-                    clip_points[num_of_clipped_points++] = vert2;
-                } else if (distance_vert1 < 0.0f && distance_vert2 >= 0.0f) {
-                    // Add intersection point
-                    clip_points[num_of_clipped_points++] = reference_face.get_intersection_point(vert1,
-                                                                                                 vert2);
-                }
-                // If both are outside, do nothing
-            }
-
-
             free(to_clip);
 
             //   Iterate all the edges of the clipped

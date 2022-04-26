@@ -213,24 +213,24 @@ namespace SAT {
 
         std::cout << "1:" << collision_distance_mesh1 << " 2:" << collision_distance_mesh2 << " e:" << edge_edge_distance << std::endl;
 
-        const float max_face_separation = MAX(collision_distance_mesh1, collision_distance_mesh2);
+        const float max_face_separation = MIN(collision_distance_mesh1, collision_distance_mesh2);
         const float k_edge_rel_tolerance = 0.90f;
         const float k_face_rel_toletance = 0.95f;
         const float k_abs_tolerance = 0.5f * 0.005f;
 
         // Add tolerance to favour face collision vs edge collision
-        if (edge_edge_distance > k_edge_rel_tolerance * max_face_separation + k_abs_tolerance) {
+        if (k_edge_rel_tolerance * edge_edge_distance + k_abs_tolerance < max_face_separation) {
             // Edge collision
             std::cout << "Edge collision" << std::endl;
             const sVector3 edge_mesh1 = mesh1.get_edge(mesh1_collidion_edge);
             const sVector3 edge_mesh2 = mesh2.get_edge(mesh2_collision_edge);
             const sVector3 collider_distance = mesh1.mesh_center.subs(mesh2.mesh_center);
-            const sVector3 edge_axis = cross_prod(edge_mesh1, edge_mesh2);
+            const sVector3 edge_axis = cross_prod(edge_mesh1, edge_mesh2).normalize();
 
             if (dot_prod(collider_distance, edge_axis) < 0.0f) {
-                manifold->normal = edge_axis.invert();
-            } else {
                 manifold->normal = edge_axis;
+            } else {
+                manifold->normal = edge_axis.invert();
             }
             manifold->contanct_points_count = 0;
 
@@ -254,7 +254,7 @@ namespace SAT {
              for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
                  manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
                  //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
-                 manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
+                 //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
                  std::cout << manifold->contact_depth[i] << std::endl;
              }
 
@@ -262,23 +262,23 @@ namespace SAT {
         } else {
             // Face collision
             // Favor the first mesh as a reference, with the tolerance
-            if (k_face_rel_toletance * collision_distance_mesh1 + k_abs_tolerance > collision_distance_mesh2) {
+            if (k_face_rel_toletance * collision_distance_mesh2 + k_abs_tolerance < collision_distance_mesh1) {
                 // Face 1 is reference face
-                std::cout << "Ref: mesh1" << std::endl;
-                reference_mesh = &mesh1;
-                reference_face = collision_face_mesh1;
-                manifold->normal = reference_mesh->normals[reference_face];
-
-                incident_mesh = &mesh2;
-            } else {
-                // Face of mesh 2 is reference face
                 std::cout << "Ref: mesh2" << std::endl;
                 reference_mesh = &mesh2;
                 reference_face = collision_face_mesh2;
+                manifold->normal = reference_mesh->normals[reference_face];
+
+                incident_mesh = &mesh1;
+            } else {
+                // Face of mesh 2 is reference face
+                std::cout << "Ref: mesh2" << std::endl;
+                reference_mesh = &mesh1;
+                reference_face = collision_face_mesh1;
                 // Inverse the collision normal
                 manifold->normal = reference_mesh->normals[reference_face].invert();
 
-                incident_mesh = &mesh1;
+                incident_mesh = &mesh2;
             }
         }
 
@@ -304,7 +304,7 @@ namespace SAT {
             manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
             //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
             //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
-            //std::cout << manifold->contact_depth[i] << std::endl;
+            std::cout << manifold->contact_depth[i] << std::endl;
         }
 
         return true;
