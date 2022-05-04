@@ -279,15 +279,6 @@ namespace SAT {
                 manifold->normal = reference_mesh->normals[reference_face];
 
                 incident_mesh = &mesh1;
-            } else {
-                // Face of mesh 2 is reference face
-                std::cout << "Ref: mesh1" << std::endl;
-                reference_mesh = &mesh1;
-                reference_face = collision_face_mesh1;
-                // Inverse the collision normal
-                manifold->normal = reference_mesh->normals[reference_face].invert();
-
-                incident_mesh = &mesh2;
             }
         }
 
