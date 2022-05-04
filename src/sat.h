@@ -245,7 +245,7 @@ namespace SAT {
             // Favor the first mesh as a reference, with the tolerance
             if (k_face_rel_toletance * collision_distance_mesh1 + k_abs_tolerance > collision_distance_mesh2) {
                 // Face 1 is reference face
-                //std::cout << "Ref: mesh1" << std::endl;
+                std::cout << "Ref: mesh1" << std::endl;
                 reference_mesh = &mesh1;
                 reference_face = collision_face_mesh1;
                 manifold->normal = reference_mesh->normals[reference_face];
@@ -253,7 +253,7 @@ namespace SAT {
                 incident_mesh = &mesh2;
             } else {
                 // Face of mesh 2 is reference face
-                //std::cout << "Ref: mesh2" << std::endl;
+                std::cout << "Ref: mesh2" << std::endl;
                 reference_mesh = &mesh2;
                 reference_face = collision_face_mesh2;
                 // Inverse the collision normal
