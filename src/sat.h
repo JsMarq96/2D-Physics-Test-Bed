@@ -272,7 +272,7 @@ namespace SAT {
                 incident_mesh = &mesh1;
             } else {
                 // Face of mesh 2 is reference face
-                std::cout << "Ref: mesh2" << std::endl;
+                std::cout << "Ref: mesh1" << std::endl;
                 reference_mesh = &mesh1;
                 reference_face = collision_face_mesh1;
                 // Inverse the collision normal
@@ -283,16 +283,23 @@ namespace SAT {
         }
 
         sPlane reference_plane = reference_mesh->get_plane_of_face(reference_face);
+        reference_plane.normal = manifold->normal;
+        //reference_plane.normal = reference_plane.normal.invert();
 
-        float incident_facing = FLT_MAX;
+        float incident_facing = -FLT_MAX;
         for(uint32_t i = 0; i < incident_mesh->face_count; i++) {
             float facing = dot_prod(reference_plane.normal, incident_mesh->normals[i]);
 
-            if (facing < incident_facing) {
+            if (facing > incident_facing) {
                 incident_facing = facing;
                 incident_face = i;
             }
         }
+
+        //manifold->contact_points[0] = reference_mesh->plane_origin[reference_face];
+        //manifold->contact_points[1] = incident_mesh->plane_origin[incident_face];
+        //manifold->contanct_points_count = 2;
+        //return true;
 
         manifold->contanct_points_count = clipping::face_face_clipping(*incident_mesh,
                                                                        incident_face,
