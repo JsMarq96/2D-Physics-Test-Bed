@@ -71,7 +71,7 @@ void test_loop(GLFWwindow *window) {
 
   // Object 1: Static cube
   transforms[0].position = {0.0f, 0.0f, 0.0f};
-  transforms[0].scale = {1.0f, 1.f, 1.0f};
+  transforms[0].scale = {1.0f, 10.f, 10.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
   transforms[1].position = {1.630f, 0.678f, 0.0f};
@@ -253,6 +253,7 @@ uint32_t add_cube(const sVector3 &pos, const sVector3 &scale, const uint32_t las
   phys_world.transforms[last_index].position = pos;
   phys_world.transforms[last_index].scale = scale;
   phys_world.transforms[last_index].set_rotation({0.80f, 0.20f, 0.00f, 0.0f});
+  //phys_world.transforms[last_index].set_rotation({1.0f, 0.0f, 0.00f, 0.0f});
   phys_world.restitution[last_index] = 0.2f;
   phys_world.friction[last_index] = 0.5f;
   phys_world.mass[last_index] = 10.0f;
@@ -310,7 +311,7 @@ void draw_loop(GLFWwindow *window) {
   last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);*/
 
   last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  //last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
   //last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
 
   phys_instance.init(transforms);
@@ -473,8 +474,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_loop(window);
+      //draw_loop(window);
+      test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

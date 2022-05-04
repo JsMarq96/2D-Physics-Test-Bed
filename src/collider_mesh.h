@@ -194,7 +194,7 @@ struct sColliderMesh {
 
 
         // Edge extraction
-        edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 2);
+        edges = (sEdgeIndexTuple*) malloc(sizeof(sEdgeIndexTuple) * face_count * 4);
         edge_cout = 0;
 
         uint32_t *edge_face_connections = (uint32_t*) malloc(sizeof(uint32_t) * face_count * 4);
@@ -236,7 +236,7 @@ struct sColliderMesh {
                 if (!is_inside) {
                     edge_face_connections[edge_cout] = i;
                     edges[edge_cout++] = curr_edge;
-                    //std::cout << edge_cout << '/' << face_count * 2 <<   std::endl;
+                    //std::cout << edge_cout << '/' << face_count * 4 << " " << face_stride <<  std::endl;
                 }  else {
                     uint32_t neighboor_face = edge_face_connections[edge_it];
                     face_connections[(i*4) + face_conn_count[i]] = neighboor_face;
@@ -287,6 +287,23 @@ struct sColliderMesh {
         }
 
         return vertices[support_index];
+    }
+
+    inline uint32_t get_support_face(const sVector3 &direction) const {
+        float best_projection = -FLT_MAX;
+        uint32_t support_index = 0;
+
+        for(int i = 0; i < face_count; i++) {
+            float is_facing = dot_prod(normals[i], direction);
+            float projection = dot_prod(plane_origin[i], direction);
+
+            if (projection > best_projection && is_facing > 0.0f) {
+                support_index = i;
+                best_projection = projection;
+            }
+        }
+
+        return support_index;
     }
 
     inline uint32_t get_neighboor_of_face(const uint32_t face_id,
