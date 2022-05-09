@@ -9,6 +9,21 @@ struct sTransform {
   sVector3 position = sVector3{};
   sVector3 scale = sVector3{1.0f, 1.0f, 1.0f};
 
+  inline bool is_equal(const sTransform &tr) {
+    if (tr.rotation.x != rotation.x || tr.rotation.y != rotation.y || tr.rotation.z != rotation.z || tr.rotation.w != rotation.w) {
+      return false;
+    }
+
+    if (tr.position.x != position.x || tr.position.y != position.y || tr.position.z != position.z) {
+      return false;
+    }
+
+    if (tr.scale.x != scale.x || tr.scale.y != scale.y || tr.scale.z != scale.z) {
+      return false;
+    }
+
+    return true;
+  }
 
   //https://math.stackexchange.com/questions/1693067/differences-between-quaternion-integration-methods
   void set_rotation(const sQuaternion4 quat) {
