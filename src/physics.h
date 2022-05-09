@@ -17,6 +17,11 @@
 
 #define PHYS_INSTANCE_COUNT 100
 
+
+// TODO:
+//  Instead on reinitializing the mesh if its different,
+//  just calculate the difference transform and applied it
+
 struct sSpeed {
     sVector3 linear = {0.0f, 0.0f, 0.0f};
     sVector3 angular = {0.0f, 0.0f, 0.0f};

@@ -299,6 +299,11 @@ void draw_loop(GLFWwindow *window) {
                                                          {1.0f, 1.0f, 1.0f},
                                                          20.0f,
                                                          false);
+  uint32_t dynamic_cube1 = phys_instance.add_cube_collider({0.3f, 6.5f, 0.0f},
+                                                         {0.50f, 1.0f, 0.90f},
+                                                         60.0f,
+                                                         false);
+
   sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
   colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
@@ -390,10 +395,11 @@ void draw_loop(GLFWwindow *window) {
     // Rendering ====
     // Render shapes
 
-  phys_instance.transforms[static_cube].get_model(&cube_models[0]);
-   phys_instance.transforms[dynamic_cube].get_model(&cube_models[1]);
+    phys_instance.transforms[static_cube].get_model(&cube_models[0]);
+    phys_instance.transforms[dynamic_cube].get_model(&cube_models[1]);
+    phys_instance.transforms[dynamic_cube1].get_model(&cube_models[2]);
 
-    cube_renderer.render(cube_models, colors, 2, proj_mat, true);
+    cube_renderer.render(cube_models, colors, 3, proj_mat, true);
     //sphere_renderer.render(sphere_models, sphere_colors, sphere_size, proj_mat, true);
 
     // Render contact points
