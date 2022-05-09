@@ -8,7 +8,9 @@
 #include "collider_mesh.h"
 #include "mesh_renderer.h"
 #include "phys_parameters.h"
+#include "quaternion.h"
 #include "sat.h"
+#include "transform.h"
 #include "types.h"
 #include "vector.h"
 #include <cstdint>
@@ -20,13 +22,30 @@ struct sSpeed {
     sVector3 angular = {0.0f, 0.0f, 0.0f};
 };
 
+enum eParentType : uint8_t {
+    NO_PARENT = 0,
+    GEOMETRY_PARENT,
+    COLLIDER_PARENT,
+    PARENT_TYPE_COUNT
+};
+
+struct sParenting {
+    eParentType  parent_type = NO_PARENT;
+    uint32_t parent_index_index = 0;
+};
+
 
 struct sPhysWorld {
+    bool               initialized         [PHYS_INSTANCE_COUNT] = {};
+
+    sParenting         node_parenting      [PHYS_INSTANCE_COUNT] = {};
     bool               enabled             [PHYS_INSTANCE_COUNT] = {};
     bool               is_static           [PHYS_INSTANCE_COUNT] = {};
     eColiderTypes      shape               [PHYS_INSTANCE_COUNT] = {};
 
-    sTransform         *transforms                               = NULL;
+    sColliderMesh      collider_meshes     [PHYS_INSTANCE_COUNT] = {};
+    sTransform         transforms          [PHYS_INSTANCE_COUNT] = {};
+    sTransform         old_transforms      [PHYS_INSTANCE_COUNT] = {};
     sSpeed             obj_speeds          [PHYS_INSTANCE_COUNT];
 
     float              mass                [PHYS_INSTANCE_COUNT] = {};
@@ -61,43 +80,90 @@ struct sPhysWorld {
 
         memset(plane_collider_normal, 0.0f, sizeof(plane_collider_normal));
 
+        memset(initialized, false, sizeof(initialized));
         _manifold_count = 0;
     }
 
-    // Set the initial values & calculate the inv_inertia tensors
-    void init(sTransform *i_transforms) {
-        transforms = i_transforms;
+    inline uint32_t add_cube_collider(const sVector3& obj_position,
+                                      const sVector3& obj_scale,
+                                      const float obj_mass,
+                                      const bool obj_is_static) {
+        uint32_t index = 0;
+        for(; index < PHYS_INSTANCE_COUNT; index++ ) {
+            if (!initialized[index]) {
+                break;
+            }
+        }
 
-        // COnfigure Intertia Tensors
-        sMat33 inertia_tensor = {};
-        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+        is_static[index] = obj_is_static;
+        enabled[index] = true;
+
+        initialized[index] = true;
+        shape[index] = CUBE_COLLIDER;
+
+        if (obj_is_static) {
+            mass[index] = 0.0f;
+            inv_mass[index] = 0.0f;
+        } else {
+            mass[index] = obj_mass;
+            inv_mass[index] = 1.0f / obj_mass;
+
+            sMat33 inertia_tensor;
             inertia_tensor.set_identity();
+            inertia_tensor.mat_values[0][0] = 1.0f/12.0f * obj_mass * (obj_scale.z * obj_scale.z + obj_scale.y * obj_scale.y);
+            inertia_tensor.mat_values[1][1] = 1.0f/12.0f * obj_mass * (obj_scale.z * obj_scale.z + obj_scale.x * obj_scale.x);
+            inertia_tensor.mat_values[2][2] = 1.0f/12.0f * obj_mass * (obj_scale.x * obj_scale.x + obj_scale.y * obj_scale.y);
 
-            if (is_static[i] || !enabled[i]) {
-                continue;
-            }
-
-            if (shape[i] == SPHERE_COLLIDER) {
-                float radius = get_radius_of_collider(i);
-                inertia_tensor.mat_values[0][0] = 2.0f/5.0f * mass[i] * radius * radius;
-                inertia_tensor.mat_values[1][1] = 2.0f/5.0f * mass[i] * radius * radius;
-                inertia_tensor.mat_values[2][2] = 2.0f/5.0f * mass[i] * radius * radius;
-            } else if (shape[i] == CUBE_COLLIDER) {
-                sVector3 &cube_size = transforms[i].scale;
-                inertia_tensor.mat_values[0][0] = 1.0f/12.0f * mass[i] * (cube_size.z * cube_size.z + cube_size.y * cube_size.y);
-                inertia_tensor.mat_values[1][1] = 1.0f/12.0f * mass[i] * (cube_size.z * cube_size.z + cube_size.x * cube_size.x);
-                inertia_tensor.mat_values[2][2] = 1.0f/12.0f * mass[i] * (cube_size.x * cube_size.x + cube_size.y * cube_size.y);
-            }
-
-            inertia_tensor.invert(&inv_inertia_tensors[i]);
+            inertia_tensor.invert(&inv_inertia_tensors[index]);
         }
 
-        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
-            inv_mass[i] = (is_static[i]) ? 0.0 : 1.0f/mass[i];
-        }
+        transforms[index].position = obj_position;
+        transforms[index].scale = obj_scale;
+        transforms[index].rotation = sQuaternion4{1.0f, 0.0f, 0.0f, 0.f};
 
-        // TODO: ad ifndef DEBUG
+        collider_meshes[index].init_cuboid(transforms[index]);
+        memcpy(&old_transforms[index], &transforms[index], sizeof(sTransform));
+
+        return index;
     }
+
+    inline uint32_t add_sphere_collider(const sVector3& obj_position,
+                                        const float radius,
+                                        const float obj_mass,
+                                        const bool obj_is_static) {
+        uint32_t index = 0;
+        for(; index < PHYS_INSTANCE_COUNT; index++ ) {
+            if (!initialized[index]) {
+                break;
+            }
+        }
+        initialized[index] = true;
+
+        if (obj_is_static) {
+            mass[index] = 0.0f;
+            inv_mass[index] = 0.0f;
+        } else {
+            mass[index] = obj_mass;
+            inv_mass[index] = 1.0f / obj_mass;
+        }
+
+        is_static[index] = obj_is_static;
+        enabled[index] = true;
+
+        sMat33 inertia_tensor;
+        inertia_tensor.set_identity();
+        inertia_tensor.mat_values[0][0] = 2.0f/5.0f * mass[index] * radius * radius;
+        inertia_tensor.mat_values[1][1] = 2.0f/5.0f * mass[index] * radius * radius;
+                inertia_tensor.mat_values[2][2] = 2.0f/5.0f * mass[index] * radius * radius;
+
+        inertia_tensor.invert(&inv_inertia_tensors[index]);
+
+        transforms[index].position = obj_position;
+        transforms[index].scale = sVector3{radius, radius, radius};
+
+        return index;
+    }
+
 
     // Apply collisions & speeds, check for collisions, and resolve them
     void step(const double elapsed_time) {
@@ -142,11 +208,14 @@ struct sPhysWorld {
                         _manifold_count++;
                     }
                 } else if (shape[i] == SPHERE_COLLIDER && shape[j] == CUBE_COLLIDER) {
-                    sColliderMesh raw_cube = {};
-                    raw_cube.init_cuboid(transforms[j]);
+                    if (!transforms[j].is_equal(old_transforms[j])) {
+                        collider_meshes[j].clean();
+                        collider_meshes[j].init_cuboid(transforms[j]);
+                        memcpy(&old_transforms[j], &transforms[j], sizeof(sTransform));
+                    }
 
                     if (test_cube_sphere_collision(transforms[j],
-                                                   raw_cube,
+                                                   collider_meshes[j],
                                                    transforms[i].position,
                                                    get_radius_of_collider(i),
                                                    &_manifolds[_manifold_count])) {
@@ -154,13 +223,17 @@ struct sPhysWorld {
                         _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
                     }
-                    raw_cube.clean();
+
                 } else if (shape[i] == CUBE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
-                    sColliderMesh raw_cube = {};
-                    raw_cube.init_cuboid(transforms[i]);
+                    if (!transforms[i].is_equal(old_transforms[j])) {
+                        collider_meshes[i].clean();
+                        collider_meshes[i].init_cuboid(transforms[j]);
+                        memcpy(&old_transforms[i], &transforms[i], sizeof(sTransform));
+                    }
+
 
                     if (test_cube_sphere_collision(transforms[i],
-                                                   raw_cube,
+                                                   collider_meshes[i],
                                                    transforms[j].position,
                                                    get_radius_of_collider(j),
                                                    &_manifolds[_manifold_count])) {
@@ -169,22 +242,27 @@ struct sPhysWorld {
                         _manifold_count++;
                     }
 
-                    raw_cube.clean();
                 } else if (shape[i] == CUBE_COLLIDER && shape[j] == CUBE_COLLIDER) {
-                    sColliderMesh cube_mesh1 = {}, cube_mesh2 = {};
-                    cube_mesh1.init_cuboid(transforms[i]);
-                    cube_mesh2.init_cuboid(transforms[j]);
+                    if (!transforms[i].is_equal(old_transforms[i])) {
+                        collider_meshes[i].clean();
+                        collider_meshes[i].init_cuboid(transforms[i]);
+                        memcpy(&old_transforms[i], &transforms[i], sizeof(sTransform));
+                    }
 
-                    if (SAT::SAT_collision_test(cube_mesh1,
-                                                cube_mesh2,
+                    if (!transforms[j].is_equal(old_transforms[j])) {
+                        collider_meshes[j].clean();
+                        collider_meshes[j].init_cuboid(transforms[j]);
+                        memcpy(&old_transforms[j], &transforms[j], sizeof(sTransform));
+                    }
+
+
+                    if (SAT::SAT_collision_test(collider_meshes[i],
+                                                collider_meshes[j],
                                                 &_manifolds[_manifold_count])) {
                         _manifolds[_manifold_count].obj1 = i;
                         _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
                     }
-
-                    cube_mesh1.clean();
-                    cube_mesh2.clean();
                 }
 
             }
@@ -397,18 +475,18 @@ struct sPhysWorld {
 
             //impulse = impulse.mult(-1.0f);
 
-            //if (!is_static[id_2]) {
+            if (!is_static[id_2]) {
                 speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));
                 speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(contact_data->r2, impulse)));
-            //}
+            }
 
             // Invert the impulse for the other body
             impulse = impulse.mult(-1.0f);
 
-            //if (!is_static[id_1]) {
+            if (!is_static[id_1]) {
                 speed_1->linear = speed_1->linear.sum(impulse.mult(inv_mass[id_1]));
                 speed_1->angular = speed_1->angular.sum(inv_inertia_tensors[id_1].multiply(cross_prod(contact_data->r1, impulse)));
-            //}
+            }
 
             // FRICTION IMPULSES =====
 
@@ -432,9 +510,6 @@ struct sPhysWorld {
                 friction_impulse_magnitude = (friction_impulse_magnitude < -max_friction) ? -max_friction : ((friction_impulse_magnitude > max_friction) ? max_friction : friction_impulse_magnitude);
 
                 sVector3 friction_impulse = contact_data->tangents[tang].mult(friction_impulse_magnitude);
-
-                //friction_impulse = friction_impulse.mult(-1.0f);
-
 
                 if (!is_static[id_2]) {
                     speed_2->linear = speed_2->linear.sum(friction_impulse.mult(inv_mass[id_2]));

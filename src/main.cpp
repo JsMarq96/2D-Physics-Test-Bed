@@ -120,6 +120,7 @@ void test_loop(GLFWwindow *window) {
     double temp_mouse_x, temp_mouse_y;
 
     glfwPollEvents();
+
     glfwGetFramebufferSize(window, &width, &heigth);
     // Set to OpenGL viewport size anc coordinates
     glViewport(0,0, width, heigth);
@@ -289,33 +290,15 @@ void draw_loop(GLFWwindow *window) {
   sPhysWorld phys_instance;
 
   phys_instance.set_default_values();
-  phys_instance.transforms = transforms;
 
-  // Object 1: Static cube
-  transforms[0].position = {-0.50f, 0.0f, 0.0f};
-  transforms[0].scale = {13.5f, 1.0f, 13.0f};
-  //transforms[0].set_rotation({0.80f, 0.20f, 0.0f, 0.0f});
-  transforms[0].set_rotation({1.0f, 0.00f, 0.0f, 0.0f});
-  phys_instance.friction[0] = 0.5f;
-  phys_instance.mass[0] = 0.0f;
-  phys_instance.restitution[0] = 0.05f;
-  phys_instance.shape[0] = CUBE_COLLIDER;
-  phys_instance.is_static[0] = true;
-  phys_instance.enabled[0] = true;
-
-  uint32_t last_index = 1;
-  //
-  /*last_index = add_sphere({0.65, 6.0f, 0.0f}, 1.0f, last_index, phys_instance);
-  last_index = add_sphere({0.6, 5.0f, 2.0f}, 2.0f, last_index, phys_instance);
-  last_index = add_sphere({0.8, 1.0f, 2.0f}, 1.0f, last_index, phys_instance);
-  last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);*/
-
-  last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-
-  phys_instance.init(transforms);
-
+  uint32_t static_cube = phys_instance.add_cube_collider({0.0f, 0.5f, 0.0f},
+                                                         {13.0f, 1.0f, 13.0f},
+                                                         0.0f,
+                                                         true);
+  uint32_t dynamic_cube = phys_instance.add_cube_collider({0.0f, 2.5f, 0.0f},
+                                                         {1.0f, 1.0f, 1.0f},
+                                                         20.0f,
+                                                         false);
   sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
   colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
@@ -406,21 +389,12 @@ void draw_loop(GLFWwindow *window) {
     //std::cout << transforms[0].scale.x << " " << transforms[0].scale.y  << " <=== " << std::endl;
     // Rendering ====
     // Render shapes
-    for(int i = 0; i < 6; i++) {
-      if (!phys_instance.enabled[i]) {
-        continue;
-      }
-      if (phys_instance.shape[i] == SPHERE_COLLIDER) {
-        sphere_colors[sphere_size] = colors[i];
-        transforms[i].get_model(&sphere_models[sphere_size++]);
-      } else if (phys_instance.shape[i] == CUBE_COLLIDER) {
-        cube_colors[cube_size] = colors[i];
-        transforms[i].get_model(&cube_models[cube_size++]);
-      }
-    }
 
-    cube_renderer.render(cube_models, cube_colors, cube_size, proj_mat, true);
-    sphere_renderer.render(sphere_models, sphere_colors, sphere_size, proj_mat, true);
+  phys_instance.transforms[static_cube].get_model(&cube_models[0]);
+   phys_instance.transforms[dynamic_cube].get_model(&cube_models[1]);
+
+    cube_renderer.render(cube_models, colors, 2, proj_mat, true);
+    //sphere_renderer.render(sphere_models, sphere_colors, sphere_size, proj_mat, true);
 
     // Render contact points
     sVector4 col_color[15] = {};
