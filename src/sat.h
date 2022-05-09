@@ -210,13 +210,12 @@ namespace SAT {
         const sColliderMesh *reference_mesh, *incident_mesh;
         uint32_t reference_face = 0, incident_face = 0;
 
-
-        std::cout << "1:" << collision_distance_mesh1 << " 2:" << collision_distance_mesh2 << " e:" << edge_edge_distance << std::endl;
-
         const float max_face_separation = MIN(collision_distance_mesh1, collision_distance_mesh2);
         const float k_edge_rel_tolerance = 0.90f;
-        const float k_face_rel_toletance = 0.95f;
+        const float k_face_rel_toletance = 0.98f;
         const float k_abs_tolerance = 0.5f * 0.005f;
+
+         std::cout << "1:" << collision_distance_mesh1 << " 2:" << collision_distance_mesh2 << " e:" << edge_edge_distance << std::endl;
 
         // Add tolerance to favour face collision vs edge collision
         if (k_edge_rel_tolerance * edge_edge_distance + k_abs_tolerance < max_face_separation) {
@@ -262,7 +261,7 @@ namespace SAT {
         } else {
             // Face collision
             // Favor the first mesh as a reference, with the tolerance
-            if (k_face_rel_toletance * collision_distance_mesh2 + k_abs_tolerance < collision_distance_mesh1) {
+            if (collision_distance_mesh2 - k_abs_tolerance < collision_distance_mesh1) {
                 // Face 1 is reference face
                 std::cout << "Ref: mesh1" << std::endl;
                 reference_mesh = &mesh1;
@@ -314,7 +313,7 @@ namespace SAT {
             manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
             //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
             //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
-            std::cout << manifold->contact_depth[i] << std::endl;
+            //std::cout << manifold->contact_depth[i] << std::endl;
         }
 
         return true;

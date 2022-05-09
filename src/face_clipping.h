@@ -35,8 +35,6 @@ namespace clipping {
                 float distance_vert1 = reference_plane.distance(vert1);
                 float distance_vert2 = reference_plane.distance(vert2);
 
-                std::cout << distance_vert1 << " " << distance_vert2 << std::endl;
-
                 if (distance_vert1 < 0.0f && distance_vert2 < 0.0f) {
                     // Add the vert2
                     clip_points[num_of_clipped_points++] = vert2;

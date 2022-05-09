@@ -311,8 +311,8 @@ void draw_loop(GLFWwindow *window) {
   last_index = add_sphere({3.5, 2.0f, 6.0f}, 2.0f, last_index, phys_instance);*/
 
   last_index = add_cube({0.5, 3.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  //last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
-  //last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  last_index = add_cube({0.8, 5.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
+  last_index = add_cube({0.9, 7.0f, 0.10f}, {1.0f, 1.0f, 1.0f}, last_index, phys_instance);
 
   phys_instance.init(transforms);
 
@@ -474,8 +474,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_loop(window);
+      draw_loop(window);
+      //test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
