@@ -286,11 +286,11 @@ namespace SAT {
         reference_plane.normal = manifold->normal;
         //reference_plane.normal = reference_plane.normal.invert();
 
-        float incident_facing = -FLT_MAX;
+        float incident_facing = FLT_MAX;
         for(uint32_t i = 0; i < incident_mesh->face_count; i++) {
             float facing = dot_prod(reference_plane.normal, incident_mesh->normals[i]);
 
-            if (facing > incident_facing) {
+            if (facing < incident_facing) {
                 incident_facing = facing;
                 incident_face = i;
             }
@@ -301,11 +301,14 @@ namespace SAT {
         //manifold->contanct_points_count = 2;
         //return true;
 
-        manifold->contanct_points_count = clipping::face_face_clipping(*incident_mesh,
-                                                                       incident_face,
-                                                                       *reference_mesh,
+        manifold->contanct_points_count = clipping::face_face_clipping(*reference_mesh,
                                                                        reference_face,
+                                                                       *incident_mesh,
+                                                                       incident_face,
                                                                        manifold->contact_points);
+
+        //manifold->contact_points[ manifold->contanct_points_count++ ] = reference_plane.origin_point;
+        //manifold->contact_points[ manifold->contanct_points_count++ ] = incident_mesh->get_plane_of_face(incident_face).origin_point;
 
         for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
             manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);

@@ -74,7 +74,7 @@ void test_loop(GLFWwindow *window) {
   transforms[0].scale = {1.0f, 10.f, 10.0f};
   transforms[0].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
 
-  transforms[1].position = {1.206f, 0.678f, 0.0f};
+  transforms[1].position = {1.206f, 0.0f, 0.0f};
   transforms[1].scale = {1.0f, 1.f, 1.0f};
   //transforms[1].set_rotation({1.0f, 0.0f, 0.0f, 0.0f});
   transforms[1].set_rotation({0.0f, 0.534f, 0.607f, -0.5880f});
