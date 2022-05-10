@@ -299,9 +299,9 @@ void draw_loop(GLFWwindow *window) {
                                                          {1.0f, 1.0f, 1.0f},
                                                          20.0f,
                                                          false);
-  uint32_t dynamic_cube1 = phys_instance.add_cube_collider({0.3f, 6.5f, 0.0f},
+  uint32_t dynamic_cube1 = phys_instance.add_cube_collider({-0.4f, 6.5f, 0.0f},
                                                          {0.50f, 1.0f, 0.90f},
-                                                         60.0f,
+                                                         80.0f,
                                                          false);
 
   sVector4 colors[6] = {};
@@ -322,7 +322,7 @@ void draw_loop(GLFWwindow *window) {
   // Frame counter
   int frames = 0;
   double start_time, fps;
-  double delta_time = 0.01;
+  double delta_time = 0.007;
   double accumulator = 0.0;
 
 
@@ -371,10 +371,13 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Text("FPS %f elapsed time %f", 1.0f / ( elapsed_time), elapsed_time);
 
     if (!stopped) {
+      // If the simulation is not stopped, add the Stop button to the GUI,
+      // and continue the simulation as normal
       if (ImGui::Button("Stop")) {
         stopped = true;
       }
 
+      // Simulate with a fixed timestep
       int num_of_physics_steps = 0;
       accumulator += elapsed_time;
       while(accumulator >= delta_time) {
@@ -384,6 +387,8 @@ void draw_loop(GLFWwindow *window) {
       }
       ImGui::Text("Num of steps: %d", num_of_physics_steps);
     } else {
+      // If the simulation is stopped, add a continue button, and a step button,
+      // to add a delta timestep to the simulation
       if (ImGui::Button("Continue")) {
         stopped = false;
       }
