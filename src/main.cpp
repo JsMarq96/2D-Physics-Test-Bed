@@ -328,6 +328,7 @@ void draw_loop(GLFWwindow *window) {
 
   start_time = glfwGetTime();
   camera_rot = 72.10f;
+  bool stopped = false;
   while(!glfwWindowShouldClose(window)) {
     // Draw loop
     int width, heigth;
@@ -369,19 +370,31 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Begin("Physics");
     ImGui::Text("FPS %f elapsed time %f", 1.0f / ( elapsed_time), elapsed_time);
 
-    int num_of_physics_steps = 0;
-    accumulator += elapsed_time;
-    while(accumulator >= delta_time) {
-      phys_instance.step(delta_time);
-      accumulator -= delta_time;
-      num_of_physics_steps++;
-    }
+    if (!stopped) {
+      if (ImGui::Button("Stop")) {
+        stopped = true;
+      }
 
+      int num_of_physics_steps = 0;
+      accumulator += elapsed_time;
+      while(accumulator >= delta_time) {
+        phys_instance.step(delta_time);
+        accumulator -= delta_time;
+        num_of_physics_steps++;
+      }
+      ImGui::Text("Num of steps: %d", num_of_physics_steps);
+    } else {
+      if (ImGui::Button("Continue")) {
+        stopped = false;
+      }
+      if (ImGui::Button("Step")) {
+        phys_instance.step(delta_time);
+      }
+    }
     phys_instance.debug_speeds();
     ImGui::End();
 
     ImGui::Begin("Overall");
-    ImGui::Text("Num of steps: %d", num_of_physics_steps);
     ImGui::SliderFloat("Camera rotation", &camera_rot, 0.0f, 360.0f);
     ImGui::SliderFloat("Camera height", &camera_height, -10.0f, 20.0f);
     //ImGui::SliderFloat("Simulator delta",(float*) &delta_time, 0.0001, 0.01);
