@@ -77,6 +77,15 @@ struct sPhysWorld {
         return MAX(transforms[id].scale.x, MAX(transforms[id].scale.y, transforms[id].scale.z));
     };
 
+    void clean() {
+        uint32_t index = 0;
+        for(; index < PHYS_INSTANCE_COUNT; index++ ) {
+            if (initialized[index] && shape[index] == CUBE_COLLIDER) {
+                collider_meshes[index].clean();
+            }
+        }
+    }
+
     void set_default_values() {
         // Set default values
         memset(enabled, false, sizeof(enabled));
@@ -109,6 +118,7 @@ struct sPhysWorld {
         if (obj_is_static) {
             mass[index] = 0.0f;
             inv_mass[index] = 0.0f;
+            inv_inertia_tensors[index].set_identity();
         } else {
             mass[index] = obj_mass;
             inv_mass[index] = 1.0f / obj_mass;
@@ -143,25 +153,26 @@ struct sPhysWorld {
             }
         }
         initialized[index] = true;
+        is_static[index] = obj_is_static;
+        enabled[index] = true;
+        shape[index] = SPHERE_COLLIDER;
 
         if (obj_is_static) {
             mass[index] = 0.0f;
             inv_mass[index] = 0.0f;
+            inv_inertia_tensors[index].set_identity();
         } else {
             mass[index] = obj_mass;
             inv_mass[index] = 1.0f / obj_mass;
+
+            sMat33 inertia_tensor;
+            inertia_tensor.set_identity();
+            inertia_tensor.mat_values[0][0] = 2.0f/5.0f * obj_mass * radius * radius;
+            inertia_tensor.mat_values[1][1] = 2.0f/5.0f * obj_mass * radius * radius;
+            inertia_tensor.mat_values[2][2] = 2.0f/5.0f * obj_mass * radius * radius;
+
+            inertia_tensor.invert(&inv_inertia_tensors[index]);
         }
-
-        is_static[index] = obj_is_static;
-        enabled[index] = true;
-
-        sMat33 inertia_tensor;
-        inertia_tensor.set_identity();
-        inertia_tensor.mat_values[0][0] = 2.0f/5.0f * mass[index] * radius * radius;
-        inertia_tensor.mat_values[1][1] = 2.0f/5.0f * mass[index] * radius * radius;
-                inertia_tensor.mat_values[2][2] = 2.0f/5.0f * mass[index] * radius * radius;
-
-        inertia_tensor.invert(&inv_inertia_tensors[index]);
 
         transforms[index].position = obj_position;
         transforms[index].scale = sVector3{radius, radius, radius};
@@ -259,7 +270,7 @@ struct sPhysWorld {
                         collider_meshes[j].init_cuboid(transforms[j]);
                         memcpy(&old_transforms[j], &transforms[j], sizeof(sTransform));
                     }
-
+                    //std::cout << i << " " << j << std::endl;
 
                     if (SAT::SAT_collision_test(collider_meshes[i],
                                                 collider_meshes[j],
@@ -358,8 +369,8 @@ struct sPhysWorld {
             transf->set_rotation(rotation);
 
             // Add some energy loss to the system
-            //obj_speeds[i].linear = obj_speeds[i].linear.mult(0.999f);
-            //obj_speeds[i].angular = obj_speeds[i].angular.mult(0.999f);
+            obj_speeds[i].linear = obj_speeds[i].linear.mult(0.999f);
+            obj_speeds[i].angular = obj_speeds[i].angular.mult(0.999f);
         }
     }
 

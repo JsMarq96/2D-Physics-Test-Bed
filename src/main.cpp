@@ -295,15 +295,19 @@ void draw_loop(GLFWwindow *window) {
                                                          {13.0f, 1.0f, 13.0f},
                                                          0.0f,
                                                          true);
-  uint32_t dynamic_cube = phys_instance.add_cube_collider({0.0f, 2.5f, 0.0f},
+  /*uint32_t dynamic_cube = phys_instance.add_cube_collider({0.0f, 2.5f, 0.0f},
                                                          {1.0f, 1.0f, 1.0f},
                                                          20.0f,
                                                          false);
   uint32_t dynamic_cube1 = phys_instance.add_cube_collider({-0.4f, 6.5f, 0.0f},
                                                          {0.50f, 1.0f, 0.90f},
                                                          80.0f,
-                                                         false);
-
+                                                         false);*/
+  uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 3.15, 0.0f},
+                                                              0.50f,
+                                                              10.0f,
+                                                              false);
+  std::cout << dynamic_sphere << std::endl;
   sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
   colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
@@ -322,13 +326,13 @@ void draw_loop(GLFWwindow *window) {
   // Frame counter
   int frames = 0;
   double start_time, fps;
-  double delta_time = 0.007;
+  double delta_time = 0.009;
   double accumulator = 0.0;
 
 
   start_time = glfwGetTime();
   camera_rot = 72.10f;
-  bool stopped = false;
+  bool stopped = true;
   while(!glfwWindowShouldClose(window)) {
     // Draw loop
     int width, heigth;
@@ -370,10 +374,12 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Begin("Physics");
     ImGui::Text("FPS %f elapsed time %f", 1.0f / ( elapsed_time), elapsed_time);
 
+    int space_state = glfwGetKey(window, GLFW_KEY_SPACE);
+    int left_state = glfwGetKey(window, GLFW_KEY_RIGHT);
     if (!stopped) {
       // If the simulation is not stopped, add the Stop button to the GUI,
       // and continue the simulation as normal
-      if (ImGui::Button("Stop")) {
+      if (ImGui::Button("Stop") || space_state == GLFW_PRESS) {
         stopped = true;
       }
 
@@ -392,7 +398,7 @@ void draw_loop(GLFWwindow *window) {
       if (ImGui::Button("Continue")) {
         stopped = false;
       }
-      if (ImGui::Button("Step")) {
+      if (ImGui::Button("Step") || left_state == GLFW_PRESS) {
         phys_instance.step(delta_time);
       }
     }
@@ -414,11 +420,12 @@ void draw_loop(GLFWwindow *window) {
     // Render shapes
 
     phys_instance.transforms[static_cube].get_model(&cube_models[0]);
-    phys_instance.transforms[dynamic_cube].get_model(&cube_models[1]);
-    phys_instance.transforms[dynamic_cube1].get_model(&cube_models[2]);
+    //phys_instance.transforms[dynamic_cube].get_model(&cube_models[1]);
+    //phys_instance.transforms[dynamic_cube1].get_model(&cube_models[2]);
+    phys_instance.transforms[dynamic_sphere].get_model(&sphere_models[0]);
 
-    cube_renderer.render(cube_models, colors, 3, proj_mat, true);
-    //sphere_renderer.render(sphere_models, sphere_colors, sphere_size, proj_mat, true);
+    cube_renderer.render(cube_models, colors, 1, proj_mat, true);
+    sphere_renderer.render(sphere_models, colors, 1, proj_mat, true);
 
     // Render contact points
     sVector4 col_color[15] = {};
@@ -427,10 +434,20 @@ void draw_loop(GLFWwindow *window) {
       for(int j = 0; j < phys_instance._manifolds[i].contanct_points_count; j++) {
         cube_models[col_points].set_identity();
         cube_models[col_points].set_position(phys_instance._manifolds[i].contact_points[j]);
-        cube_models[col_points].set_scale({0.05f, 0.05f, 0.05f});
+        cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
         col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
       }
     }
+
+    /*cube_models[col_points].set_identity();
+    cube_models[col_points].set_position(phys_instance.transforms[dynamic_cube].position);
+    cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
+    col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
+    cube_models[col_points].set_identity();
+    cube_models[col_points].set_position(phys_instance.transforms[dynamic_cube1].position);
+    cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
+    col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};*/
+
 
     glDisable(GL_DEPTH_TEST);
     sphere_renderer.render(cube_models, col_color, col_points, proj_mat, false);
@@ -441,6 +458,8 @@ void draw_loop(GLFWwindow *window) {
 
     glfwSwapBuffers(window);
   }
+
+  phys_instance.clean();
 }
 
 int main() {

@@ -217,6 +217,8 @@ namespace SAT {
 
          std::cout << "1:" << collision_distance_mesh1 << " 2:" << collision_distance_mesh2 << " e:" << edge_edge_distance << std::endl;
 
+         sVector3 contact_points[12];
+
         // Add tolerance to favour face collision vs edge collision
         if (k_edge_rel_tolerance * edge_edge_distance + k_abs_tolerance < max_face_separation) {
             // Edge collision
@@ -243,19 +245,27 @@ namespace SAT {
                                                                        incident_face,
                                                                        mesh2,
                                                                        reference_face,
-                                                                       manifold->contact_points);
+                                                                       contact_points);
             /*manifold->contanct_points_count = clipping::edge_edge_clipping(mesh1,
                                                                            mesh1_collidion_edge,
                                                                            mesh2,
                                                                            mesh2_collision_edge,
                                                                            manifold->contact_points,
                                                                            manifold->contact_depth);*/
+
+             uint32_t contact_id = 0;
              for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
-                 manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
+                 float distance = reference_plane.distance(contact_points[i]);
+                 if (distance < 0.001f) {
+                     manifold->contact_depth[contact_id] = distance;
+                     manifold->contact_points[contact_id++] = contact_points[i];
+                 }
                  //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
                  //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
-                 std::cout << manifold->contact_depth[i] << std::endl;
+                 //std::cout << manifold->contact_depth[i] << std::endl;
              }
+
+             manifold->contanct_points_count = contact_id;
 
             return true;
         } else {
@@ -304,17 +314,24 @@ namespace SAT {
                                                                        reference_face,
                                                                        *incident_mesh,
                                                                        incident_face,
-                                                                       manifold->contact_points);
+                                                                       contact_points);
 
         //manifold->contact_points[ manifold->contanct_points_count++ ] = reference_plane.origin_point;
         //manifold->contact_points[ manifold->contanct_points_count++ ] = incident_mesh->get_plane_of_face(incident_face).origin_point;
 
+        uint32_t contact_id = 0;
         for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
-            manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
-            //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
+            float distance = reference_plane.distance(contact_points[i]);
+            if (distance < 0.01f) {
+                manifold->contact_depth[contact_id] = distance;
+                manifold->contact_points[contact_id++] = contact_points[i];
+            }
+                        //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
             //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
             //std::cout << manifold->contact_depth[i] << std::endl;
         }
+
+        manifold->contanct_points_count = contact_id;
 
         return true;
     }
