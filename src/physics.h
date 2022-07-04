@@ -101,6 +101,7 @@ struct sPhysWorld {
     inline uint32_t add_cube_collider(const sVector3& obj_position,
                                       const sVector3& obj_scale,
                                       const float obj_mass,
+                                      const float restitut,
                                       const bool obj_is_static) {
         uint32_t index = 0;
         for(; index < PHYS_INSTANCE_COUNT; index++ ) {
@@ -114,6 +115,7 @@ struct sPhysWorld {
 
         initialized[index] = true;
         shape[index] = CUBE_COLLIDER;
+        restitution[index] = restitut;
 
         if (obj_is_static) {
             mass[index] = 0.0f;
@@ -145,6 +147,7 @@ struct sPhysWorld {
     inline uint32_t add_sphere_collider(const sVector3& obj_position,
                                         const float radius,
                                         const float obj_mass,
+                                        const float restitut,
                                         const bool obj_is_static) {
         uint32_t index = 0;
         for(; index < PHYS_INSTANCE_COUNT; index++ ) {
@@ -156,6 +159,7 @@ struct sPhysWorld {
         is_static[index] = obj_is_static;
         enabled[index] = true;
         shape[index] = SPHERE_COLLIDER;
+        restitution[index] = restitut;
 
         if (obj_is_static) {
             mass[index] = 0.0f;
@@ -230,29 +234,28 @@ struct sPhysWorld {
                         memcpy(&old_transforms[j], &transforms[j], sizeof(sTransform));
                     }
 
-                    if (test_cube_sphere_collision(transforms[j],
-                                                   collider_meshes[j],
-                                                   transforms[i].position,
-                                                   get_radius_of_collider(i),
-                                                   &_manifolds[_manifold_count])) {
+                    if (SAT::SAT_sphere_cube_collision(transforms[i].position,
+                                                       get_radius_of_collider(i),
+                                                       transforms[j],
+                                                       collider_meshes[j],
+                                                       &_manifolds[_manifold_count])) {
                         _manifolds[_manifold_count].obj1 = i;
                         _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;
                     }
 
                 } else if (shape[i] == CUBE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
-                    if (!transforms[i].is_equal(old_transforms[j])) {
+                    if (!transforms[i].is_equal(old_transforms[i])) {
                         collider_meshes[i].clean();
-                        collider_meshes[i].init_cuboid(transforms[j]);
+                        collider_meshes[i].init_cuboid(transforms[i]);
                         memcpy(&old_transforms[i], &transforms[i], sizeof(sTransform));
                     }
 
-
-                    if (test_cube_sphere_collision(transforms[i],
-                                                   collider_meshes[i],
-                                                   transforms[j].position,
-                                                   get_radius_of_collider(j),
-                                                   &_manifolds[_manifold_count])) {
+                    if (SAT::SAT_sphere_cube_collision(transforms[j].position,
+                                                       get_radius_of_collider(j),
+                                                       transforms[i],
+                                                       collider_meshes[i],
+                                                       &_manifolds[_manifold_count])) {
                         _manifolds[_manifold_count].obj1 = i;
                         _manifolds[_manifold_count].obj2 = j;
                         _manifold_count++;

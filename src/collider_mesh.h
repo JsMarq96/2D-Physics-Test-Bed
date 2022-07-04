@@ -324,8 +324,6 @@ struct sColliderMesh {
         return vertices[edge_indices.x].subs(vertices[edge_indices.y]);
     }
 
-    // TODO: add test basd on the triangle SDF https://iquilezles.org/articles/triangledistance/
-    // TODO: extrapolate the triangle test, to a 2 triangle test for a quad face
     inline bool test_face_sphere_collision(const uint32_t face_index,
                                            const sVector3 &sphere_origin,
                                            const float sphere_radius,

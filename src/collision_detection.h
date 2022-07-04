@@ -7,6 +7,7 @@
 #include "raw_geometry.h"
 #include "collider_mesh.h"
 #include "vector.h"
+#include "sdf.h"
 #include <cstdint>
 
 #define MAX_COL_POINTS 10
@@ -144,27 +145,6 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
                                        const sVector3 &sphere_center,
                                        const float radius,
                                        sCollisionManifold *manifold) {
-    uint32_t plane = 0;
-    float facing = FLT_MAX;
-    // Select the most facing plane of all of them
-    plane = cube_geometry.get_support_face(cube_transform.position.subs(sphere_center).normalize().mult(1.0f));
-
-    std::cout << plane << std::endl;
-    float distance = 0.0f;
-    if (cube_geometry.test_face_sphere_collision(plane,
-                                                 sphere_center,
-                                                 radius, &distance)) {
-        //
-        const sPlane face_plane = cube_geometry.get_plane_of_face(plane);
-        manifold->normal = face_plane.normal.normalize();
-        manifold->contact_points[0] = sphere_center.sum(face_plane.normal.mult(radius));
-        manifold->contact_depth[0] = distance;
-
-        manifold->contanct_points_count = 1;
-
-        return true;
-    }
-
     return false;
 }
 

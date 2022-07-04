@@ -30,6 +30,8 @@
 
 #include "kv_storage.h"
 
+#include "sdf.h"
+
 void temp_error_callback(int error_code, const char* descr) {
 	std::cout << "GLFW Error: " << error_code << " " << descr << std::endl;
 }
@@ -294,6 +296,7 @@ void draw_loop(GLFWwindow *window) {
   uint32_t static_cube = phys_instance.add_cube_collider({0.0f, 0.5f, 0.0f},
                                                          {13.0f, 1.0f, 13.0f},
                                                          0.0f,
+                                                         20.0f,
                                                          true);
   /*uint32_t dynamic_cube = phys_instance.add_cube_collider({0.0f, 2.5f, 0.0f},
                                                          {1.0f, 1.0f, 1.0f},
@@ -303,10 +306,13 @@ void draw_loop(GLFWwindow *window) {
                                                          {0.50f, 1.0f, 0.90f},
                                                          80.0f,
                                                          false);*/
-  uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 3.15, 0.0f},
+  uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
                                                               0.50f,
-                                                              10.0f,
+                                                              5.0f,
+                                                              1.0f,
                                                               false);
+  phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.0f, 0.03f, 0.0f});
+
   std::cout << dynamic_sphere << std::endl;
   sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
@@ -315,6 +321,13 @@ void draw_loop(GLFWwindow *window) {
   colors[3] = {0.0f, 0.0f, 1.0f, 0.50f};
   colors[4] = {0.0f, 0.0f, 1.0f, 1.00f};
   colors[5] = {0.0f, 0.0f, 1.0f, 1.00f};
+
+  sVector4 colors_sp[6] = {};
+  colors_sp[0] = {0.0f, 1.0f, 0.0f, 0.50f};
+  colors_sp[1] = {0.0f, 0.0f, 1.0f, 0.50f};
+  colors_sp[2] = {0.0f, 0.0f, 1.0f, 1.00f};
+  colors_sp[3] = {0.0f, 0.0f, 1.0f, 1.00f};
+
 
   float prev_frame_time = glfwGetTime();
   sCamera camera = {};
@@ -400,6 +413,14 @@ void draw_loop(GLFWwindow *window) {
       }
       if (ImGui::Button("Step") || left_state == GLFW_PRESS) {
         phys_instance.step(delta_time);
+
+        //sVector3 cube_pos = phys_instance.transforms[static_cube].position;
+        //sVector3 sphere_center = phys_instance.transforms[dynamic_sphere].position;
+        //uint32_t face = phys_instance.collider_meshes[static_cube].get_support_face(sphere_center.subs(cube_pos).invert());
+
+        //sVector3 *vert = phys_instance.collider_meshes[static_cube].get_face(face);
+
+        //std::cout << "SDF: " << SDF::quad(sphere_center, vert[0], vert[1], vert[2], vert[4], phys_instance.collider_meshes[static_cube].normals[face]) << std::endl;// - phys_instance.transforms[dynamic_sphere].scale.x << std::endl;
       }
     }
     phys_instance.debug_speeds();
@@ -425,7 +446,7 @@ void draw_loop(GLFWwindow *window) {
     phys_instance.transforms[dynamic_sphere].get_model(&sphere_models[0]);
 
     cube_renderer.render(cube_models, colors, 1, proj_mat, true);
-    sphere_renderer.render(sphere_models, colors, 1, proj_mat, true);
+    sphere_renderer.render(sphere_models, colors_sp, 1, proj_mat, true);
 
     // Render contact points
     sVector4 col_color[15] = {};

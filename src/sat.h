@@ -335,6 +335,94 @@ namespace SAT {
 
         return true;
     }
+
+
+    inline void project_to_axis(const sVector3 &axis,
+                                const sColliderMesh &box_mesh,
+                                float *min_on_axis,
+                                float *max_on_axis) {
+        float min = FLT_MAX;
+        float max = -FLT_MAX;
+
+        for(int i = 0; i < box_mesh.vertices_count; i++) {
+            float projection = dot_prod(box_mesh.vertices[i], axis);
+            min = MIN(min, projection);
+            max = MAX(max, projection);
+        }
+
+        *min_on_axis = min;
+        *max_on_axis = max;
+    }
+
+    inline float overlap(const float min_1,
+                         const float max_1,
+                         const float min_2,
+                         const float max_2) {
+        float p = MAX(max_1, max_2) - MIN(min_1, min_2);
+
+        return ((max_2 - min_2) + (max_1 - min_1)) - p;
+    }
+
+    inline bool SAT_sphere_cube_collision(const sVector3 &sphere_center,
+                                          const float sphere_radius,
+                                          const sTransform &cube_transform,
+                                          const sColliderMesh &box_mesh,
+                                          sCollisionManifold *manifold) {
+        sVector3 axis_normals[3] = {
+             cube_transform.apply_rotation({0.0f, 1.0f, 0.0f}).normalize(),
+             cube_transform.apply_rotation({1.0f, 0.0f, 0.0f}).normalize(),
+             cube_transform.apply_rotation({0.0f, 0.0f, 1.0f}).normalize()  };
+
+        int min_axis = -1;
+        float min_separation = FLT_MAX;
+        std::cout << "======" << std::endl;
+        for(int i = 0; i < 3; i++) {
+            float proj_sphere_center = dot_prod(sphere_center, axis_normals[i]);
+            float box_min = 0.0f, box_max = 0.0f;
+
+            project_to_axis(axis_normals[i],
+                            box_mesh,
+                            &box_min,
+                            &box_max);
+
+            float axis_overlap = overlap(box_min,
+                                         box_max,
+                                         proj_sphere_center - sphere_radius,
+                                         proj_sphere_center + sphere_radius);
+            // If there is no overlap, then the sat test is negative,
+            // so early exit
+            std::cout << axis_overlap << std::endl;
+            if (axis_overlap <= 0.001f) {
+                return false;
+            }
+
+            if (min_separation > axis_overlap) {
+                min_axis = i;
+                min_separation = axis_overlap;
+            }
+        }
+
+        // Collision manifold generation
+        sVector3 col_axis = axis_normals[min_axis];
+        float sphere_center_proj = dot_prod(sphere_center, col_axis);
+        float box_center_proj = dot_prod(cube_transform.position, col_axis);
+        std::cout << col_axis.x << " " << col_axis.y << " " << col_axis.z << std::endl;
+
+
+        // Invert the axis based on the relative position to the sphere to the center
+        if (sphere_center_proj < box_center_proj) {
+            col_axis = col_axis.invert();
+        }
+
+        std::cout << min_separation  << " < "<< std::endl;
+
+        manifold->contact_points[0] = sphere_center.sum(col_axis.invert().mult(sphere_radius));
+        manifold->contact_depth[0] = min_separation;
+        manifold->normal = col_axis;
+        manifold->contanct_points_count = 1;
+
+        return true;
+    }
 };
 
 #endif // SAT_H_
