@@ -413,7 +413,7 @@ namespace SAT {
         }
 
         manifold->contact_points[0] = sphere_center.sum(col_axis.invert().mult(sphere_radius));
-        manifold->contact_depth[0] = min_separation;
+        manifold->contact_depth[0] = -min_separation;
         manifold->normal = col_axis;
         manifold->contanct_points_count = 1;
 

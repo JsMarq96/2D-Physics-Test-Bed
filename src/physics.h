@@ -372,8 +372,8 @@ struct sPhysWorld {
             transf->set_rotation(rotation);
 
             // Add some energy loss to the system
-            obj_speeds[i].linear = obj_speeds[i].linear.mult(0.999f);
-            obj_speeds[i].angular = obj_speeds[i].angular.mult(0.999f);
+            //obj_speeds[i].linear = obj_speeds[i].linear.mult(0.999f);
+            //obj_speeds[i].angular = obj_speeds[i].angular.mult(0.999f);
         }
     }
 
@@ -491,8 +491,6 @@ struct sPhysWorld {
             impulse_magnitude = MAX(impulse_magnitude, 0.0f);
 
             sVector3 impulse = manifold.normal.mult(impulse_magnitude);
-
-            //impulse = impulse.mult(-1.0f);
 
             if (!is_static[id_2]) {
                 speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));

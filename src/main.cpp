@@ -308,10 +308,16 @@ void draw_loop(GLFWwindow *window) {
                                                          false);*/
   uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
                                                               0.50f,
+                                                              10.0f,
+                                                              1.0f,
+                                                              false);
+  uint32_t dynamic_sphere2 = phys_instance.add_sphere_collider({0.250f, 3.95, 0.0f},
+                                                              0.50f,
                                                               5.0f,
                                                               1.0f,
                                                               false);
-  phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.3f, 0.0f, 0.0f});
+
+  //phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.3f, 0.0f, 0.0f});
 
   std::cout << dynamic_sphere << std::endl;
   sVector4 colors[6] = {};
@@ -450,14 +456,23 @@ void draw_loop(GLFWwindow *window) {
     //std::cout << transforms[0].scale.x << " " << transforms[0].scale.y  << " <=== " << std::endl;
     // Rendering ====
     // Render shapes
+    int sphere_count = 0;
+    int cube_count = 0;
 
-    phys_instance.transforms[static_cube].get_model(&cube_models[0]);
-    //phys_instance.transforms[dynamic_cube].get_model(&cube_models[1]);
-    //phys_instance.transforms[dynamic_cube1].get_model(&cube_models[2]);
-    phys_instance.transforms[dynamic_sphere].get_model(&sphere_models[0]);
+    for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+      if (!phys_instance.enabled[i])
+        continue;
+      if (phys_instance.shape[i] == SPHERE_COLLIDER) {
+        phys_instance.transforms[i].get_model(&sphere_models[sphere_count]);
+        sphere_colors[sphere_count++] = {0.0f, 1.0f, 0.0f, 1.0f};
+      } else if (phys_instance.shape[i] == CUBE_COLLIDER) {
+        phys_instance.transforms[i].get_model(&cube_models[cube_count]);
+        sphere_colors[cube_count++] = {0.0f, 0.0f, 1.0f, 1.0f};
+      }
+    }
 
-    cube_renderer.render(cube_models, colors, 1, proj_mat, true);
-    sphere_renderer.render(sphere_models, colors_sp, 1, proj_mat, true);
+    cube_renderer.render(cube_models, cube_colors, cube_count, proj_mat, true);
+    sphere_renderer.render(sphere_models, sphere_colors, sphere_count, proj_mat, true);
 
     // Render contact points
     sVector4 col_color[15] = {};
