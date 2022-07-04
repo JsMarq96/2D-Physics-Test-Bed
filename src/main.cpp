@@ -311,7 +311,7 @@ void draw_loop(GLFWwindow *window) {
                                                               5.0f,
                                                               1.0f,
                                                               false);
-  phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.0f, 0.03f, 0.0f});
+  phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.3f, 0.0f, 0.0f});
 
   std::cout << dynamic_sphere << std::endl;
   sVector4 colors[6] = {};
@@ -347,6 +347,17 @@ void draw_loop(GLFWwindow *window) {
   camera_rot = 72.10f;
   bool stopped = true;
   while(!glfwWindowShouldClose(window)) {
+
+    /*sTransform transf;
+    transf.set_rotation({0.954f, 0.30f, 0.0f, 0.0f});
+    sVector3 norm = {0.0f, 1.0f, 0.0f};
+
+    std::cout << norm.x << " " << norm.y <<  " " << norm.z << std::endl;
+
+    norm = transf.apply_rotation(norm);
+
+    std::cout << norm.x << " " << norm.y <<  " " << norm.z << std::endl;*/
+
     // Draw loop
     int width, heigth;
     double temp_mouse_x, temp_mouse_y;

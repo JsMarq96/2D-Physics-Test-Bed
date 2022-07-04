@@ -375,7 +375,7 @@ namespace SAT {
 
         int min_axis = -1;
         float min_separation = FLT_MAX;
-        std::cout << "======" << std::endl;
+
         for(int i = 0; i < 3; i++) {
             float proj_sphere_center = dot_prod(sphere_center, axis_normals[i]);
             float box_min = 0.0f, box_max = 0.0f;
@@ -406,15 +406,11 @@ namespace SAT {
         sVector3 col_axis = axis_normals[min_axis];
         float sphere_center_proj = dot_prod(sphere_center, col_axis);
         float box_center_proj = dot_prod(cube_transform.position, col_axis);
-        std::cout << col_axis.x << " " << col_axis.y << " " << col_axis.z << std::endl;
-
 
         // Invert the axis based on the relative position to the sphere to the center
         if (sphere_center_proj < box_center_proj) {
             col_axis = col_axis.invert();
         }
-
-        std::cout << min_separation  << " < "<< std::endl;
 
         manifold->contact_points[0] = sphere_center.sum(col_axis.invert().mult(sphere_radius));
         manifold->contact_depth[0] = min_separation;
