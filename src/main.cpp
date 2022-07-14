@@ -116,6 +116,8 @@ void test_loop(GLFWwindow *window) {
   start_time = glfwGetTime();
 
 
+  sVector3 sphere_pos = {1.2f, 2.0f, 0.0f};
+
   while(!glfwWindowShouldClose(window)) {
     // Draw loop
     int width, heigth;
@@ -174,6 +176,7 @@ void test_loop(GLFWwindow *window) {
     ImGui::Begin("Test");
     ImGui::SliderFloat3("Cube2 pos", transforms[1].position.raw_values, -10.0f, 10.0f);
     ImGui::SliderFloat4("Cube2 rot", transforms[1].rotation.raw_values, -10.0f, 10.0f);
+    ImGui::SliderFloat3("Sphere pos", sphere_pos.raw_values, -10.0f, 10.0f);
 
 
     sColliderMesh col_cube1 = {}, col_cube2 = {};
@@ -201,26 +204,49 @@ void test_loop(GLFWwindow *window) {
       cube_models[cube_num++].add_position(col_cube2.vertices[j]);
     }
 
-
-    sphere_renderer.render(sphere_models, colors, 0, proj_mat, true);
+    sphere_models[0].set_identity();
+    sphere_models[0].set_position(sphere_pos);
+    sphere_renderer.render(sphere_models, colors, 1, proj_mat, true);
 
 
     if (SAT::SAT_collision_test(col_cube1,
                                 col_cube2,
                                 &manifold)) {
-      ImGui::Text("Collision %i points", manifold.contanct_points_count);
+      ImGui::Text("Collision cube %i points", manifold.contanct_points_count);
       for(uint32_t i = 0; i < manifold.contanct_points_count; i++) {
         cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
         cube_models[cube_num].set_identity();
         cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
         cube_models[cube_num++].add_position(manifold.contact_points[i]);
-        ImGui::Text("Point %f %f %f", manifold.contact_points[i].x, manifold.contact_points[i].y, manifold.contact_points[i].z);
+        ImGui::Text("Point %f %f %f, depth: %f", manifold.contact_points[i].x, manifold.contact_points[i].y, manifold.contact_points[i].z, manifold.contact_depth[i]);
 
       }
 
     } else {
-      ImGui::Text("No collision");
+      ImGui::Text("No cube collision");
     }
+
+    if (SAT::SAT_sphere_cube_collision(sphere_pos,
+                                       1.0f,
+                                       transforms[0],
+
+                                       col_cube1,
+
+                                       &manifold)) {
+      ImGui::Text("Collision sphere %i points", manifold.contanct_points_count);
+      for(uint32_t i = 0; i < manifold.contanct_points_count; i++) {
+        cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
+        cube_models[cube_num].set_identity();
+        cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
+        cube_models[cube_num++].add_position(manifold.contact_points[i]);
+        ImGui::Text("Point %f %f %f, depth: %f", manifold.contact_points[i].x, manifold.contact_points[i].y, manifold.contact_points[i].z, manifold.contact_depth[i]);
+
+      }
+
+    } else {
+      ImGui::Text("No sphere collision");
+    }
+
 
     ImGui::End();
 
@@ -304,7 +330,7 @@ void draw_loop(GLFWwindow *window) {
                                                          false);*/
   uint32_t dynamic_cube1 = phys_instance.add_cube_collider({-0.4f, 6.5f, 0.0f},
                                                            {0.50f, 1.0f, 0.90f},
-                                                           80.0f,
+                                                           30.0f,
                                                            0.2f,
                                                            false);
   uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
@@ -539,8 +565,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_loop(window);
+      draw_loop(window);
+      //test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

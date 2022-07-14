@@ -372,8 +372,8 @@ struct sPhysWorld {
             transf->set_rotation(rotation);
 
             // Add some energy loss to the system
-            //obj_speeds[i].linear = obj_speeds[i].linear.mult(0.999f);
-            //obj_speeds[i].angular = obj_speeds[i].angular.mult(0.999f);
+            obj_speeds[i].linear = obj_speeds[i].linear.mult(0.999f);
+            obj_speeds[i].angular = obj_speeds[i].angular.mult(0.999f);
         }
     }
 
