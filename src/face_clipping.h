@@ -59,7 +59,7 @@ namespace clipping {
                 memcpy(to_clip, clip_points, sizeof(sVector3) * num_of_clipped_points);
             }
 
-           /* for(uint32_t i = 0; i < num_of_points_to_clip; i++) {
+            for(uint32_t i = 0; i < num_of_points_to_clip; i++) {
                 sVector3 vert1 = to_clip[i];
                 sVector3 vert2 = to_clip[(i + 1) % mesh2.face_stride];
 
@@ -80,7 +80,7 @@ namespace clipping {
                                                                                                   vert1);
                 }
                 // If both are outside, do nothing
-            }*/
+            }
             //num_of_points_to_clip = num_of_clipped_points;
             //memcpy(to_clip, clip_points, sizeof(sVector3) * num_of_clipped_points);
             //num_of_clipped_points = 0;

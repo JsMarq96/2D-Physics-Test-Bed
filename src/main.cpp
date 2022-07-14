@@ -301,11 +301,12 @@ void draw_loop(GLFWwindow *window) {
   /*uint32_t dynamic_cube = phys_instance.add_cube_collider({0.0f, 2.5f, 0.0f},
                                                          {1.0f, 1.0f, 1.0f},
                                                          20.0f,
-                                                         false);
-  uint32_t dynamic_cube1 = phys_instance.add_cube_collider({-0.4f, 6.5f, 0.0f},
-                                                         {0.50f, 1.0f, 0.90f},
-                                                         80.0f,
                                                          false);*/
+  uint32_t dynamic_cube1 = phys_instance.add_cube_collider({-0.4f, 6.5f, 0.0f},
+                                                           {0.50f, 1.0f, 0.90f},
+                                                           80.0f,
+                                                           0.2f,
+                                                           false);
   uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
                                                               0.50f,
                                                               10.0f,
@@ -538,8 +539,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_loop(window);
+      //draw_loop(window);
+      test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

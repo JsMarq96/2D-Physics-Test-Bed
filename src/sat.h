@@ -322,13 +322,11 @@ namespace SAT {
         uint32_t contact_id = 0;
         for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
             float distance = reference_plane.distance(contact_points[i]);
-            if (distance < 0.01f) {
-                manifold->contact_depth[contact_id] = distance;
+                            manifold->contact_depth[contact_id] = distance;
                 manifold->contact_points[contact_id++] = contact_points[i];
-            }
                         //manifold->contact_points[i] = manifold->contact_points[i].sum(manifold->normal);
             //manifold->contact_depth[i] = MIN(0.0f, manifold->contact_depth[i]);
-            //std::cout << manifold->contact_depth[i] << std::endl;
+            std::cout << distance << std::endl;
         }
 
         manifold->contanct_points_count = contact_id;
@@ -391,7 +389,6 @@ namespace SAT {
                                          proj_sphere_center + sphere_radius);
             // If there is no overlap, then the sat test is negative,
             // so early exit
-            std::cout << axis_overlap << std::endl;
             if (axis_overlap <= 0.001f) {
                 return false;
             }
