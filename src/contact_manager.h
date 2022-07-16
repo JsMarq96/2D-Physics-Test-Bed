@@ -5,15 +5,13 @@
 // Contact Manger
 // For contact caching
 //*/
-
-#include "kv_storage.h"
 #include "vector.h"
 #include "contact_data.h"
 #include <cstdint>
 #include <cstring>
 #include <sys/types.h>
 
-#define MAX_CONTACT_COUNT 5
+#define MAX_CONTACT_COUNT 9
 #define MAX_COLLISION_COUNT 20
 #define MAX_UINT16 65535
 #define EPSILON 0.000005f
@@ -43,10 +41,11 @@ struct sCollision {
 
     sVector3 contact_normal;
 
-
+    uint8_t contact_count = 0;
     sVector3 contact_point[MAX_CONTACT_COUNT];
+    float    contanct_normal_impulse[MAX_CONTACT_COUNT]; // Contact constrain
+    float    contanct_tang_impulse[2][MAX_CONTACT_COUNT]; // Friction constraint
     float    contact_depth[MAX_CONTACT_COUNT];
-    uint16_t contact_id[MAX_CONTACT_COUNT];
 };
 
 struct sCollisionManager {
@@ -61,24 +60,43 @@ struct sCollisionManager {
     void renew_contacts_to_collision(const uint16_t col_id,
                                      const sVector3 *incoming_points,
                                      const float *depth_of_incomming_points,
-                                     const uint8_t point_count) {
-        bool points_in_use[MAX_CONTACT_COUNT] = {false};
-        memset(points_in_use, false, sizeof(points_in_use));
+                                     const uint8_t incoming_point_count) {
 
         sCollision *coll = &collisions[col_id];
+        float old_contact_normal_impulse[MAX_CONTACT_COUNT];
+        float old_contact_tang_impulse[2][MAX_CONTACT_COUNT];
+        sVector3 old_contanct_position[MAX_CONTACT_COUNT];
+        uint8_t old_contact_count = coll->contact_count;
+
+        // Store old collision data
+        memcpy(old_contact_normal_impulse, coll->contact_depth, sizeof(old_contact_normal_impulse));
+        memcpy(old_contact_tang_impulse, coll->contact_depth, sizeof(old_contact_tang_impulse));
+        memcpy(old_contanct_position, coll->contact_point, sizeof(old_contanct_position));
+
+        // Copy new data to collision
+        memcpy(coll->contact_depth, depth_of_incomming_points, incoming_point_count * sizeof(float));
+        memcpy(coll->contact_point, incoming_points, incoming_point_count * sizeof(sVector3));
+        memset(coll->contanct_normal_impulse, 0.0f, sizeof(sCollision::contanct_normal_impulse));
+        memset(coll->contanct_tang_impulse, 0.0f, sizeof(sCollision::contanct_tang_impulse));
+        coll->contact_count = incoming_point_count;
 
         // Note: O^2 complexity, but small loop size, so its doesnt really matter
-        for(uint16_t i = 0; i < MAX_CONTACT_COUNT; i++) {
-            for(uint16_t j = 0; j < point_count; j++) {
-                // Check for extreamly close points
-                if (incoming_points[j].subs(coll->contact_point[i]).magnitude() < EPSILON) {
-                    // If its really close, then they are the same point
-                    coll->contact_point[i] = incoming_points[j];
-                    coll->contact_depth[i] = depth_of_incomming_points[j];
-                    points_in_use[i] = true;
+        for(uint16_t j = 0; j < incoming_point_count; j++) {
+            // Look for a coindicence between the old points
+            for(uint16_t i = 0; i < old_contact_count; i++) {
+                 // Check for extreamly close points
+                if (incoming_points[j].subs(old_contanct_position[i]).magnitude() < EPSILON) {
+                    // If its really close, then they are the same point,
+                    // transfer the old impulse, for warmstarting
+                    coll->contanct_normal_impulse[j] = old_contact_normal_impulse[i];
+                    coll->contanct_tang_impulse[j][0] = old_contact_tang_impulse[i][0];
+                    coll->contanct_tang_impulse[j][1] = old_contact_tang_impulse[i][1];
+                    break; // Early out
                 }
             }
+
         }
+
     }
 
     uint16_t get_collision(const uint8_t obj1,
