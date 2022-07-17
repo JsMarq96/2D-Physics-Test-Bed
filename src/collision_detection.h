@@ -7,7 +7,6 @@
 #include "raw_geometry.h"
 #include "collider_mesh.h"
 #include "vector.h"
-#include "contact_data.h"
 #include <cstdint>
 
 
@@ -20,7 +19,10 @@ inline bool test_sphere_sphere_collision(const sVector3  &center1,
                                          const float radius1,
                                          const sVector3 &center2,
                                          const float radius2,
-                                         sCollisionManifold *manifold) {
+                                         sVector3 *normal,
+                                         sVector3 *contact_points,
+                                         float *contact_depth,
+                                         uint16_t *contanct_points_count) {
 
     sVector3 center1_to_2 = center1.subs(center2);
     float center_distance = center1_to_2.magnitude();
@@ -28,12 +30,12 @@ inline bool test_sphere_sphere_collision(const sVector3  &center1,
 
     if (center_distance < total_radius) {
         // The spheres are colliding
-        manifold->normal = center1_to_2.normalize().mult(-1.0f);
+        *normal = center1_to_2.normalize().mult(-1.0f);
 
-        manifold->contact_points[0] = center1.sum(manifold->normal.mult(radius1));
-        manifold->contact_depth[0] = center_distance - total_radius;
+        contact_points[0] = center1.sum(normal->mult(radius1));
+        contact_depth[0] = center_distance - total_radius;
         
-        manifold->contanct_points_count = 1;
+        *contanct_points_count = 1;
 
         return true;
     }
@@ -44,7 +46,10 @@ inline bool test_plane_sphere_collision(const sVector3 &sphere_center,
                                         const float radius,
                                         const sVector3 &plane_origin,
                                         const sVector3 &plane_normal,
-                                        sCollisionManifold *manifold) {
+                                        sVector3 *normal,
+                                        sVector3 *contact_points,
+                                        float *contact_depth,
+                                        uint16_t *contanct_points_count) {
     // Based arround the signed distance of the plane
     sPlane plane;
     plane.origin_point = plane_origin;
@@ -53,11 +58,11 @@ inline bool test_plane_sphere_collision(const sVector3 &sphere_center,
     float distance = plane.distance(sphere_center) - radius;
 
     if (distance < 0.0f) {
-        manifold->normal = plane_normal.normalize();
-        manifold->contact_depth[0] = distance;
-        manifold->contact_points[0] = plane.project_point(sphere_center).sum(plane_origin.mult(distance));
+        *normal = plane_normal.normalize();
+        contact_depth[0] = distance;
+        contact_points[0] = plane.project_point(sphere_center).sum(plane_origin.mult(distance));
 
-        manifold->contanct_points_count = 1;
+        *contanct_points_count = 1;
 
         //std::cout << "====================" << std::endl;
         return true;
@@ -70,14 +75,20 @@ inline bool test_cube_cube_collision(const sTransform &cube1_trasform,
                                      const sRawGeometry &cube1_geometry,
                                      const sTransform &cube2_trasform,
                                      const sRawGeometry &cube2_geometry,
-                                     sCollisionManifold *manifold);
+                                     sVector3 *normal,
+                                     sVector3 *contact_points,
+                                     float *contact_depth,
+                                     uint16_t *contanct_points_count);
 
 // NOTE: this works for avery convex shape
 inline bool test_cube_sphere_collision(const sTransform &cube_transform,
                                        const sRawGeometry &cube_geometry,
                                        const sVector3 &sphere_center,
                                        const float radius,
-                                       sCollisionManifold *manifold) {
+                                       sVector3 *normal,
+                                       sVector3 *contact_points,
+                                       float *contact_depth,
+                                       uint16_t *contanct_points_count) {
     int plane = -1;
     float facing = -1000;
 
@@ -101,7 +112,10 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
                                        radius,
                                        cube_geometry.planes[plane].origin_point,
                                        cube_geometry.planes[plane].normal,
-                                       manifold);
+                                       normal,
+                                       contact_points,
+                                       contact_depth,
+                                       contanct_points_count);
 }
 
 // NOTE: this works for avery convex shape
@@ -109,7 +123,10 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
                                        const sColliderMesh &cube_geometry,
                                        const sVector3 &sphere_center,
                                        const float radius,
-                                       sCollisionManifold *manifold) {
+                                       sVector3 *normal,
+                                       sVector3 *contact_points,
+                                       float *contact_depth,
+                                       uint16_t *contanct_points_count) {
     return false;
 }
 

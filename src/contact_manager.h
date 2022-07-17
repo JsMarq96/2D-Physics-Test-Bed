@@ -11,8 +11,6 @@
 #include <cstring>
 #include <sys/types.h>
 
-#define MAX_CONTACT_COUNT 9
-#define MAX_COLLISION_COUNT 20
 #define MAX_UINT16 65535
 #define EPSILON 0.000005f
 
@@ -30,39 +28,30 @@ inline uint16_t get_collision_id(const uint8_t id1, const uint8_t id2) {
     return (uint16_t) min_id | ((uint16_t) max_id << 8);
 }
 
-inline uint16_t get_contact_id() {
-    return 0;
-}
-
-
-
-struct sCollision {
-    uint16_t collision_id;
-
-    sVector3 contact_normal;
-
-    uint8_t contact_count = 0;
-    sVector3 contact_point[MAX_CONTACT_COUNT];
-    float    contanct_normal_impulse[MAX_CONTACT_COUNT]; // Contact constrain
-    float    contanct_tang_impulse[2][MAX_CONTACT_COUNT]; // Friction constraint
-    float    contact_depth[MAX_CONTACT_COUNT];
-};
-
 struct sCollisionManager {
     // For the obj ids and the collision
     uint16_t id_collision_map[MAX_UINT16] = {};
     bool id_map_in_use[MAX_UINT16] = {};
 
-    sCollision collisions[MAX_COLLISION_COUNT];
+    sCollisionManifold manifold[MAX_COLLISION_COUNT];
     bool is_collision_in_use[MAX_COLLISION_COUNT];
 
+    bool has_collided_on_frame[MAX_COLLISION_COUNT];
 
-    void renew_contacts_to_collision(const uint16_t col_id,
+    void clean_frame() {
+        memset(has_collided_on_frame, false, sizeof(sCollisionManager::has_collided_on_frame));
+    }
+
+    void renew_contacts_to_collision(const uint8_t obj1,
+                                     const uint8_t obj2,
                                      const sVector3 *incoming_points,
                                      const float *depth_of_incomming_points,
                                      const uint8_t incoming_point_count) {
+        uint16_t col_id = get_collision(obj1, obj2);
 
-        sCollision *coll = &collisions[col_id];
+        has_collided_on_frame[col_id] = true;
+
+        sCollisionManifold *coll = &manifold[col_id];
         float old_contact_normal_impulse[MAX_CONTACT_COUNT];
         float old_contact_tang_impulse[2][MAX_CONTACT_COUNT];
         sVector3 old_contanct_position[MAX_CONTACT_COUNT];
@@ -76,8 +65,8 @@ struct sCollisionManager {
         // Copy new data to collision
         memcpy(coll->contact_depth, depth_of_incomming_points, incoming_point_count * sizeof(float));
         memcpy(coll->contact_point, incoming_points, incoming_point_count * sizeof(sVector3));
-        memset(coll->contanct_normal_impulse, 0.0f, sizeof(sCollision::contanct_normal_impulse));
-        memset(coll->contanct_tang_impulse, 0.0f, sizeof(sCollision::contanct_tang_impulse));
+        memset(coll->contanct_normal_impulse, 0.0f, sizeof(sCollisionManifold::contanct_normal_impulse));
+        memset(coll->contanct_tang_impulse, 0.0f, sizeof(sCollisionManifold::contanct_tang_impulse));
         coll->contact_count = incoming_point_count;
 
         // Note: O^2 complexity, but small loop size, so its doesnt really matter
@@ -103,6 +92,7 @@ struct sCollisionManager {
                            const uint8_t obj2) {
         uint16_t col_id = get_collision_id(obj1, obj2);
 
+        // There is no collision for this two object
         if (!id_map_in_use[col_id]) {
             uint16_t i = 0;
             for(; i < MAX_COLLISION_COUNT; i++) {
@@ -115,6 +105,7 @@ struct sCollisionManager {
             is_collision_in_use[i] = true;
             id_collision_map[col_id] = i;
             id_map_in_use[col_id] = true;
+            manifold[col_id].contact_count = 0;
             return i;
         }
 

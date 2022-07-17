@@ -5,6 +5,8 @@
 #include "vector.h"
 
 #define MAX_COL_POINTS 10
+#define MAX_CONTACT_COUNT 9
+#define MAX_COLLISION_COUNT 20
 
 enum eColiderTypes : uint8_t {
     SPHERE_COLLIDER = 0,
@@ -20,15 +22,10 @@ struct sContactData {
 
     float linear_mass = 0.0f;
     float angular_mass = 0.0f;
+    float tangental_angular_mass[2] = {};
 
     float restitution = 0.0f;
     float bias = 0.0f;
-
-    float prev_normal_impulse = 0.0f;
-    float prev_tangent_impulses[2] = {0.0f, 0.0f};
-
-    sVector3 tangents[2] = {};
-    float tangental_angular_mass[2] = {};
 };
 
 struct sCollisionManifold {
@@ -36,16 +33,14 @@ struct sCollisionManifold {
     uint8_t   obj2;
 
     sVector3 normal;
+    sVector3 tangents[2];
 
-    sVector3 contact_points[MAX_COL_POINTS] = {};
-    float    contact_depth [MAX_COL_POINTS] = {};
-    sContactData contact_data[MAX_COL_POINTS] = {};
-    int contanct_points_count = 0;
-
-    inline void add_contact_point(const sVector3 &point,
-                                  const float depth) {
-
-    }
+    uint8_t       contact_count = 0;
+    sVector3      contact_point[MAX_CONTACT_COUNT];
+    float         contanct_normal_impulse[MAX_CONTACT_COUNT]; // Contact constrain
+    float         contanct_tang_impulse[2][MAX_CONTACT_COUNT]; // Friction constraint
+    float         contact_depth[MAX_CONTACT_COUNT];
+    sContactData  precompute_data[MAX_CONTACT_COUNT];
 };
 
 

@@ -13,6 +13,8 @@
 #include "transform.h"
 #include "types.h"
 #include "vector.h"
+#include "contact_manager.h"
+
 #include <cstdint>
 
 #define PHYS_INSTANCE_COUNT 100
@@ -43,26 +45,27 @@ struct sParenting {
 struct sPhysWorld {
     bool               initialized         [PHYS_INSTANCE_COUNT] = {};
 
+    // Collider pareting & state
     sParenting         node_parenting      [PHYS_INSTANCE_COUNT] = {};
     bool               enabled             [PHYS_INSTANCE_COUNT] = {};
     bool               is_static           [PHYS_INSTANCE_COUNT] = {};
     eColiderTypes      shape               [PHYS_INSTANCE_COUNT] = {};
 
+    // Collider data
     sColliderMesh      collider_meshes     [PHYS_INSTANCE_COUNT] = {};
     sTransform         transforms          [PHYS_INSTANCE_COUNT] = {};
     sTransform         old_transforms      [PHYS_INSTANCE_COUNT] = {};
     sSpeed             obj_speeds          [PHYS_INSTANCE_COUNT];
 
+    // Physics properties
     float              mass                [PHYS_INSTANCE_COUNT] = {};
     float              inv_mass            [PHYS_INSTANCE_COUNT] = {};
     float              restitution         [PHYS_INSTANCE_COUNT] = {};
     float              friction            [PHYS_INSTANCE_COUNT] = {};
-
-
     sMat33             inv_inertia_tensors [PHYS_INSTANCE_COUNT] = {};
 
-    sCollisionManifold _manifolds          [PHYS_INSTANCE_COUNT * 2] = {};
-    int                _manifold_count                           = 0;
+    // Collision & contact data
+    sCollisionManager  coll_manager = {};
     int                curr_frame_col_count                      = 0;
 
     // Collider's Custom information
@@ -73,9 +76,19 @@ struct sPhysWorld {
     // DEBUG ==============
     sMeshRenderer      debug_capsules_renderers[COLLIDER_COUNT] = {};
 
+    // Helper functions
     inline float get_radius_of_collider(const int id) const {
         return MAX(transforms[id].scale.x, MAX(transforms[id].scale.y, transforms[id].scale.z));
     };
+
+    // Lifecicle functions
+    void init() {
+        memset(enabled, false, sizeof(sPhysWorld::enabled));
+        memset(initialized, false, sizeof(sPhysWorld::initialized));
+
+        coll_manager.init();
+        set_default_values();
+    }
 
     void clean() {
         uint32_t index = 0;
@@ -95,7 +108,6 @@ struct sPhysWorld {
         memset(plane_collider_normal, 0.0f, sizeof(plane_collider_normal));
 
         memset(initialized, false, sizeof(initialized));
-        _manifold_count = 0;
     }
 
     inline uint32_t add_cube_collider(const sVector3& obj_position,
@@ -187,8 +199,9 @@ struct sPhysWorld {
 
     // Apply collisions & speeds, check for collisions, and resolve them
     void step(const double elapsed_time) {
-        // 0 - Clean manifolds
-        memset(_manifolds, 0, sizeof(_manifolds));
+        // 0 - Clean manifolds via the manager
+        coll_manager.clean_frame();
+
         // 1 - Rotate inertia tensors
         for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
             sMat33 r_mat = {}, r_mat_t = {}, inv_inertia = {};
@@ -204,8 +217,13 @@ struct sPhysWorld {
         apply_gravity(elapsed_time);
 
         // 3 - Collision Detection
-        for(int i = 0; i < PHYS_INSTANCE_COUNT; i++) {
-            for(int j = i+1; j < PHYS_INSTANCE_COUNT; j++) {
+        uint16_t tmp_contanct_point_count = 0;
+        sVector3 tmp_contact_points[MAX_CONTACT_COUNT] = {};
+        float    tmp_contact_depth[MAX_CONTACT_COUNT] = {};
+        sVector3 tmp_contact_normal = {};
+
+        for(uint8_t i = 0; i < PHYS_INSTANCE_COUNT; i++) {
+            for(uint8_t j = i+1; j < PHYS_INSTANCE_COUNT; j++) {
                 if (!enabled[i] || !enabled[j]) {
                     continue;
                 }
@@ -215,6 +233,10 @@ struct sPhysWorld {
                     continue;
                 }
 
+                uint8_t obj1 = 0;
+                uint8_t obj2 = 0;
+                bool collided = false;
+
                 // If there is a collision, store it in the manifold array
                 // Test the different colliders
                 if (shape[i] == SPHERE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
@@ -222,10 +244,13 @@ struct sPhysWorld {
                                                      get_radius_of_collider(i),
                                                      transforms[j].position,
                                                      get_radius_of_collider(j),
-                                                     &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = i;
-                        _manifolds[_manifold_count].obj2 = j;
-                        _manifold_count++;
+                                                     &tmp_contact_normal,
+                                                     tmp_contact_points,
+                                                     tmp_contact_depth,
+                                                     &tmp_contanct_point_count)) {
+                        obj1 = i;
+                        obj2 = j;
+                        collided = true;
                     }
                 } else if (shape[i] == SPHERE_COLLIDER && shape[j] == CUBE_COLLIDER) {
                     if (!transforms[j].is_equal(old_transforms[j])) {
@@ -238,10 +263,13 @@ struct sPhysWorld {
                                                        get_radius_of_collider(i),
                                                        transforms[j],
                                                        collider_meshes[j],
-                                                       &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = i;
-                        _manifolds[_manifold_count].obj2 = j;
-                        _manifold_count++;
+                                                       &tmp_contact_normal,
+                                                       tmp_contact_points,
+                                                       tmp_contact_depth,
+                                                       &tmp_contanct_point_count)) {
+                        obj1 = i;
+                        obj2 = j;
+                        collided = true;
                     }
 
                 } else if (shape[i] == CUBE_COLLIDER && shape[j] == SPHERE_COLLIDER) {
@@ -255,10 +283,13 @@ struct sPhysWorld {
                                                        get_radius_of_collider(j),
                                                        transforms[i],
                                                        collider_meshes[i],
-                                                       &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = i;
-                        _manifolds[_manifold_count].obj2 = j;
-                        _manifold_count++;
+                                                       &tmp_contact_normal,
+                                                       tmp_contact_points,
+                                                       tmp_contact_depth,
+                                                       &tmp_contanct_point_count)) {
+                        obj1 = i;
+                        obj2 = j;
+                        collided = true;
                     }
 
                 } else if (shape[i] == CUBE_COLLIDER && shape[j] == CUBE_COLLIDER) {
@@ -277,33 +308,49 @@ struct sPhysWorld {
 
                     if (SAT::SAT_collision_test(collider_meshes[i],
                                                 collider_meshes[j],
-                                                &_manifolds[_manifold_count])) {
-                        _manifolds[_manifold_count].obj1 = i;
-                        _manifolds[_manifold_count].obj2 = j;
-                        _manifold_count++;
+                                                &tmp_contact_normal,
+                                                tmp_contact_points,
+                                                tmp_contact_depth,
+                                                &tmp_contanct_point_count)) {
+                        obj1 = i;
+                        obj2 = j;
+                        collided = true;
                     }
                 }
 
+                if (collided) {
+                    coll_manager.renew_contacts_to_collision(obj1,
+                                                             obj2,
+                                                             tmp_contact_points,
+                                                             tmp_contact_depth,
+                                                             tmp_contanct_point_count);
+                }
             }
         }
 
         // 4 - Collision Resolution
         // 4.1 - Collision presolving
-        for(int i = 0; i < _manifold_count; i++) {
-            impulse_presolver(_manifolds[i], elapsed_time);
+        int indices[MAX_COLLISION_COUNT] = {};
+        int collision_count = 0;
+        for(int i = 0; i < MAX_COLLISION_COUNT; i++) {
+            if (!coll_manager.has_collided_on_frame[i])
+                continue;
+
+            impulse_presolver(coll_manager.manifold[i], elapsed_time);
+            indices[collision_count++] = i;
         }
+
         // 4.2 = Collision Solving via iterations
         for(int iter = 0; iter < PHYS_SOLVER_ITERATIONS; iter++) {
-            for(int i = 0; i < _manifold_count; i++) {
-                impulse_response(_manifolds[i], elapsed_time);
+            for(int i = 0; i < collision_count; i++) {
+                impulse_response(coll_manager.manifold[indices[i]], elapsed_time);
             }
         }
 
         // 5 - Integrate solutions
         integrate(elapsed_time);
 
-        curr_frame_col_count = _manifold_count;
-        _manifold_count = 0;
+        curr_frame_col_count = collision_count;
     }
 
     void debug_speeds() const {
@@ -327,7 +374,7 @@ struct sPhysWorld {
             }
 
         }
-        ImGui::Text("Collision num: %i", _manifold_count);
+        ImGui::Text("Collision num: %i", curr_frame_col_count);
     }
 
     void render_colliders() const {
@@ -401,12 +448,12 @@ struct sPhysWorld {
         sSpeed *speed_2 = &obj_speeds[id_2];
 
         // Calculate impulse response for each contact point
-        for(int i = 0; i < manifold.contanct_points_count; i++) {
-            sContactData *contact_data = &manifold.contact_data[i];
+        for(uint8_t i = 0; i < manifold.contact_count ; i++) {
+            sContactData *contact_data = &manifold.precompute_data[i];
             // NORMAL IMPULSE ========
             // Vector from the center to the collision point
-            contact_data->r1 = manifold.contact_points[i].subs(transf_1->position);
-            contact_data->r2 = manifold.contact_points[i].subs(transf_2->position);
+            contact_data->r1 = manifold.contact_point[i].subs(transf_1->position);
+            contact_data->r2 = manifold.contact_point[i].subs(transf_2->position);
 
             sVector3 r1_cross_n = cross_prod(contact_data->r1, manifold.normal);
             sVector3 r2_cross_n = cross_prod(contact_data->r2, manifold.normal);
@@ -447,11 +494,11 @@ struct sPhysWorld {
             // FRICTION IMPULSES =====
 
             // Calculate the tangent wrenches
-            plane_space(manifold.normal, contact_data->tangents[0], contact_data->tangents[1]);
+            plane_space(manifold.normal, manifold.tangents[0], manifold.tangents[1]);
 
             for(int tang = 0; tang < 2; tang++) {
-                sVector3 r1_cross_t = cross_prod(contact_data->r1, contact_data->tangents[tang]);
-                sVector3 r2_cross_t = cross_prod(contact_data->r2, contact_data->tangents[tang]);
+                sVector3 r1_cross_t = cross_prod(contact_data->r1, manifold.tangents[tang]);
+                sVector3 r2_cross_t = cross_prod(contact_data->r2, manifold.tangents[tang]);
 
                 contact_data->tangental_angular_mass[tang] = dot_prod(r1_cross_t, inv_inertia_tensors[id_1].multiply(r1_cross_t)) +
                     dot_prod(r2_cross_t, inv_inertia_tensors[id_2].multiply(r2_cross_t));
@@ -470,8 +517,8 @@ struct sPhysWorld {
         sSpeed *speed_2 = &obj_speeds[id_2];
 
         // Calculate impulse response for each contact point
-        for(int i = 0; i < manifold.contanct_points_count; i++) {
-            const sContactData *contact_data = &manifold.contact_data[i];
+        for(int i = 0; i < manifold.contact_count; i++) {
+            const sContactData *contact_data = &manifold.precompute_data[i];
             // NORMAL IMPULSE ========
             // Vector from the center to the collision point
 
@@ -511,11 +558,11 @@ struct sPhysWorld {
             float max_friction = friction_constant * impulse_magnitude;
 
             for(int tang = 0; tang < 2; tang++) {
-                sVector3 r1_cross_t = cross_prod(contact_data->r1, contact_data->tangents[tang]);
-                sVector3 r2_cross_t = cross_prod(contact_data->r2, contact_data->tangents[tang]);
+                sVector3 r1_cross_t = cross_prod(contact_data->r1, manifold.tangents[tang]);
+                sVector3 r2_cross_t = cross_prod(contact_data->r2, manifold.tangents[tang]);
 
                 // Calculate the momentun & impulse, but with the tangent wrench instead of the normal
-                collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), contact_data->tangents[tang]) +
+                collision_momentun = dot_prod(speed_1->linear.subs(speed_2->linear), manifold.tangents[tang]) +
                                      dot_prod(r1_cross_t, speed_1->angular) -
                                      dot_prod(r2_cross_t, speed_2->angular);
 
@@ -526,7 +573,7 @@ struct sPhysWorld {
                 // Clamp friction
                 friction_impulse_magnitude = (friction_impulse_magnitude < -max_friction) ? -max_friction : ((friction_impulse_magnitude > max_friction) ? max_friction : friction_impulse_magnitude);
 
-                sVector3 friction_impulse = contact_data->tangents[tang].mult(friction_impulse_magnitude);
+                sVector3 friction_impulse = manifold.tangents[tang].mult(friction_impulse_magnitude);
 
                 if (!is_static[id_2]) {
                     speed_2->linear = speed_2->linear.sum(friction_impulse.mult(inv_mass[id_2]));
