@@ -208,7 +208,7 @@ void test_loop(GLFWwindow *window) {
     sphere_models[0].set_position(sphere_pos);
     sphere_renderer.render(sphere_models, colors, 1, proj_mat, true);
 
-
+    /*
     if (SAT::SAT_collision_test(col_cube1,
                                 col_cube2,
                                 &manifold)) {
@@ -246,7 +246,7 @@ void test_loop(GLFWwindow *window) {
     } else {
       ImGui::Text("No sphere collision");
     }
-
+    */
 
     ImGui::End();
 
@@ -317,6 +317,8 @@ void draw_loop(GLFWwindow *window) {
 
   sPhysWorld phys_instance;
 
+  phys_instance.init();
+
   phys_instance.set_default_values();
 
   uint32_t static_cube = phys_instance.add_cube_collider({0.0f, 0.5f, 0.0f},
@@ -328,11 +330,11 @@ void draw_loop(GLFWwindow *window) {
                                                          {1.0f, 1.0f, 1.0f},
                                                          20.0f,
                                                          false);*/
-  uint32_t dynamic_cube1 = phys_instance.add_cube_collider({-0.4f, 6.5f, 0.0f},
+  /*uint32_t dynamic_cube1 = phys_instance.add_cube_collider({-0.4f, 6.5f, 0.0f},
                                                            {0.50f, 1.0f, 0.90f},
                                                            30.0f,
                                                            0.2f,
-                                                           false);
+                                                           false);*/
   uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
                                                               0.50f,
                                                               10.0f,
@@ -504,14 +506,18 @@ void draw_loop(GLFWwindow *window) {
     // Render contact points
     sVector4 col_color[15] = {};
     int col_points = 0;
-    for(int i = 0; i < phys_instance.curr_frame_col_count; i++) {
-      for(int j = 0; j < phys_instance._manifolds[i].contanct_points_count; j++) {
+    for(int i = 0; i < MAX_COLLISION_COUNT; i++) {
+      if (!phys_instance.coll_manager.has_collided_on_frame[i])
+        continue;
+
+      for(int j = 0; j < phys_instance.coll_manager.manifold[i].contact_count; j++) {
         cube_models[col_points].set_identity();
-        cube_models[col_points].set_position(phys_instance._manifolds[i].contact_points[j]);
+        cube_models[col_points].set_position(phys_instance.coll_manager.manifold[i].contact_point[j]);
         cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
         col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
       }
     }
+
 
     /*cube_models[col_points].set_identity();
     cube_models[col_points].set_position(phys_instance.transforms[dynamic_cube].position);

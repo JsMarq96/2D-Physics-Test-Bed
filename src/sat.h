@@ -297,10 +297,10 @@ namespace SAT {
 
 
         *contanct_points_count = clipping::face_face_clipping(*reference_mesh,
-                                                                       reference_face,
-                                                                       *incident_mesh,
-                                                                       incident_face,
-                                                                       contact_points);
+                                                              reference_face,
+                                                              *incident_mesh,
+                                                              incident_face,
+                                                              contact_points);
 
         uint32_t contact_id = 0;
         for(; contact_id < *contanct_points_count; contact_id++) {
@@ -346,7 +346,10 @@ namespace SAT {
                                           const float sphere_radius,
                                           const sTransform &cube_transform,
                                           const sColliderMesh &box_mesh,
-                                          sCollisionManifold *manifold) {
+                                          sVector3 *normal,
+                                          sVector3 *contact_points,
+                                          float *contact_depth,
+                                          uint16_t *contanct_points_count) {
         sVector3 axis_normals[3] = {
              cube_transform.apply_rotation({0.0f, 1.0f, 0.0f}).normalize(),
              cube_transform.apply_rotation({1.0f, 0.0f, 0.0f}).normalize(),
@@ -390,10 +393,10 @@ namespace SAT {
             col_axis = col_axis.invert();
         }
 
-        manifold->contact_points[0] = sphere_center.sum(col_axis.invert().mult(sphere_radius));
-        manifold->contact_depth[0] = -min_separation;
-        manifold->normal = col_axis;
-        manifold->contanct_points_count = 1;
+        contact_points[0] = sphere_center.sum(col_axis.invert().mult(sphere_radius));
+        contact_depth[0] = -min_separation;
+        *normal = col_axis;
+        *contanct_points_count = 1;
 
         return true;
     }

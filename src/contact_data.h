@@ -3,10 +3,7 @@
 
 #include "math.h"
 #include "vector.h"
-
-#define MAX_COL_POINTS 10
-#define MAX_CONTACT_COUNT 9
-#define MAX_COLLISION_COUNT 20
+#include "constants.h"
 
 enum eColiderTypes : uint8_t {
     SPHERE_COLLIDER = 0,

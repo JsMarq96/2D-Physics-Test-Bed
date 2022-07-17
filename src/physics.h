@@ -319,6 +319,7 @@ struct sPhysWorld {
                 }
 
                 if (collided) {
+                    std::cout << (uint16_t) shape[i] << " " << (uint16_t) shape[j] << std::endl;
                     coll_manager.renew_contacts_to_collision(obj1,
                                                              obj2,
                                                              tmp_contact_points,
@@ -438,8 +439,8 @@ struct sPhysWorld {
 
     // TODO: arbiter & warmstarting
     void impulse_presolver(sCollisionManifold &manifold, const float elapsed_time) {
-        int id_1 = manifold.obj1;
-        int id_2 = manifold.obj2;
+        uint8_t id_1 = manifold.obj1;
+        uint8_t id_2 = manifold.obj2;
 
         sTransform *transf_1 = &transforms[id_1];
         sTransform *transf_2 = &transforms[id_2];
@@ -466,6 +467,8 @@ struct sPhysWorld {
             contact_data->linear_mass = inv_mass[id_1] + inv_mass[id_2];
             contact_data->angular_mass = dot_prod(r1_cross_n, inv_inertia_tensors[id_1].multiply(r1_cross_n)) +
                 dot_prod(r2_cross_n, inv_inertia_tensors[id_2].multiply(r2_cross_n));
+
+            std::cout <<(uint32_t) id_1 << " " << (uint32_t)id_2 << std::endl;
 
             // Baumgarte correction for the impulse
             contact_data->bias = -BAUMGARTE_TERM / elapsed_time * MIN(0.0f, manifold.contact_depth[i] + PENETRATION_SLOP);
@@ -507,8 +510,8 @@ struct sPhysWorld {
     }
 
     void impulse_response(const sCollisionManifold &manifold, const float elapsed_time) {
-        int id_1 = manifold.obj1;
-        int id_2 = manifold.obj2;
+        uint8_t id_1 = manifold.obj1;
+        uint8_t id_2 = manifold.obj2;
 
         sTransform *transf_1 = &transforms[id_1];
         sTransform *transf_2 = &transforms[id_2];
@@ -535,6 +538,7 @@ struct sPhysWorld {
             float impulse_magnitude = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
 
             // The impulse cannot be negative
+            //std::cout << contact_data->linear_mass + contact_data->angular_mass << std::endl;
             impulse_magnitude = MAX(impulse_magnitude, 0.0f);
 
             sVector3 impulse = manifold.normal.mult(impulse_magnitude);

@@ -5,6 +5,7 @@
 // Contact Manger
 // For contact caching
 //*/
+#include "constants.h"
 #include "vector.h"
 #include "contact_data.h"
 #include <cstdint>
@@ -12,7 +13,6 @@
 #include <sys/types.h>
 
 #define MAX_UINT16 65535
-#define EPSILON 0.000005f
 
 inline uint16_t get_collision_id(const uint8_t id1, const uint8_t id2) {
     uint8_t min_id = 0, max_id = 0;
@@ -57,6 +57,9 @@ struct sCollisionManager {
         sVector3 old_contanct_position[MAX_CONTACT_COUNT];
         uint8_t old_contact_count = coll->contact_count;
 
+        coll->obj1 = obj1;
+        coll->obj2 = obj2;
+
         // Store old collision data
         memcpy(old_contact_normal_impulse, coll->contact_depth, sizeof(old_contact_normal_impulse));
         memcpy(old_contact_tang_impulse, coll->contact_depth, sizeof(old_contact_tang_impulse));
@@ -74,7 +77,7 @@ struct sCollisionManager {
             // Look for a coindicence between the old points
             for(uint16_t i = 0; i < old_contact_count; i++) {
                  // Check for extreamly close points
-                if (incoming_points[j].subs(old_contanct_position[i]).magnitude() < EPSILON) {
+                if (incoming_points[j].subs(old_contanct_position[i]).magnitude() < COMP_EPSILON) {
                     // If its really close, then they are the same point,
                     // transfer the old impulse, for warmstarting
                     coll->contanct_normal_impulse[j] = old_contact_normal_impulse[i];
@@ -105,12 +108,11 @@ struct sCollisionManager {
             is_collision_in_use[i] = true;
             id_collision_map[col_id] = i;
             id_map_in_use[col_id] = true;
-            manifold[col_id].contact_count = 0;
+            manifold[i].contact_count = 0;
             return i;
         }
 
         return id_collision_map[col_id];
-
     }
 
     void init() {
