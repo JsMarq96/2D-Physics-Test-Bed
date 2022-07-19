@@ -24,6 +24,9 @@ struct sContactData {
     float restitution = 0.0f;
     float bias = 0.0f;
 
+    float normal_impulse = 0.0f;
+    float tangent_impulses[2] = {0.0f, 0.0f};
+
     float prev_normal_impulse = 0.0f;
     float prev_tangent_impulses[2] = {0.0f, 0.0f};
 

@@ -13,6 +13,7 @@
 #include "transform.h"
 #include "types.h"
 #include "vector.h"
+#include "contact_manager.h"
 #include <cstdint>
 
 #define PHYS_INSTANCE_COUNT 100
@@ -43,24 +44,27 @@ struct sParenting {
 struct sPhysWorld {
     bool               initialized         [PHYS_INSTANCE_COUNT] = {};
 
+    // Collider pareting & state
     sParenting         node_parenting      [PHYS_INSTANCE_COUNT] = {};
     bool               enabled             [PHYS_INSTANCE_COUNT] = {};
     bool               is_static           [PHYS_INSTANCE_COUNT] = {};
     eColiderTypes      shape               [PHYS_INSTANCE_COUNT] = {};
 
+    // Collider data
     sColliderMesh      collider_meshes     [PHYS_INSTANCE_COUNT] = {};
     sTransform         transforms          [PHYS_INSTANCE_COUNT] = {};
     sTransform         old_transforms      [PHYS_INSTANCE_COUNT] = {};
     sSpeed             obj_speeds          [PHYS_INSTANCE_COUNT];
 
+    // Physics properties
     float              mass                [PHYS_INSTANCE_COUNT] = {};
     float              inv_mass            [PHYS_INSTANCE_COUNT] = {};
     float              restitution         [PHYS_INSTANCE_COUNT] = {};
     float              friction            [PHYS_INSTANCE_COUNT] = {};
-
-
     sMat33             inv_inertia_tensors [PHYS_INSTANCE_COUNT] = {};
 
+    // Collision & contact data
+    sCollisionManager  coll_manager = {};
     sCollisionManifold _manifolds          [PHYS_INSTANCE_COUNT * 2] = {};
     int                _manifold_count                           = 0;
     int                curr_frame_col_count                      = 0;
@@ -290,6 +294,8 @@ struct sPhysWorld {
         // 4 - Collision Resolution
         // 4.1 - Collision presolving
         for(int i = 0; i < _manifold_count; i++) {
+            // Add past impulses
+            coll_manager.update_collision(&_manifolds[i]);
             impulse_presolver(_manifolds[i], elapsed_time);
         }
         // 4.2 = Collision Solving via iterations
@@ -298,6 +304,12 @@ struct sPhysWorld {
                 impulse_response(_manifolds[i], elapsed_time);
             }
         }
+        // Update past impulses
+        for(int i = 0; i < _manifold_count; i++) {
+            coll_manager.update_impulses_on_collision(_manifolds[i]);
+        }
+
+        //coll_manager.frame_cleanup();
 
         // 5 - Integrate solutions
         integrate(elapsed_time);
@@ -445,6 +457,7 @@ struct sPhysWorld {
             }
 
             // FRICTION IMPULSES =====
+            std::cout << contact_data->prev_normal_impulse << " old tan" << std::endl;
 
             // Calculate the tangent wrenches
             plane_space(manifold.normal, contact_data->tangents[0], contact_data->tangents[1]);
@@ -459,7 +472,7 @@ struct sPhysWorld {
         }
     }
 
-    void impulse_response(const sCollisionManifold &manifold, const float elapsed_time) {
+    void impulse_response(sCollisionManifold &manifold, const float elapsed_time) {
         int id_1 = manifold.obj1;
         int id_2 = manifold.obj2;
 
@@ -471,7 +484,7 @@ struct sPhysWorld {
 
         // Calculate impulse response for each contact point
         for(int i = 0; i < manifold.contanct_points_count; i++) {
-            const sContactData *contact_data = &manifold.contact_data[i];
+            sContactData *contact_data = &manifold.contact_data[i];
             // NORMAL IMPULSE ========
             // Vector from the center to the collision point
 
@@ -485,12 +498,12 @@ struct sPhysWorld {
 
 
 
-            float impulse_magnitude = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
+            contact_data->normal_impulse = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
 
             // The impulse cannot be negative
-            impulse_magnitude = MAX(impulse_magnitude, 0.0f);
+            contact_data->normal_impulse = MAX(contact_data->normal_impulse, 0.0f);
 
-            sVector3 impulse = manifold.normal.mult(impulse_magnitude);
+            sVector3 impulse = manifold.normal.mult(contact_data->normal_impulse);
 
             if (!is_static[id_2]) {
                 speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));
@@ -508,7 +521,7 @@ struct sPhysWorld {
             // FRICTION IMPULSES =====
 
             float friction_constant = sqrt(friction[id_1] * friction[id_2]);
-            float max_friction = friction_constant * impulse_magnitude;
+            float max_friction = friction_constant * contact_data->normal_impulse;
 
             for(int tang = 0; tang < 2; tang++) {
                 sVector3 r1_cross_t = cross_prod(contact_data->r1, contact_data->tangents[tang]);
