@@ -263,19 +263,18 @@ namespace SAT {
                 std::cout << "Ref: mesh1" << std::endl;
                 reference_mesh = &mesh1;
                 reference_face = collision_face_mesh1;
-                manifold->normal = reference_mesh->normals[reference_face];
-
                 incident_mesh = &mesh2;
             } else {
                 // Face of mesh 2 is reference face
                 std::cout << "Ref: mesh2" << std::endl;
                 reference_mesh = &mesh2;
                 reference_face = collision_face_mesh2;
-                manifold->normal = reference_mesh->normals[reference_face];
-
                 incident_mesh = &mesh1;
             }
         }
+
+        manifold->normal = reference_mesh->normals[reference_face];
+
 
         sPlane reference_plane = reference_mesh->get_plane_of_face(reference_face);
 
@@ -289,17 +288,18 @@ namespace SAT {
             }
         }
 
-
         manifold->contanct_points_count = clipping::face_face_clipping(*reference_mesh,
                                                                        reference_face,
                                                                        *incident_mesh,
                                                                        incident_face,
                                                                        contact_points);
 
+        std::cout << "f" << std::endl;
+
         uint32_t contact_id = 0;
         for(; contact_id < manifold->contanct_points_count; contact_id++) {
             float distance = reference_plane.distance(contact_points[contact_id]);
-            manifold->contact_depth[contact_id] = MIN(0.0f, distance);
+            manifold->contact_depth[contact_id] = -distance;
             manifold->contact_points[contact_id] = contact_points[contact_id];
             std::cout << manifold->contact_depth[contact_id] << std::endl;
         }

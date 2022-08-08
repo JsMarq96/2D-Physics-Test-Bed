@@ -120,6 +120,7 @@ struct sPhysWorld {
         initialized[index] = true;
         shape[index] = CUBE_COLLIDER;
         restitution[index] = restitut;
+        friction[index] = 0.2f;
 
         if (obj_is_static) {
             mass[index] = 0.0f;
@@ -164,6 +165,7 @@ struct sPhysWorld {
         enabled[index] = true;
         shape[index] = SPHERE_COLLIDER;
         restitution[index] = restitut;
+        friction[index] = 0.2f;
 
         if (obj_is_static) {
             mass[index] = 0.0f;
@@ -439,7 +441,12 @@ struct sPhysWorld {
             contact_data->restitution = MIN(restitution[id_1], restitution[id_2]);
 
             // Warmstarting
-            float impulse_magnitude = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
+            //float impulse_magnitude = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
+            float impulse_magnitude = contact_data->prev_normal_impulse / 4.0f;
+
+            //if (contact_data->prev_normal_impulse > 0.0f) {
+            //    impulse_magnitude = (contact_data->prev_normal_impulse + impulse_magnitude) / 2.0f;
+            //}
 
             sVector3 impulse = manifold.normal.mult(impulse_magnitude);
 
@@ -457,8 +464,6 @@ struct sPhysWorld {
             }
 
             // FRICTION IMPULSES =====
-            std::cout << contact_data->prev_normal_impulse << " old tan" << std::endl;
-
             // Calculate the tangent wrenches
             plane_space(manifold.normal, contact_data->tangents[0], contact_data->tangents[1]);
 
@@ -497,11 +502,13 @@ struct sPhysWorld {
                                        dot_prod(r2_cross_n, speed_2->angular);
 
 
-
             contact_data->normal_impulse = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
 
+            // Impulse clamping
+            float prev_total_impulse = contact_data->avg_normal_impulse;
             // The impulse cannot be negative
-            contact_data->normal_impulse = MAX(contact_data->normal_impulse, 0.0f);
+            contact_data->avg_normal_impulse = MAX(prev_total_impulse + contact_data->normal_impulse, 0.0f);
+            contact_data->normal_impulse = contact_data->avg_normal_impulse - prev_total_impulse;
 
             sVector3 impulse = manifold.normal.mult(contact_data->normal_impulse);
 
@@ -537,9 +544,12 @@ struct sPhysWorld {
                 float friction_impulse_magnitude = collision_momentun / (contact_data->linear_mass + contact_data->tangental_angular_mass[tang]);
 
                 // Clamp friction
-                friction_impulse_magnitude = (friction_impulse_magnitude < -max_friction) ? -max_friction : ((friction_impulse_magnitude > max_friction) ? max_friction : friction_impulse_magnitude);
+                float old_avg_tang_imp = contact_data->avg_tang_impulse[tang];
+                contact_data->avg_tang_impulse[tang] += friction_impulse_magnitude;
+                contact_data->avg_tang_impulse[tang]  = (contact_data->avg_tang_impulse[tang]  < -max_friction) ? -max_friction : ((contact_data->avg_tang_impulse[tang]  > max_friction) ? max_friction : contact_data->avg_tang_impulse[tang]);
+                contact_data->tangent_impulses[tang] = contact_data->avg_tang_impulse[tang] - old_avg_tang_imp;
 
-                sVector3 friction_impulse = contact_data->tangents[tang].mult(friction_impulse_magnitude);
+                sVector3 friction_impulse = contact_data->tangents[tang].mult(contact_data->tangent_impulses[tang]);
 
                 if (!is_static[id_2]) {
                     speed_2->linear = speed_2->linear.sum(friction_impulse.mult(inv_mass[id_2]));

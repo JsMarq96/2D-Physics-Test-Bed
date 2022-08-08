@@ -29,6 +29,8 @@ namespace clipping {
 
             // Perform clipping agains the neighboring planes
             for(uint32_t clip_plane = 0; clip_plane < mesh1.face_stride; clip_plane++) {
+                std::cout << mesh1.face_stride << " " << mesh1.get_neighboor_of_face(face_1, clip_plane  +1) << std::endl;
+                std::cout << "f" << std::endl;
                 sPlane clipping_face = mesh1.get_plane_of_face(mesh1.get_neighboor_of_face(face_1, clip_plane));
                 uint32_t num_of_clipped_points = 0;
 
@@ -39,15 +41,15 @@ namespace clipping {
                     float distance_vert1 = clipping_face.distance(vert1);
                     float distance_vert2 = clipping_face.distance(vert2);
 
-                    if (distance_vert1 < 0.0001f && distance_vert2 < 0.0001f) {
+                    if (distance_vert1 <= 0.0001f && distance_vert2 <= 0.0001f) {
                         // Add the vert2
                         clip_points[num_of_clipped_points++] = vert2;
-                    } else if (distance_vert1 >= 0.0001f && distance_vert2 < 0.0001f) {
+                    } else if (distance_vert1 > 0.0001f && distance_vert2 < 0.0001f) {
                         // Add intersection point & vert2
                         clip_points[num_of_clipped_points++] = clipping_face.get_intersection_point(vert1,
                                                                                                      vert2);
                         clip_points[num_of_clipped_points++] = vert2;
-                    } else if (distance_vert1 < 0.0001f && distance_vert2 >= 0.0001f) {
+                    } else if (distance_vert1 < 0.0001f && distance_vert2 > 0.0001f) {
                         // Add intersection point
                         clip_points[num_of_clipped_points++] = clipping_face.get_intersection_point(vert1,
                                                                                                      vert2);
@@ -69,12 +71,12 @@ namespace clipping {
                 if (distance_vert1 <= 0.0001f && distance_vert2 <= 0.0001f) {
                     // Add the vert2
                     clip_points[num_of_clipped_points++] = vert2;
-                } else if (distance_vert1 > 0.0001f && distance_vert2 <= 0.0001f) {
+                } else if (distance_vert1 > 0.0001f && distance_vert2 < 0.0001f) {
                     // Add intersection point & vert2
                     clip_points[num_of_clipped_points++] = vert2;
                     clip_points[num_of_clipped_points++] = reference_plane.get_intersection_point(vert1,
                                                                                                   vert2);
-                } else if (distance_vert1 <= 0.0001f && distance_vert2 > 0.0001f) {
+                } else if (distance_vert1 < 0.0001f && distance_vert2 > 0.0001f) {
                     // Add intersection point
                     clip_points[num_of_clipped_points++] = reference_plane.get_intersection_point(vert2,
                                                                                                   vert1);
