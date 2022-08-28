@@ -426,6 +426,7 @@ struct sPhysWorld {
             // Restitution constant
             contact_data->restitution = MIN(restitution[id_1], restitution[id_2]);
 
+            continue;
             // Warmstarting
             float impulse_magnitude = (1 + contact_data->restitution) * (collision_momentun + contact_data->bias) / (contact_data->linear_mass + contact_data->angular_mass);
 
