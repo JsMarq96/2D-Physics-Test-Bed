@@ -9,99 +9,69 @@
 #include <cstring>
 #include <exception>
 
+#define FACE_EPSILON 0.001f
+
 namespace clipping {
     // Crop Mesh2's face to mesh1's face
-    inline uint32_t face_face_clipping(const sColliderMesh &mesh1,
-                                       const uint32_t face_1,
-                                       const sColliderMesh &mesh2,
-                                       const uint32_t face_2,
+    inline uint32_t face_face_clipping(const sColliderMesh *ref_mesh,
+                                       const uint32_t ref_face,
+                                       const sColliderMesh *inc_mesh,
+                                       const uint32_t inc_face,
                                        sVector3 *clip_points) {
+        // Fill clipping planes
+        sPlane clipping_planes[5] = {};
+        uint32_t clip_plane_count = (ref_mesh->face_stride == 4) ?  5 : 4;
 
-            // Sutherland-Hodgman Cliping
-            sVector3 *to_clip = (sVector3*) malloc(sizeof(sVector3) * 15);
-            memcpy(to_clip, mesh2.get_face(face_2), sizeof(sVector3) * mesh2.face_stride);
-            uint32_t num_of_points_to_clip = mesh2.face_stride;
+        clipping_planes[0] = ref_mesh->get_plane_of_face(ref_face);
+        for(uint16_t i = 0; ref_mesh->face_stride > i; i++) {
+            clipping_planes[i + 1] = ref_mesh->get_plane_of_face(ref_mesh->get_neighboor_of_face(ref_face,
+                                                                                                 i));
+        }
 
-            sPlane reference_plane = mesh1.get_plane_of_face(face_1);
+        // 10 is the max number of points that can be had from clipping two quads
+        sVector3 points_to_clip[10] = {};
+        uint32_t points_to_clip_count = inc_mesh->face_stride;
+        memcpy(points_to_clip,
+               inc_mesh->get_face(inc_face),
+               sizeof(sVector3) * points_to_clip_count);
 
-            // first clip agains the reference plane
-            uint32_t num_of_clipped_points = 0;
+        sVector3 clipped_points[10] = {};
+        uint32_t clipped_points_count = 0;
+        // Sutherland-Hogman clipping for all the clipping planes
+        for(uint32_t plane_id = 0; plane_id < clip_plane_count; plane_id++) {
+            sPlane &clip_plane = clipping_planes[plane_id];
+            uint32_t num_clipped_points = 0;
 
-            // Perform clipping agains the neighboring planes
-            for(uint32_t clip_plane = 0; clip_plane < mesh1.face_stride; clip_plane++) {
-                //std::cout << clip_plane << " " << mesh1.face_stride << std::endl;
-                sPlane clipping_face = mesh1.get_plane_of_face(mesh1.get_neighboor_of_face(face_1, clip_plane));
-                uint32_t num_of_clipped_points = 0;
+            for(uint32_t i = 0; i < points_to_clip_count; i++) {
+                sVector3 &v1 = points_to_clip[i];
+                sVector3 &v2 = points_to_clip[(i+1) % points_to_clip_count];
 
-                for(uint32_t i = 0; i < num_of_points_to_clip; i++) {
-                    sVector3 vert1 = to_clip[i];
-                    sVector3 vert2 = to_clip[(i + 1) % mesh2.face_stride];
+                float dist_v1 = clip_plane.distance(v1);
+                float dist_v2 = clip_plane.distance(v2);
 
-                    float distance_vert1 = clipping_face.distance(vert1);
-                    float distance_vert2 = clipping_face.distance(vert2);
-
-                    if (distance_vert1 < 0.0001f && distance_vert2 < 0.0001f) {
-                        // Add the vert2
-                        clip_points[num_of_clipped_points++] = vert2;
-                    } else if (distance_vert1 >= 0.0001f && distance_vert2 < 0.0001f) {
-                        // Add intersection point & vert2
-                        clip_points[num_of_clipped_points++] = clipping_face.get_intersection_point(vert1,
-                                                                                                     vert2);
-                        clip_points[num_of_clipped_points++] = vert2;
-                    } else if (distance_vert1 < 0.0001f && distance_vert2 >= 0.0001f) {
-                        // Add intersection point
-                        clip_points[num_of_clipped_points++] = clipping_face.get_intersection_point(vert1,
-                                                                                                     vert2);
-                    }
-                    // If both are outside, do nothing
+                if (dist_v1 <= FACE_EPSILON && dist_v2 <= FACE_EPSILON) {
+                    // Both points inside, store the second
+                    clipped_points[clipped_points_count++] = v2;
+                } else if (dist_v1 >= FACE_EPSILON && dist_v2 <= FACE_EPSILON) {
+                    // First point outside, store the intersection point and the second
+                    clipped_points[clipped_points_count++] = v2;
+                    clipped_points[clipped_points_count++] = clip_plane.get_intersection_point(v1,
+                                                                                               v2);
+                } else if (dist_v1 <= FACE_EPSILON && dist_v2 >= FACE_EPSILON) {
+                    // Second point outside, store the intersection point
+                    clipped_points[clipped_points_count++] = clip_plane.get_intersection_point(v1,
+                                                                                               v2);
                 }
-                num_of_points_to_clip = num_of_clipped_points;
-                memcpy(to_clip, clip_points, sizeof(sVector3) * num_of_clipped_points);
+                // If both points are outisde, skip then
             }
 
-            // Clipping against the reference plane
-            for(uint32_t i = 0; i < num_of_points_to_clip; i++) {
-                sVector3 vert1 = to_clip[i];
-                sVector3 vert2 = to_clip[(i + 1) % mesh2.face_stride];
+            points_to_clip_count = clipped_points_count;
+            clipped_points_count = 0;
+            memcpy(points_to_clip, clipped_points, sizeof(sVector3) * points_to_clip_count);
+        }
 
-                float distance_vert1 = reference_plane.distance(vert1);
-                float distance_vert2 = reference_plane.distance(vert2);
-
-                if (distance_vert1 <= 0.0001f && distance_vert2 <= 0.0001f) {
-                    // Add the vert2
-                    clip_points[num_of_clipped_points++] = vert2;
-                } else if (distance_vert1 > 0.0001f && distance_vert2 <= 0.0001f) {
-                    // Add intersection point & vert2
-                    clip_points[num_of_clipped_points++] = vert2;
-                    clip_points[num_of_clipped_points++] = reference_plane.get_intersection_point(vert1,
-                                                                                                  vert2);
-                } else if (distance_vert1 <= 0.0001f && distance_vert2 > 0.0001f) {
-                    // Add intersection point
-                    clip_points[num_of_clipped_points++] = reference_plane.get_intersection_point(vert2,
-                                                                                                  vert1);
-                }
-                // If both are outside, do nothing
-            }
-            num_of_points_to_clip = num_of_clipped_points;
-            memcpy(to_clip, clip_points, sizeof(sVector3) * num_of_clipped_points);
-            num_of_clipped_points = 0;
-
-            // TODO: clip agains adjacent faces
-
-            free(to_clip);
-            //return num_of_clipped_points;
-
-
-            //   Iterate all the edges of the clipped
-            //      If both vertices are inside,
-            //         then we add the second(last) point
-            //      If the first is outside, and the second is inside,
-            //         we add the intersection point, and the second
-            //      If the firs is inside and the second is outside,
-            //         we only add the intersection point
-            //      Both vertecis are outside,
-            //         we dont add any points
-            return num_of_points_to_clip;
+        memcpy(clip_points, points_to_clip, sizeof(sVector3) * points_to_clip_count);
+        return points_to_clip_count;
     }
 
     inline uint32_t edge_edge_clipping(const sColliderMesh &mesh1,

@@ -30,7 +30,6 @@
 
 #include "kv_storage.h"
 
-#include "sdf.h"
 
 void temp_error_callback(int error_code, const char* descr) {
 	std::cout << "GLFW Error: " << error_code << " " << descr << std::endl;
@@ -333,7 +332,20 @@ void draw_loop(GLFWwindow *window) {
                                                            30.0f,
                                                            0.2f,
                                                            false);
-  uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
+  phys_instance.add_cube_collider({-0.4f, 3.5f, 0.0f},
+                                                           {0.50f, 1.0f, 0.90f},
+                                                           30.0f,
+                                                           0.2f,
+                                                           false);
+phys_instance.add_cube_collider({-0.4f, 5.5f, 0.0f},
+                                                           {0.50f, 1.0f, 0.90f},
+                                                           30.0f,
+                                                           0.10f,
+                                                           false);
+
+
+  /*
+  **   uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
                                                               0.50f,
                                                               10.0f,
                                                               1.0f,
@@ -343,10 +355,10 @@ void draw_loop(GLFWwindow *window) {
                                                               5.0f,
                                                               1.0f,
                                                               false);
-
+   */
   //phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.3f, 0.0f, 0.0f});
 
-  std::cout << dynamic_sphere << std::endl;
+  //std::cout << dynamic_sphere << std::endl;
   sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
   colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
@@ -384,11 +396,8 @@ void draw_loop(GLFWwindow *window) {
     /*sTransform transf;
     transf.set_rotation({0.954f, 0.30f, 0.0f, 0.0f});
     sVector3 norm = {0.0f, 1.0f, 0.0f};
-
     std::cout << norm.x << " " << norm.y <<  " " << norm.z << std::endl;
-
     norm = transf.apply_rotation(norm);
-
     std::cout << norm.x << " " << norm.y <<  " " << norm.z << std::endl;*/
 
     // Draw loop
@@ -403,7 +412,7 @@ void draw_loop(GLFWwindow *window) {
     sMat44 proj_mat = {};
 
     // OpenGL stuff
-    glEnable(GL_DEPTH_TEST);  
+    glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 
@@ -412,11 +421,11 @@ void draw_loop(GLFWwindow *window) {
     ImGui::NewFrame();
 
     camera.position = rotate_arround({5.0f, camera_height, 5.0f},
-                                     sVector3{0.0f, 0.0f, 0.0f}, 
+                                     sVector3{0.0f, 0.0f, 0.0f},
                                      to_radians(camera_rot));
-  
+
     camera.look_at(sVector3{0.0f, 0.0f, 0.0f});
-    camera.get_perspective_viewprojection_matrix(90.0f, 
+    camera.get_perspective_viewprojection_matrix(90.0f,
                                                 1000.0f,
                                                 0.001f,
                                                 (float)width / (float)heigth,
@@ -511,16 +520,15 @@ void draw_loop(GLFWwindow *window) {
         cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
         col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
       }
-    }
 
-    /*cube_models[col_points].set_identity();
-    cube_models[col_points].set_position(phys_instance.transforms[dynamic_cube].position);
-    cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
-    col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
-    cube_models[col_points].set_identity();
-    cube_models[col_points].set_position(phys_instance.transforms[dynamic_cube1].position);
-    cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
-    col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};*/
+      for(int j = 0; j < phys_instance._manifolds[i].contanct_points_count; j++) {
+        cube_models[col_points].set_identity();
+        cube_models[col_points].set_position(phys_instance._manifolds[i].contact_points[j].sum(phys_instance._manifolds[i].normal.mult(phys_instance._manifolds[i].contact_depth[j])));
+        cube_models[col_points].set_scale({0.015f, 0.05f, 0.015f});
+        col_color[col_points++] = {0.0f, 0.0f, 1.0f, 0.50f};
+      }
+
+    }
 
 
     glDisable(GL_DEPTH_TEST);

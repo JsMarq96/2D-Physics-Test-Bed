@@ -7,7 +7,6 @@
 #include "raw_geometry.h"
 #include "collider_mesh.h"
 #include "vector.h"
-#include "sdf.h"
 #include <cstdint>
 
 #define MAX_COL_POINTS 10
@@ -118,7 +117,7 @@ inline bool test_cube_sphere_collision(const sTransform &cube_transform,
 
     // Select the most facing plane of all of them
     for(int i = 0; i < cube_geometry.planes_size; i++) {
-        // the most facing point to the plane
+        // the most facing point to the planein
         sVector3 sphere_to_plane_origin = sphere_center.subs(cube_geometry.planes[i].origin_point).normalize();
         sphere_to_plane_origin = sphere_center.sum(sphere_to_plane_origin.mult(radius));
 
