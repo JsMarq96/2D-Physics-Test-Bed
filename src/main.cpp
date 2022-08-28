@@ -471,14 +471,6 @@ phys_instance.add_cube_collider({-0.4f, 5.5f, 0.0f},
       }
       if (ImGui::Button("Step") || left_state == GLFW_PRESS) {
         phys_instance.step(delta_time);
-
-        //sVector3 cube_pos = phys_instance.transforms[static_cube].position;
-        //sVector3 sphere_center = phys_instance.transforms[dynamic_sphere].position;
-        //uint32_t face = phys_instance.collider_meshes[static_cube].get_support_face(sphere_center.subs(cube_pos).invert());
-
-        //sVector3 *vert = phys_instance.collider_meshes[static_cube].get_face(face);
-
-        //std::cout << "SDF: " << SDF::quad(sphere_center, vert[0], vert[1], vert[2], vert[4], phys_instance.collider_meshes[static_cube].normals[face]) << std::endl;// - phys_instance.transforms[dynamic_sphere].scale.x << std::endl;
       }
     }
     phys_instance.debug_speeds();
