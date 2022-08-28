@@ -14,7 +14,7 @@
 #define MAX_CONTACT_COUNT 9
 #define MAX_COLLISION_COUNT 20
 #define MAX_UINT16 65535
-#define DIFF_EPSILON 0.007f
+#define DIFF_EPSILON 0.005f
 
 
 /**

@@ -6,5 +6,6 @@
 #define MAX_CONTACT_COUNT 9
 #define MAX_COLLISION_COUNT 20
 
+#define MAX_COLLISION_COUNT 20
 
 #endif // CONSTANTS_H_

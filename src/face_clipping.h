@@ -37,7 +37,6 @@ namespace clipping {
 
         sVector3 clipped_points[10] = {};
         uint32_t clipped_points_count = 0;
-
         // Sutherland-Hogman clipping for all the clipping planes
         for(uint32_t plane_id = 0; plane_id < clip_plane_count; plane_id++) {
             sPlane &clip_plane = clipping_planes[plane_id];

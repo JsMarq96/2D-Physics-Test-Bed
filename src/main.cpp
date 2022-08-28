@@ -525,6 +525,14 @@ phys_instance.add_cube_collider({-0.4f, 5.5f, 0.0f},
         cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
         col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
       }
+
+      for(int j = 0; j < phys_instance._manifolds[i].contanct_points_count; j++) {
+        cube_models[col_points].set_identity();
+        cube_models[col_points].set_position(phys_instance._manifolds[i].contact_points[j].sum(phys_instance._manifolds[i].normal.mult(phys_instance._manifolds[i].contact_depth[j])));
+        cube_models[col_points].set_scale({0.015f, 0.05f, 0.015f});
+        col_color[col_points++] = {0.0f, 0.0f, 1.0f, 0.50f};
+      }
+
     }
 
 

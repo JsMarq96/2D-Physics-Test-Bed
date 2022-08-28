@@ -30,6 +30,9 @@ struct sContactData {
     float prev_normal_impulse = 0.0f;
     float prev_tangent_impulses[2] = {0.0f, 0.0f};
 
+    float avg_normal_impulse = 0.0f;
+    float avg_tang_impulse[2] = {0.0f, 0.0f};
+
     sVector3 tangents[2] = {};
     float tangental_angular_mass[2] = {};
 };
