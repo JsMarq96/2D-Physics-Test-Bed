@@ -309,7 +309,7 @@ struct sPhysWorld {
             coll_manager.update_impulses_on_collision(_manifolds[i]);
         }
 
-        //coll_manager.frame_cleanup();
+        coll_manager.frame_cleanup();
 
         // 5 - Integrate solutions
         integrate(elapsed_time);
@@ -412,6 +412,8 @@ struct sPhysWorld {
         sSpeed *speed_1 = &obj_speeds[id_1];
         sSpeed *speed_2 = &obj_speeds[id_2];
 
+        // TODO: might be a NaN over here...
+
         // Calculate impulse response for each contact point
         for(int i = 0; i < manifold.contanct_points_count; i++) {
             sContactData *contact_data = &manifold.contact_data[i];
@@ -457,7 +459,6 @@ struct sPhysWorld {
             }
 
             // FRICTION IMPULSES =====
-            std::cout << contact_data->prev_normal_impulse << " old tan" << std::endl;
 
             // Calculate the tangent wrenches
             plane_space(manifold.normal, contact_data->tangents[0], contact_data->tangents[1]);

@@ -215,98 +215,52 @@ namespace SAT {
         const float k_face_rel_toletance = 0.98f;
         const float k_abs_tolerance = 0.5f * 0.005f;
 
-         sVector3 contact_points[12];
 
-        // Add tolerance to favour face collision vs edge collision
-        if (k_edge_rel_tolerance * edge_edge_distance + k_abs_tolerance < max_face_separation) {
-            // Edge collision
-            // for clipping, we estimate the collision faces based on the normal direction
-            std::cout << "Edge collision <=============" << std::endl;
-            const sVector3 edge_mesh1 = mesh1.get_edge(mesh1_collidion_edge);
-            const sVector3 edge_mesh2 = mesh2.get_edge(mesh2_collision_edge);
-            const sVector3 collider_distance = mesh1.mesh_center.subs(mesh2.mesh_center);
-            const sVector3 edge_axis = cross_prod(edge_mesh1, edge_mesh2).normalize();
+        // Select the reference object and the incident
+         if (collision_distance_mesh1 + 0.005f < collision_face_mesh2) {
+             reference_mesh = &mesh1;
+             incident_mesh = &mesh2;
 
-            if (dot_prod(collider_distance, edge_axis) < 0.0f) {
-                manifold->normal = edge_axis;
-            } else {
-                manifold->normal = edge_axis.invert();
-            }
-            manifold->contanct_points_count = 0;
+             reference_face = collision_face_mesh1;
+         } else {
+             reference_mesh = &mesh2;
+             incident_mesh = &mesh1;
 
-            incident_face = mesh1.get_support_face(manifold->normal.invert());
-            reference_face = mesh2.get_support_face(manifold->normal);
+             reference_face = collision_face_mesh2;
+         }
 
-            sPlane reference_plane = mesh2.get_plane_of_face(reference_face);
+         // Choose indicent face
+         sVector3 reference_normal = reference_mesh->normals[reference_face];
+         manifold->normal = reference_normal;
+         incident_face = 0;
+         float incident_facing = dot_prod(reference_normal,
+                                          incident_mesh->normals[0]);
+         for(uint32_t i = 1; i < incident_mesh->face_count; i++) {
+             float tmp_incident = dot_prod(reference_normal,
+                                           incident_mesh->normals[i]);
 
-            manifold->contanct_points_count = clipping::face_face_clipping(mesh1,
-                                                                       incident_face,
-                                                                       mesh2,
-                                                                       reference_face,
-                                                                       contact_points);
-
-             uint32_t contact_id = 0;
-             for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
-                 float distance = reference_plane.distance(contact_points[i]);
-                 manifold->contact_depth[contact_id] = distance;
-                 manifold->contact_points[contact_id++] = contact_points[i];
+             if (tmp_incident < incident_facing) {
+                 incident_facing = tmp_incident;
+                 incident_face = i;
              }
 
-             manifold->contanct_points_count = contact_id;
+         }
 
-            return true;
-        } else {
-            // Face collision
-            // Favor the first mesh as a reference, with the tolerance
-            if (collision_distance_mesh2 - k_abs_tolerance < collision_distance_mesh1) {
-                // Face 1 is reference face
-                std::cout << "Ref: mesh1" << std::endl;
-                reference_mesh = &mesh1;
-                reference_face = collision_face_mesh1;
-                manifold->normal = reference_mesh->normals[reference_face];
+         sVector3 contact_points[12] = {};
+         manifold->contanct_points_count = clipping::face_face_clipping(reference_mesh,
+                                                                        reference_face,
+                                                                        incident_mesh,
+                                                                        incident_face,
+                                                                        manifold->contact_points);
 
-                incident_mesh = &mesh2;
-            } else {
-                // Face of mesh 2 is reference face
-                std::cout << "Ref: mesh2" << std::endl;
-                reference_mesh = &mesh2;
-                reference_face = collision_face_mesh2;
-                manifold->normal = reference_mesh->normals[reference_face];
+         // Get clipping depths
+         sPlane reference_plane = reference_mesh->get_plane_of_face(reference_face);
+         for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
+             // Distance minus the face epsilon
+             manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]) ;
+         }
 
-                incident_mesh = &mesh1;
-            }
-        }
-
-        sPlane reference_plane = reference_mesh->get_plane_of_face(reference_face);
-
-        float incident_facing = dot_prod(reference_plane.normal, incident_mesh->normals[0]);
-        for(uint32_t i = 1; i < incident_mesh->face_count; i++) {
-            float facing = dot_prod(reference_plane.normal, incident_mesh->normals[i]);
-
-            if (facing < incident_facing) {
-                incident_facing = facing;
-                incident_face = i;
-            }
-        }
-
-
-        manifold->contanct_points_count = clipping::face_face_clipping(*reference_mesh,
-                                                                       reference_face,
-                                                                       *incident_mesh,
-                                                                       incident_face,
-                                                                       contact_points);
-
-        uint32_t contact_id = 0;
-        for(; contact_id < manifold->contanct_points_count; contact_id++) {
-            float distance = reference_plane.distance(contact_points[contact_id]);
-            manifold->contact_depth[contact_id] = MIN(0.0f, distance);
-            manifold->contact_points[contact_id] = contact_points[contact_id];
-            std::cout << manifold->contact_depth[contact_id] << std::endl;
-        }
-
-        manifold->contanct_points_count = contact_id;
-
-        return true;
+         return true;
     }
 
 
@@ -388,6 +342,8 @@ namespace SAT {
         manifold->contact_depth[0] = -min_separation;
         manifold->normal = col_axis;
         manifold->contanct_points_count = 1;
+
+
 
         return true;
     }

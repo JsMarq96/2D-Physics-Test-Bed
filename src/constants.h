@@ -1,0 +1,10 @@
+#ifndef CONSTANTS_H_
+#define CONSTANTS_H_
+
+#define COMP_EPSILON 0.0005f
+#define MAX_COL_POINTS 10
+#define MAX_CONTACT_COUNT 9
+#define MAX_COLLISION_COUNT 20
+
+
+#endif // CONSTANTS_H_

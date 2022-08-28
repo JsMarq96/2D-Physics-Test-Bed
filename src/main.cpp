@@ -333,7 +333,7 @@ void draw_loop(GLFWwindow *window) {
                                                            30.0f,
                                                            0.2f,
                                                            false);
-  uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
+ uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
                                                               0.50f,
                                                               10.0f,
                                                               1.0f,
@@ -346,7 +346,7 @@ void draw_loop(GLFWwindow *window) {
 
   //phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.3f, 0.0f, 0.0f});
 
-  std::cout << dynamic_sphere << std::endl;
+  //std::cout << dynamic_sphere << std::endl;
   sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
   colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
@@ -512,15 +512,6 @@ void draw_loop(GLFWwindow *window) {
         col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
       }
     }
-
-    /*cube_models[col_points].set_identity();
-    cube_models[col_points].set_position(phys_instance.transforms[dynamic_cube].position);
-    cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
-    col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};
-    cube_models[col_points].set_identity();
-    cube_models[col_points].set_position(phys_instance.transforms[dynamic_cube1].position);
-    cube_models[col_points].set_scale({0.03f, 0.03f, 0.03f});
-    col_color[col_points++] = {1.0f, 0.0f, 0.0f, 1.00f};*/
 
 
     glDisable(GL_DEPTH_TEST);
