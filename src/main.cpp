@@ -333,7 +333,20 @@ void draw_loop(GLFWwindow *window) {
                                                            30.0f,
                                                            0.2f,
                                                            false);
- uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
+  phys_instance.add_cube_collider({-0.4f, 3.5f, 0.0f},
+                                                           {0.50f, 1.0f, 0.90f},
+                                                           30.0f,
+                                                           0.2f,
+                                                           false);
+phys_instance.add_cube_collider({-0.4f, 5.5f, 0.0f},
+                                                           {0.50f, 1.0f, 0.90f},
+                                                           30.0f,
+                                                           0.10f,
+                                                           false);
+
+
+  /*
+  **   uint32_t dynamic_sphere = phys_instance.add_sphere_collider({0.0f, 2.15, 0.0f},
                                                               0.50f,
                                                               10.0f,
                                                               1.0f,
@@ -344,6 +357,7 @@ void draw_loop(GLFWwindow *window) {
                                                               1.0f,
                                                               false);
 
+   */
   //phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.3f, 0.0f, 0.0f});
 
   //std::cout << dynamic_sphere << std::endl;

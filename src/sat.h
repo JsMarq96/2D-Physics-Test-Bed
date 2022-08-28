@@ -215,9 +215,8 @@ namespace SAT {
         const float k_face_rel_toletance = 0.98f;
         const float k_abs_tolerance = 0.5f * 0.005f;
 
-
         // Select the reference object and the incident
-         if (collision_distance_mesh1 + 0.005f < collision_face_mesh2) {
+         if (collision_distance_mesh1 + 0.005f > collision_distance_mesh2) {
              reference_mesh = &mesh1;
              incident_mesh = &mesh2;
 
@@ -229,9 +228,20 @@ namespace SAT {
              reference_face = collision_face_mesh2;
          }
 
-         // Choose indicent face
          sVector3 reference_normal = reference_mesh->normals[reference_face];
+
+         float ref_proj = dot_prod(reference_normal,
+                                   reference_mesh->get_support(reference_normal));
+         float inc_proj = dot_prod(reference_normal,
+                                   incident_mesh->get_support(reference_normal));
+
+         if (inc_proj < ref_proj) {
+             reference_normal = reference_normal.invert();
+         }
+
          manifold->normal = reference_normal;
+
+         // Choose indicent face
          incident_face = 0;
          float incident_facing = dot_prod(reference_normal,
                                           incident_mesh->normals[0]);

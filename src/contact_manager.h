@@ -174,7 +174,6 @@ struct sCollisionManager {
             collisions[i].contact_count = 0;
             return i;
         }
-        std::cout << "Old " << collisions[col_id].contanct_normal_impulse[0] << std::endl;
         return id_collision_map[col_id];
 
     }
