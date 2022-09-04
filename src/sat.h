@@ -204,9 +204,7 @@ namespace SAT {
         //  Face v (edge or Face)
         //  http://vodacek.zvb.cz/archiv/293.html
         //
-        sPlane crop_plane = {};
 
-        sVector3 separating_axis = {};
         const sColliderMesh *reference_mesh, *incident_mesh;
         uint32_t reference_face = 0, incident_face = 0;
 
@@ -215,8 +213,11 @@ namespace SAT {
         const float k_face_rel_toletance = 0.98f;
         const float k_abs_tolerance = 0.5f * 0.005f;
 
+        if (k_edge_rel_tolerance * edge_edge_distance + k_abs_tolerance < max_face_separation) {
+            std::cout << "should edge" << std::endl;
+        }
         // Select the reference object and the incident
-         if (collision_distance_mesh1 + 0.005f > collision_distance_mesh2) {
+         if (collision_distance_mesh1 > collision_distance_mesh2 - k_abs_tolerance) {
              reference_mesh = &mesh1;
              incident_mesh = &mesh2;
 
@@ -237,6 +238,7 @@ namespace SAT {
 
          if (inc_proj < ref_proj) {
              reference_normal = reference_normal.invert();
+             std::cout << "inv" << std::endl;
          }
 
          manifold->normal = reference_normal;
@@ -267,7 +269,7 @@ namespace SAT {
          sPlane reference_plane = reference_mesh->get_plane_of_face(reference_face);
          for(uint32_t i = 0; i < manifold->contanct_points_count; i++) {
              // Distance minus the face epsilon
-             manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]) ;
+             manifold->contact_depth[i] = reference_plane.distance(manifold->contact_points[i]);
          }
 
          return true;

@@ -225,12 +225,10 @@ void test_loop(GLFWwindow *window) {
       ImGui::Text("No cube collision");
     }
 
-    if (SAT::SAT_sphere_cube_collision(sphere_pos,
+    /*if (SAT::SAT_sphere_cube_collision(sphere_pos,
                                        1.0f,
                                        transforms[0],
-
                                        col_cube1,
-
                                        &manifold)) {
       ImGui::Text("Collision sphere %i points", manifold.contanct_points_count);
       for(uint32_t i = 0; i < manifold.contanct_points_count; i++) {
@@ -241,10 +239,9 @@ void test_loop(GLFWwindow *window) {
         ImGui::Text("Point %f %f %f, depth: %f", manifold.contact_points[i].x, manifold.contact_points[i].y, manifold.contact_points[i].z, manifold.contact_depth[i]);
 
       }
-
     } else {
       ImGui::Text("No sphere collision");
-    }
+    }*/
 
 
     ImGui::End();
@@ -280,7 +277,23 @@ uint32_t add_cube(const sVector3 &pos, const sVector3 &scale, const uint32_t las
 
   phys_world.transforms[last_index].position = pos;
   phys_world.transforms[last_index].scale = scale;
-  phys_world.transforms[last_index].set_rotation({0.80f, 0.20f, 0.00f, 0.0f});
+  //phys_world.transforms[last_index].set_rotation({0.80f, 0.00f, 0.20f, 0.0f});
+  phys_world.transforms[last_index].set_rotation({1.0f, 0.0f, 0.00f, 0.0f});
+  phys_world.restitution[last_index] = 0.2f;
+  phys_world.friction[last_index] = 0.5f;
+  phys_world.mass[last_index] = 10.0f;
+  phys_world.shape[last_index] = CUBE_COLLIDER;
+  phys_world.is_static[last_index] = false;
+  phys_world.enabled[last_index] = true;
+
+  return last_index+1;
+}
+
+uint32_t add_cube_rot(const sVector3 &pos, const sVector3 &scale, const uint32_t last_index, sPhysWorld &phys_world) {
+
+  phys_world.transforms[last_index].position = pos;
+  phys_world.transforms[last_index].scale = scale;
+  phys_world.transforms[last_index].set_rotation({0.80f, 0.00f, 0.20f, 0.0f});
   //phys_world.transforms[last_index].set_rotation({1.0f, 0.0f, 0.00f, 0.0f});
   phys_world.restitution[last_index] = 0.2f;
   phys_world.friction[last_index] = 0.5f;
@@ -291,6 +304,7 @@ uint32_t add_cube(const sVector3 &pos, const sVector3 &scale, const uint32_t las
 
   return last_index+1;
 }
+
 
 
 void draw_loop(GLFWwindow *window) {
@@ -318,7 +332,7 @@ void draw_loop(GLFWwindow *window) {
 
   phys_instance.set_default_values();
 
-  uint32_t static_cube = phys_instance.add_cube_collider({0.0f, 0.5f, 0.0f},
+  uint32_t static_cube = phys_instance.add_cube_collider({0.0f, -1.5f, 0.0f},
                                                          {13.0f, 1.0f, 13.0f},
                                                          0.0f,
                                                          20.0f,
@@ -327,21 +341,20 @@ void draw_loop(GLFWwindow *window) {
                                                          {1.0f, 1.0f, 1.0f},
                                                          20.0f,
                                                          false);*/
-  uint32_t dynamic_cube1 = phys_instance.add_cube_collider({-0.4f, 6.5f, 0.0f},
+  uint32_t dynamic_cube1 = phys_instance.add_cube_collider({4.4f, 6.5f, 0.0f},
                                                            {0.50f, 1.0f, 0.90f},
                                                            30.0f,
                                                            0.2f,
                                                            false);
-  phys_instance.add_cube_collider({-0.4f, 3.5f, 0.0f},
+    phys_instance.transforms[dynamic_cube1].rotate({0.8, 0.2, 0.0, 0.0});
+    phys_instance.transforms[static_cube].rotate({0.8, 0.0, 0.2, 0.0});
+
+    uint32_t static_cube_1 = phys_instance.add_cube_collider({-10.4f, 2.5f, 0.0f},
                                                            {0.50f, 1.0f, 0.90f},
                                                            30.0f,
                                                            0.2f,
-                                                           false);
-phys_instance.add_cube_collider({-0.4f, 5.5f, 0.0f},
-                                                           {0.50f, 1.0f, 0.90f},
-                                                           30.0f,
-                                                           0.10f,
-                                                           false);
+                                                           true);
+    phys_instance.transforms[static_cube_1].rotate({0.8, 2.0, 0.2, 0.0});
 
 
   /*
@@ -573,8 +586,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      draw_loop(window);
-      //test_loop(window);
+      //draw_loop(window);
+      test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}
