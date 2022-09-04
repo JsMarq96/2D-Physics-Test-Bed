@@ -213,12 +213,16 @@ void test_loop(GLFWwindow *window) {
                                 &manifold)) {
       ImGui::Text("Collision cube %i points", manifold.contanct_points_count);
       for(uint32_t i = 0; i < manifold.contanct_points_count; i++) {
-        cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 0.0f};
+        cube_colors[cube_num] = {1.0f, 0.f, 0.0f, 1.0f};
         cube_models[cube_num].set_identity();
         cube_models[cube_num].set_scale({0.05f, 0.05f, 0.05f});
         cube_models[cube_num++].add_position(manifold.contact_points[i]);
         ImGui::Text("Point %f %f %f, depth: %f", manifold.contact_points[i].x, manifold.contact_points[i].y, manifold.contact_points[i].z, manifold.contact_depth[i]);
 
+        cube_colors[cube_num] = {0.0f, 0.f, 1.0f, 1.0f};
+        cube_models[cube_num].set_identity();
+        cube_models[cube_num].set_scale({0.05f, 0.15f, 0.05f});
+        cube_models[cube_num++].add_position(manifold.contact_points[i].sum(manifold.normal.mult(manifold.contact_depth[i])));
       }
 
     } else {
@@ -347,7 +351,6 @@ void draw_loop(GLFWwindow *window) {
                                                            0.2f,
                                                            false);
     phys_instance.transforms[dynamic_cube1].rotate({0.8, 0.2, 0.0, 0.0});
-    phys_instance.transforms[static_cube].rotate({0.8, 0.0, 0.2, 0.0});
 
     uint32_t static_cube_1 = phys_instance.add_cube_collider({-10.4f, 2.5f, 0.0f},
                                                            {0.50f, 1.0f, 0.90f},
@@ -369,9 +372,6 @@ void draw_loop(GLFWwindow *window) {
                                                               1.0f,
                                                               false);
    */
-  //phys_instance.transforms[static_cube].set_rotation({0.9540f, 0.3f, 0.0f, 0.0f});
-
-  //std::cout << dynamic_sphere << std::endl;
   sVector4 colors[6] = {};
   colors[0] = {1.0f, 1.0f, 1.0f, 0.50f};
   colors[1] = {0.0f, 0.0f, 0.0f, 0.50f};
@@ -405,13 +405,6 @@ void draw_loop(GLFWwindow *window) {
   camera_rot = 72.10f;
   bool stopped = true;
   while(!glfwWindowShouldClose(window)) {
-
-    /*sTransform transf;
-    transf.set_rotation({0.954f, 0.30f, 0.0f, 0.0f});
-    sVector3 norm = {0.0f, 1.0f, 0.0f};
-    std::cout << norm.x << " " << norm.y <<  " " << norm.z << std::endl;
-    norm = transf.apply_rotation(norm);
-    std::cout << norm.x << " " << norm.y <<  " " << norm.z << std::endl;*/
 
     // Draw loop
     int width, heigth;
@@ -479,14 +472,6 @@ void draw_loop(GLFWwindow *window) {
       }
       if (ImGui::Button("Step") || left_state == GLFW_PRESS) {
         phys_instance.step(delta_time);
-
-        //sVector3 cube_pos = phys_instance.transforms[static_cube].position;
-        //sVector3 sphere_center = phys_instance.transforms[dynamic_sphere].position;
-        //uint32_t face = phys_instance.collider_meshes[static_cube].get_support_face(sphere_center.subs(cube_pos).invert());
-
-        //sVector3 *vert = phys_instance.collider_meshes[static_cube].get_face(face);
-
-        //std::cout << "SDF: " << SDF::quad(sphere_center, vert[0], vert[1], vert[2], vert[4], phys_instance.collider_meshes[static_cube].normals[face]) << std::endl;// - phys_instance.transforms[dynamic_sphere].scale.x << std::endl;
       }
     }
     phys_instance.debug_speeds();
@@ -495,6 +480,10 @@ void draw_loop(GLFWwindow *window) {
     ImGui::Begin("Overall");
     ImGui::SliderFloat("Camera rotation", &camera_rot, 0.0f, 360.0f);
     ImGui::SliderFloat("Camera height", &camera_height, -10.0f, 20.0f);
+    ImGui::SliderFloat3("Cube2 pos", phys_instance.transforms[dynamic_cube1].position.raw_values, -10.0f, 10.0f);
+    if (ImGui::Button("Add a console break")) {
+      std::cout << " =============== " << std::endl;
+    }
     //ImGui::SliderFloat("Simulator delta",(float*) &delta_time, 0.0001, 0.01);
     ImGui::End();
 
@@ -502,7 +491,6 @@ void draw_loop(GLFWwindow *window) {
     sVector4 cube_colors[15] = {}, sphere_colors[15] = {};
     int cube_size = 0, sphere_size = 0;
 
-    //std::cout << transforms[0].scale.x << " " << transforms[0].scale.y  << " <=== " << std::endl;
     // Rendering ====
     // Render shapes
     int sphere_count = 0;
@@ -586,8 +574,8 @@ int main() {
       ImGui_ImplGlfw_InitForOpenGL(window, true);
       ImGui_ImplOpenGL3_Init("#version 130");
       ImGui::StyleColorsDark();
-      //draw_loop(window);
-      test_loop(window);
+      draw_loop(window);
+      //test_loop(window);
 		} else {
 			std::cout << "Cannot init gl3w" << std::endl;
 		}

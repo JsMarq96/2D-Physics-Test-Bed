@@ -513,6 +513,9 @@ struct sPhysWorld {
 
             sVector3 impulse = manifold.normal.mult(impulse_mag);
 
+            // Angular mass is really effed
+            std::cout << angular_mass << " = depths: " << manifold.contact_depth[i] << " - " << impulse_mag << std::endl;
+
             if (!is_static[id_2]) {
                 speed_2->linear = speed_2->linear.sum(impulse.mult(inv_mass[id_2]));
                 speed_2->angular = speed_2->angular.sum(inv_inertia_tensors[id_2].multiply(cross_prod(rel_pos_2,
@@ -527,8 +530,7 @@ struct sPhysWorld {
                                                                                                       impulse)));
             }
 
-
-            // TODO: redo friction
+                        // TODO: redo friction
         }
     }
 
